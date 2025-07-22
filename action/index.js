@@ -477,7 +477,7 @@ async function startRaven() {
 ╰───────◇
 ╭──〔 🔗 *Quick Links* 〕──◇
 ├─ 📢 *Join Our Channel:*
-│   Click [**Here**](https://whatsapp.com/channel/0029VasHgfG4tRrwjAUyTs10)
+│   Click [**Here**](https://whatsapp.com/channel/0029VasHgfG4tRrwjAUyTs10) to join!
 ├─ 🛠️ *Shadow-Xtech Developer:*
 │   Click [**Here**](${developerContactLink})
 ├─ ⭐ *Give Us a Star:*
