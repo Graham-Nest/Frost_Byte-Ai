@@ -457,7 +457,7 @@ async function startRaven() {
       // --- END NEW ---
 
       // URLs and IDs from the provided context
-      const whatsappChannelId = "0029VasHgfG4tRrwjAUyTs10";
+      const whatsappChannelId = "120363369453603973@newsletter";
       const whatsappChannelLink = "https://www.whatsapp.com/channel/0029VasHgfG4tRrwjAUyTs10";
       const developerContactLink = "https://wa.me/254756360306"; // From ТΞϾH 404 PЯФJΞϾТS | WhatsApp Channel
       const githubRepoLink = "https://github.com/Graham-Nest/Frost_Byte-Ai";

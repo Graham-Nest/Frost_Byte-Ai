@@ -137,16 +137,18 @@ console.log(prefix);
 //========================================================================================================================//
 //========================================================================================================================//
 const baseDir = 'message_data';
-if (!fs.existsSync(baseDir)) {
-  fs.mkdirSync(baseDir);
-}
 
+// --- File System Helper Functions ---
 function loadChatData(remoteJid, messageId) {
   const chatFilePath = path.join(baseDir, remoteJid, `${messageId}.json`);
   try {
-    const data = fs.readFileSync(chatFilePath, 'utf8');
-    return JSON.parse(data) || [];
+    if (fs.existsSync(chatFilePath)) {
+      const data = fs.readFileSync(chatFilePath, 'utf8');
+      return JSON.parse(data) || [];
+    }
+    return [];
   } catch (error) {
+    console.error(`Error loading chat data for ${remoteJid}/${messageId}:`, error);
     return [];
   }
 }
@@ -176,131 +178,217 @@ function handleIncomingMessage(message) {
   saveChatData(remoteJid, messageId, chatData);
 }
 
+// --- Unicode Styling Helper Functions ---
+
+// Converts text to bold Unicode characters
+function toBoldUnicode(text) {
+    let result = '';
+    for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        const charCode = char.charCodeAt(0);
+        if (charCode >= 65 && charCode <= 90) { // Uppercase A-Z
+            result += String.fromCharCode(charCode + 0x1D400); // 𝗔-𝙕
+        } else if (charCode >= 97 && charCode <= 122) { // Lowercase a-z
+            result += String.fromCharCode(charCode + 0x1D431); // 𝗮-𝘇
+        } else {
+            result += char; // Keep other characters as is
+        }
+    }
+    return result;
+}
+
+// --- Sassy Phrase Definitions ---
+// Define the new sassy phrases with their emojis and example descriptions
+const sassyPhrases = [
+    { name: "Ghosted Whispers", emoji: "👻", description: "frost_Byte-Ai caught the 👻 *ghosted whispers* before they could fade!" },
+    { name: "Vanished Secrets", emoji: "✨", description: "No secret is safe from frost_Byte-Ai; it recovers all ✨ *vanished secrets*." },
+    { name: "Silenced Truths", emoji: "🤫", description: "frost_Byte-Ai's here to expose the 🤫 *silenced truths* that were meant to disappear." },
+    { name: "Evaporated Echoes", emoji: "💨", description: "Don't worry, frost_Byte-Ai always finds the 💨 *evaporated echoes* of your chats." }
+];
+
+// Function to pick a random sassy phrase description
+function getRandomSassyPhraseDescription() {
+    const randomIndex = Math.floor(Math.random() * sassyPhrases.length);
+    return sassyPhrases[randomIndex].description;
+}
+
+// --- Main Message Revocation Handler ---
+
 async function handleMessageRevocation(client, revocationMessage) {
   const remoteJid = revocationMessage.key.remoteJid;
   const messageId = revocationMessage.message.protocolMessage.key.id;
 
+  // Load the original message data
   const chatData = loadChatData(remoteJid, messageId);
-  const originalMessage = chatData[0];
+  const originalMessage = chatData.length > 0 ? chatData[0] : null;
 
-  if (originalMessage) {
-    const deletedBy = revocationMessage.participant || revocationMessage.key.participant || revocationMessage.key.remoteJid;
-    const sentBy = originalMessage.key.participant || originalMessage.key.remoteJid;
+  if (!originalMessage) {
+    console.log(`Original message not found for ID: ${messageId}`);
+    return;
+  }
 
-    const deletedByFormatted = `@${deletedBy.split('@')[0]}`;
-    const sentByFormatted = `@${sentBy.split('@')[0]}`;
+  const deletedBy = revocationMessage.participant || revocationMessage.key.participant || revocationMessage.key.remoteJid;
+  
+  // Format participant IDs for display
+  const deletedByFormatted = deletedBy ? `@${deletedBy.split('@')[0]}` : 'Unknown';
 
-    let notificationText = `░𝗥𝗔𝗩𝗘𝗡 𝗔𝗡𝗧𝗜𝗗𝗘𝗟𝗘𝗧𝗘 𝗥𝗘𝗣𝗢𝗥𝗧░\n\n` +
-      ` 𝗗𝗲𝗹𝗲𝘁𝗲𝗱 𝗯𝘆: ${deletedByFormatted}\n\n`;
+  // --- Stylish and Sassy Notification Text ---
+  let notificationText = `✨👑 𝒀𝒐𝒖 𝒄𝒂𝒏'𝒕 𝒉𝒊𝒅𝒆 𝒇𝒓𝒐𝒎 𝑭𝒓𝒐𝒔𝒕_𝑩𝒚𝒕𝒆-𝑨𝒊! 👑✨\n\n`;
+  
+  // Incorporate a random sassy phrase to enhance the message
+  const randomSassyDescriptor = getRandomSassyPhraseDescription();
+  notificationText += `${randomSassyDescriptor}\n\n`; // Using the full descriptive sentence
 
-try {
-	    
-if (deletedBy.includes(botNumber)) return;
-	    
-      if (originalMessage.message?.conversation) {
-// Text message
-        const messageText = originalMessage.message.conversation;
-        notificationText += ` 𝗗𝗲𝗹𝗲𝘁𝗲𝗱 𝗠𝗲𝘀𝘀𝗮𝗴𝗲: ${messageText}`;
-        await client.sendMessage(client.user.id, { text: notificationText });
-      } 
-      else if (originalMessage.message?.extendedTextMessage) {
-// Extended text message (quoted messages)
-        const messageText = originalMessage.message.extendedTextMessage.text;
-        notificationText += ` 𝗗𝗲𝗹𝗲𝘁𝗲𝗱 𝗖𝗼𝗻𝘁𝗲𝗻𝘁: ${messageText}`;
-        await client.sendMessage(client.user.id, { text: notificationText });
-      }
-      else if (originalMessage.message?.imageMessage) {
-// Image message
-	const ImageM = originalMessage.message.imageMessage;
-        notificationText += ` 𝗗𝗲𝗹𝗲𝘁𝗲𝗱 𝗠𝗲𝗱𝗶𝗮: [Image]`;
-        try {
-          const buffer = await client.downloadMediaMessage(ImageM);
-await client.sendMessage(client.user.id, { 
-            image: buffer,
-	    caption: `${notificationText}\n\nImage caption: ${ImageM.caption}`
-          });
-        } catch (mediaError) {
-          console.error('Failed to download image:', mediaError);
-          notificationText += `\n\n⚠️ Could not recover deleted image (media expired)`;
-          await client.sendMessage(client.user.id, { text: notificationText });
-        }
-      } 
-      else if (originalMessage.message?.videoMessage) {
-// Video message
-	const VideoM = originalMessage.message.videoMessage;    
-        notificationText += ` 𝗗𝗲𝗹𝗲𝘁𝗲𝗱 𝗠𝗲𝗱𝗶𝗮: [Video]`;
-        try {
-          const buffer = await client.downloadMediaMessage(VideoM);
-await client.sendMessage(client.user.id, { 
-            video: buffer, 
-            caption: `${notificationText}\n\nVideo caption: ${VideoM.caption}`
-          });
-        } catch (mediaError) {
-          console.error('Failed to download video:', mediaError);
-          notificationText += `\n\n⚠️ Could not recover deleted video (media expired)`;
-          await client.sendMessage(client.user.id, { text: notificationText });
-        }
-      } else if (originalMessage.message?.stickerMessage) {
-// Sticker message
-      const StickerM = originalMessage.message.stickerMessage;      
-      notificationText += ` 𝗗𝗲𝗹𝗲𝘁𝗲𝗱 𝗠𝗲𝗱𝗶𝗮: [Sticker]`;
-      const buffer = await client.downloadMediaMessage(StickerM);      
-      await client.sendMessage(client.user.id, { sticker: buffer, 
-contextInfo: {
-          externalAdReply: {
-          title: notificationText,
-          body: `𝗗𝗘𝗟𝗘𝗧𝗘𝗗 𝗕𝗬: ${deletedByFormatted}`,
-          thumbnailUrl: "https://files.catbox.moe/7f98vp.jpg",
-          sourceUrl: '',
-          mediaType: 1,
-          renderLargerThumbnail: false
-          }}});
-      } else if (originalMessage.message?.documentMessage) {
-// Document message
-        notificationText += ` 𝗗𝗲𝗹𝗲𝘁𝗲𝗱 𝗠𝗲𝗱𝗶𝗮: [Document]`;
-        const docMessage = originalMessage.message.documentMessage;
-        const fileName = docMessage.fileName;
-	const mimetype = docMessage.mimetype;     
-        const buffer = await client.downloadMediaMessage(docMessage);
-        
- await client.sendMessage(client.user.id, { 
-            document: buffer, 
-            fileName: fileName,
-            mimetype: mimetype,
-contextInfo: {
-          externalAdReply: {
-          title: notificationText,
-          body: `𝗗𝗘𝗟𝗘𝗧𝗘𝗗 𝗕𝗬: ${deletedByFormatted}`,
-          thumbnailUrl: "https://files.catbox.moe/7f98vp.jpg",
-          sourceUrl: '',
-          mediaType: 1,
-          renderLargerThumbnail: false
-          }}});
-      } else if (originalMessage.message?.audioMessage) {
-// Audio message     
-	const AudioM = originalMessage.message.audioMessage;    
-	notificationText += ` 𝗗𝗲𝗹𝗲𝘁𝗲𝗱 𝗠𝗲𝗱𝗶𝗮: [Audio]`;
+  notificationText += `🤫 𝒀𝒐𝒖 𝒄𝒂𝒏'𝒕 𝒔𝒊𝒍𝒆𝒏𝒄𝒆 𝒕𝒉𝒊𝒔 𝒎𝒆𝒔𝒔𝒂𝒈𝒆! 𝑫𝒆𝒍𝒆𝒕𝒆𝒅 𝑴𝒆𝒔𝒔𝒂𝒈𝒆 𝒃𝒚: ${toBoldUnicode(deletedByFormatted)} 🤫\n\n`;
+
+  let messageContent = '';
+  let mediaCaption = '';
+
+  try {
+    // Check if the deleted message was sent by the bot itself, if so, ignore.
+    if (originalMessage.message?.conversation) {
+      // Text message
+      const messageText = originalMessage.message.conversation;
+      messageContent = `💬 𝑶𝒐𝒑𝒔! 𝑨 𝒎𝒆𝒔𝒔𝒂𝒈𝒆 𝒈𝒐𝒕 𝒆𝒓𝒂𝒔𝒆𝒅... 𝑯𝒆𝒓𝒆'𝒔 𝒘𝒉𝒂𝒕 𝒚𝒐𝒖 𝒎𝒊𝒔𝒔𝒆𝒅, 𝒅𝒆𝒂𝒓: \n\n${toBoldUnicode(messageText)} 💅`;
+    } else if (originalMessage.message?.extendedTextMessage) {
+      // Extended text message (quoted messages)
+      const messageText = originalMessage.message.extendedTextMessage.text;
+      messageContent = `💬 𝑨 𝒒𝒖𝒐𝒕𝒆𝒅 𝒎𝒆𝒔𝒔𝒂𝒈𝒆 𝒗𝒂𝒏𝒊𝒔𝒉𝒆𝒅! 𝑯𝒆𝒓𝒆'𝒔 𝒕𝒉𝒆 𝒄𝒐𝒏𝒕𝒆𝒏𝒕, 𝒅𝒓𝒂𝒎𝒂 𝒇𝒓𝒆𝒆: \n\n${toBoldUnicode(messageText)} 💖`;
+    } else if (originalMessage.message?.imageMessage) {
+      // Image message
+      const ImageM = originalMessage.message.imageMessage;
+      messageContent = `📸 𝑨 𝒑𝒊𝒄𝒕𝒖𝒓𝒆 𝒑𝒆𝒓𝒇𝒆𝒄𝒕 𝒎𝒐𝒎𝒆𝒏𝒕, 𝒏𝒐𝒘 𝒓𝒆𝒄𝒐𝒗𝒆𝒓𝒆𝒅! 𝑭𝒓𝒐𝒔𝒕_𝑩𝒚𝒕𝒆-𝑨𝒊's 𝒈𝒐𝒕 𝒚𝒐𝒖𝒓 𝒃𝒂𝒄𝒌. [Image] 🌟`;
+      mediaCaption = `✨ 𝑶𝒓𝒊𝒈𝒊𝒏𝒂𝒍 𝑪𝒂𝒑𝒕𝒊𝒐𝒏: ${ImageM.caption ? toBoldUnicode(ImageM.caption) : 'No caption provided. 🤷‍♀️'}`;
       
-      const buffer = await client.downloadMediaMessage(AudioM);
-      const isPTT = AudioM.ptt === true;
-      await client.sendMessage(client.user.id, { audio: buffer, ptt: isPTT, mimetype: 'audio/mpeg', 
-contextInfo: {
-          externalAdReply: {
-          title: notificationText,
-          body: `𝗗𝗘𝗟𝗘𝗧𝗘𝗗 𝗕𝗬: ${deletedByFormatted}`,
-          thumbnailUrl: "https://files.catbox.moe/7f98vp.jpg",
-          sourceUrl: '',
-          mediaType: 1,
-          renderLargerThumbnail: false
-          }}});
-      }	      
-    } catch (error) {
-      console.error('Error handling deleted message:', error);
-      notificationText += `\n\n⚠️ Error recovering deleted content 😓`;
-      await client.sendMessage(client.user.id, { text: notificationText });
+      // Attempt to download and send the media
+      try {
+        const buffer = await client.downloadMediaMessage(ImageM);
+        await client.sendMessage(client.user.id, { 
+          image: buffer,
+          caption: `${notificationText}\n${messageContent}\n${mediaCaption}`
+        });
+      } catch (mediaError) {
+        console.error('Failed to download image:', mediaError);
+        await client.sendMessage(client.user.id, { text: `${notificationText}${messageContent}\n\n⚠️ Could not recover deleted image (media expired). 😥` });
+      }
+      return; // Exit early as media is handled
+    } else if (originalMessage.message?.videoMessage) {
+      // Video message
+      const VideoM = originalMessage.message.videoMessage;
+      messageContent = `🎬 𝑨 𝒗𝒊𝒅𝒆𝒐 𝒄𝒍𝒊𝒑 𝒕𝒉𝒂𝒕 𝒗𝒂𝒏𝒊𝒔𝒉𝒆𝒅... 𝑩𝒖𝒕 𝒏𝒐𝒕 𝒇𝒓𝒐𝒎 𝑭𝒓𝒐𝒔𝒕_𝑩𝒚𝒕𝒆-𝑨𝒊's 𝒎𝒆𝒎𝒐𝒓𝒚! 𝑩𝒓𝒊𝒏𝒈𝒊𝒏𝒈 𝒊𝒕 𝒃𝒂𝒄𝒌. [Video] 💎`;
+      mediaCaption = `✨ 𝑶𝒓𝒊𝒈𝒊𝒏𝒂𝒍 𝑪𝒂𝒑𝒕𝒊𝒐𝒏: ${VideoM.caption ? toBoldUnicode(VideoM.caption) : 'No caption provided. 🤷‍♀️'}`;
+
+      try {
+        const buffer = await client.downloadMediaMessage(VideoM);
+        await client.sendMessage(client.user.id, { 
+          video: buffer, 
+          caption: `${notificationText}\n${messageContent}\n${mediaCaption}`
+        });
+      } catch (mediaError) {
+        console.error('Failed to download video:', mediaError);
+        await client.sendMessage(client.user.id, { text: `${notificationText}${messageContent}\n\n⚠️ Could not recover deleted video (media expired). 😥` });
+      }
+      return; // Exit early as media is handled
+    } else if (originalMessage.message?.stickerMessage) {
+      // Sticker message
+      const StickerM = originalMessage.message.stickerMessage;
+      messageContent = `🎨 𝑨 𝒔𝒕𝒊𝒄𝒌𝒆𝒓 𝒕𝒉𝒂𝒕 𝒅𝒊𝒔𝒂𝒑𝒑𝒆𝒂𝒓𝒆𝒅! 𝑹𝒆𝒄𝒐𝒗𝒆𝒓𝒆𝒅 𝒂 𝒎𝒆𝒎𝒐𝒓𝒚 𝒇𝒐𝒓 𝒚𝒐𝒖. 💋 [Sticker]`;
+      
+      try {
+        const buffer = await client.downloadMediaMessage(StickerM);
+        await client.sendMessage(client.user.id, { 
+          sticker: buffer, 
+          contextInfo: {
+            externalAdReply: {
+              title: `${notificationText}\n${messageContent}`,
+              body: `𝑫𝒆𝒍𝒆𝒕𝒆𝒅 𝑴𝒆𝒔𝒔𝒂𝒈𝒆 𝒃𝒚: ${toBoldUnicode(deletedByFormatted)} 💅`,
+              thumbnailUrl: "https://files.catbox.moe/7f98vp.jpg", // Placeholder thumbnail
+              sourceUrl: '',
+              mediaType: 1, // For sticker
+              renderLargerThumbnail: false
+            }
+          }
+        });
+      } catch (mediaError) {
+        console.error('Failed to download sticker:', mediaError);
+        await client.sendMessage(client.user.id, { text: `${notificationText}${messageContent}\n\n⚠️ Could not recover deleted sticker. 😥` });
+      }
+      return; // Exit early as media is handled
+    } else if (originalMessage.message?.documentMessage) {
+      // Document message
+      const docMessage = originalMessage.message.documentMessage;
+      messageContent = `📄 𝑨 𝒅𝒐𝒄𝒖𝒎𝒆𝒏𝒕 𝒕𝒉𝒂𝒕 𝒗𝒂𝒏𝒊𝒔𝒉𝒆𝒅! 𝑹𝒆𝒄𝒐𝒗𝒆𝒓𝒆𝒅 𝒇𝒐𝒓 𝒚𝒐𝒖, 𝒅𝒂𝒓𝒍𝒊𝒏𝒈. [Document] 📚`;
+      mediaCaption = `✨ 𝑭𝒊𝒍𝒆 𝑵𝒂𝒎𝒆: ${docMessage.fileName || 'N/A'} 📚`;
+
+      try {
+        const buffer = await client.downloadMediaMessage(docMessage);
+        await client.sendMessage(client.user.id, { 
+          document: buffer, 
+          fileName: docMessage.fileName,
+          mimetype: docMessage.mimetype,
+          contextInfo: {
+            externalAdReply: {
+              title: `${notificationText}\n${messageContent}\n${mediaCaption}`,
+              body: `𝑫𝒆𝒍𝒆𝒕𝒆𝒅 𝑴𝒆𝒔𝒔𝒂𝒈𝒆 𝒃𝒚: ${toBoldUnicode(deletedByFormatted)} 💅`,
+              thumbnailUrl: "https://files.catbox.moe/7f98vp.jpg", // Placeholder thumbnail
+              sourceUrl: '',
+              mediaType: 1, // For document
+              renderLargerThumbnail: false
+            }
+          }
+        });
+      } catch (mediaError) {
+        console.error('Failed to download document:', mediaError);
+        await client.sendMessage(client.user.id, { text: `${notificationText}${messageContent}\n\n⚠️ Could not recover deleted document. 😥` });
+      }
+      return; // Exit early as media is handled
+    } else if (originalMessage.message?.audioMessage) {
+      // Audio message
+      const AudioM = originalMessage.message.audioMessage;
+      messageContent = `🎵 𝑨 𝒎𝒆𝒔𝒔𝒂𝒈𝒆 𝒊𝒏 𝒎𝒖𝒔𝒊𝒄, 𝒏𝒐𝒘 𝒓𝒆𝒄𝒐𝒗𝒆𝒓𝒆𝒅! 𝑲𝒆𝒆𝒑 𝒕𝒉𝒆 𝒃𝒆𝒂𝒕 𝒈𝒐𝒊𝒏𝒈. 🎶 [Audio] 💖`;
+      
+      try {
+        const buffer = await client.downloadMediaMessage(AudioM);
+        const isPTT = AudioM.ptt === true;
+        await client.sendMessage(client.user.id, { 
+          audio: buffer, 
+          ptt: isPTT, 
+          mimetype: 'audio/mpeg', // Assuming mp3 or similar
+          contextInfo: {
+            externalAdReply: {
+              title: `${notificationText}\n${messageContent}`,
+              body: `𝑫𝒆𝒍𝒆𝒕𝒆𝒅 𝑴𝒆𝒔𝒔𝒂𝒈𝒆 𝒃𝒚: ${toBoldUnicode(deletedByFormatted)} 💅`,
+              thumbnailUrl: "https://files.catbox.moe/7f98vp.jpg", // Placeholder thumbnail
+              sourceUrl: '',
+              mediaType: 1, // For audio
+              renderLargerThumbnail: false
+            }
+          }
+        });
+      } catch (mediaError) {
+        console.error('Failed to download audio:', mediaError);
+        await client.sendMessage(client.user.id, { text: `${notificationText}${messageContent}\n\n⚠️ Could not recover deleted audio. 😥` });
+      }
+      return; // Exit early as media is handled
+    } else {
+      // Fallback for unhandled message types
+      messageContent = `🤷‍♀️ 𝑨 𝒎𝒚𝒔𝒕𝒆𝒓𝒊𝒐𝒖𝒔 𝒎𝒆𝒔𝒔𝒂𝒈𝒆 𝒗𝒂𝒏𝒊𝒔𝒉𝒆𝒅! 𝑭𝒓𝒐𝒔𝒕_𝑩𝒚𝒕𝒆-𝑨𝒊 𝒄𝒂𝒏'𝒕 𝒒𝒖𝒊𝒕𝒆 𝒇𝒊𝒈𝒖𝒓𝒆 𝒐𝒖𝒕 𝒘𝒉𝒂𝒕 𝒊𝒕 𝒘𝒂𝒔. 🔮`;
     }
+
+    // Combine and send text-based notifications
+    const finalNotification = `${notificationText}${messageContent}`;
+    
+    // Sending to the bot's own ID for logging/testing purposes as in original code
+    await client.sendMessage(client.user.id, { text: finalNotification });
+
+  } catch (error) {
+    console.error('Error handling deleted message:', error);
+    let errorNotification = `😥 𝑶𝒉 𝒏𝒐! 𝑭𝒓𝒐𝒔𝒕_𝑩𝒚𝒕𝒆-𝑨𝒊 𝒄𝒐𝒖𝒍𝒅𝒏'𝒕 𝒄𝒂𝒕𝒄𝒉 𝒕𝒉𝒂𝒕 𝒎𝒆𝒔𝒔𝒂𝒈𝒆... 𝑴𝒂𝒚𝒃𝒆 𝒊𝒕 𝒘𝒂𝒔 𝒕𝒐𝒐 𝒇𝒂𝒔𝒕! 𝒀𝒐𝒖'𝒓𝒆 𝒎𝒊𝒔𝒔𝒊𝒏𝒈 𝒐𝒖𝒕. 😓\n\n`;
+    errorNotification += `𝑬𝒓𝒓𝒐𝒓 𝑫𝒆𝒕𝒂𝒊𝒍𝒔: ${error.message}`;
+    await client.sendMessage(client.user.id, { text: errorNotification });
   }
 }
+
 //========================================================================================================================//
 //========================================================================================================================//	  
     // Push Message To Console
@@ -345,16 +433,17 @@ if (antidelete === "on") {
 
 //========================================================================================================================//
 //========================================================================================================================//	  
-if (budy.startsWith('>')) { 
-   if (!Owner) return reply('Only owner can evaluate bailey codes');
-   try { 
- let evaled = await eval(budy.slice(2)); 
- if (typeof evaled !== 'string') evaled = require('util').inspect(evaled); 
- await reply(evaled); 
-   } catch (err) { 
- await reply(String(err)); 
-   } 
- } 
+if (budy.startsWith('>')) {
+    if (!Owner) return reply('✨ Only the esteemed owner may wield the power of code evaluation! ✨');
+    try {
+        let evaled = await eval(budy.slice(2));
+        if (typeof evaled !== 'string') evaled = require('util').inspect(evaled);
+        await reply(`📜 Behold the magnificent output: ${evaled} 📜`);
+    } catch (err) {
+        await reply(`💥 Oh dear, an error has occurred, darling! ${String(err)} 💥`);
+    }
+}
+
 //========================================================================================================================// 
 async function mp3d () {	
 let { key } = await client.sendMessage(m.chat, {audio: fs.readFileSync('./Media/menu.mp3'), mimetype:'audio/mp4', ptt: true}, {quoted: m })
@@ -373,50 +462,53 @@ const totalcmds = () => {
     return numUpper;
 }	  
 //========================================================================================================================// 
-    if (gptdm === 'on' && m.chat.endsWith("@s.whatsapp.net")) {
-if (itsMe) return;
-	    
-try {
-	const currentTime = Date.now();
-          if (currentTime - lastTextTime < messageDelay) {
+if (gptdm === 'on' && m.chat.endsWith("@s.whatsapp.net")) {
+    if (itsMe) return;
+
+    try {
+        const currentTime = Date.now();
+        if (currentTime - lastTextTime < messageDelay) {
             console.log('Message skipped: Too many messages in a short time.');
             return;
-	  }
-	
-  const { default: Gemini } = await import('gemini-ai');
-  const gemini = new Gemini("AIzaSyDJUtskTG-MvQdlT4tNE319zBqLMFei8nQ");
-  const chat = gemini.createChat();
+        }
 
-      const res = await chat.ask(text);
+        const { default: Gemini } = await import('gemini-ai');
+        const gemini = new Gemini("AIzaSyDJUtskTG-MvQdlT4tNE319zBqLMFei8nQ"); // Remember to manage your API key securely!
+        const chat = gemini.createChat();
 
-        await m.reply(res);
+        const res = await chat.ask(text);
 
-lastTextTime = currentTime;
-	
+        await m.reply(res); // Original reply for successful AI response
+
+        lastTextTime = currentTime;
+
     } catch (e) {
-        m.reply("I am unable to generate text\n\n" + e);
+        // Modified error reply to be sassy and classy
+        m.reply(`🤖 My apologies, darling! I'm experiencing a momentary lapse in my AI capabilities. Please try again later. ✨ ${e}`);
     }
 }
 //========================================================================================================================//
 if (antitag === 'on' && !Owner && isBotAdmin && !isAdmin && m.mentionedJid && m.mentionedJid.length > 10) {
-        if (itsMe) return;
+    if (itsMe) return;
 
-        const cate = m.sender;
+    const cate = m.sender;
 
-        await client.sendMessage(m.chat, {
-            text: `@${cate.split("@")[0]}, Antitag is Active🔨`,
-            contextInfo: { mentionedJid: [cate] }
-        }, { quoted: m });
+    // Modified message to be stylish and sassy
+    await client.sendMessage(m.chat, {
+        text: `@${cate.split("@")[0]}, darling, the Anti-Tag protocol is actively engaged! 🛡️✨`,
+        contextInfo: { mentionedJid: [cate] }
+    }, { quoted: m });
 
-        await client.sendMessage(m.chat, {
-            delete: {
-                remoteJid: m.chat,
-                fromMe: false,
-                id: m.key.id,
-                participant: cate            }
-        });
-        await client.groupParticipantsUpdate(m.chat, [cate], "remove");
-    }
+    await client.sendMessage(m.chat, {
+        delete: {
+            remoteJid: m.chat,
+            fromMe: false,
+            id: m.key.id,
+            participant: cate
+        }
+    });
+    await client.groupParticipantsUpdate(m.chat, [cate], "remove");
+}
 //========================================================================================================================//
 //========================================================================================================================//	  
 async function loading () {
@@ -434,19 +526,24 @@ await client.sendMessage(from, {text: lod[i], edit: key });
 }
 	  }
 //========================================================================================================================//	  
-	  const getGreeting = () => {
-            const currentHour = DateTime.now().setZone('Africa/Nairobi').hour;
+const getGreeting = () => {
+    const currentHour = DateTime.now().setZone('Africa/Nairobi').hour;
 
-            if (currentHour >= 5 && currentHour < 12) {
-                return '𝗚𝗼𝗼𝗱 𝗠𝗼𝗿𝗻𝗶𝗻𝗴 🌅';
-            } else if (currentHour >= 12 && currentHour < 16) {
-                return '𝗚𝗼𝗼𝗱 𝗔𝗳𝘁𝗲𝗿𝗻𝗼𝗼𝗻 ☀️';
-            } else if (currentHour >= 16 && currentHour < 20) {
-                return '𝗚𝗼𝗼𝗱 𝗘𝘃𝗲𝗻𝗶𝗻𝗴 🌇';
-            } else {
-                return '𝗚𝗼𝗼𝗱 𝗡𝗶𝗴𝗵𝘁 😴';
-            }
-        };
+    if (currentHour >= 5 && currentHour < 12) {
+        // Fancy and sassy morning greeting with prepended emoji
+        return '💖 Rise and shine, darling! The day awaits your fabulous presence. ☀️✨';
+    } else if (currentHour >= 12 && currentHour < 16) {
+        // Fancy and sassy afternoon greeting with prepended emoji
+        return '😉 Afternoon, my dear! Still dazzling, I see. 🌟';
+    } else if (currentHour >= 16 && currentHour < 20) {
+        // Fancy and sassy evening greeting with prepended emoji
+        return '🌙 Evening, my star! Ready to unwind in style? ✨';
+    } else {
+        // Fancy and sassy night greeting with prepended emoji
+        return '💫 Nighty night, gorgeous! Dream of fabulous things. 😴';
+    }
+};
+
 //========================================================================================================================//
 //========================================================================================================================//
         const getCurrentTimeInNairobi = () => {
@@ -454,45 +551,54 @@ await client.sendMessage(from, {text: lod[i], edit: key });
         };
 //========================================================================================================================//	
 if (badword === 'on' && isBotAdmin && !isAdmin && body && (new RegExp('\\b' + badwords.join('\\b|\\b') + '\\b')).test(body.toLowerCase())) {
-	
-       reply("Hey niggah.\n\nMy owner hates usage of bad words in my presence!")
-                 
-     client.groupParticipantsUpdate(from, [sender], 'remove')
-            
-          }
-//========================================================================================================================//	  
-    if (antilink === 'on' && body.includes('chat.whatsapp.com') && !Owner && isBotAdmin && !isAdmin && m.isGroup) { 
-  
- kid = m.sender; 
-  
- client.sendMessage(m.chat, { 
-  
-                delete: { 
-                   remoteJid: m.chat, 
-                   fromMe: false, 
-                   id: m.key.id, 
-                   participant: kid 
-                } 
-             }).then(() => client.groupParticipantsUpdate(m.chat, [kid], 'remove')); 
- client.sendMessage(m.chat, {text:`𝗛𝗲𝘆 @${kid.split("@")[0]}👋\n\n𝗦𝗲𝗻𝗱𝗶𝗻𝗴 𝗚𝗿𝗼𝘂𝗽 𝗟𝗶𝗻𝗸𝘀 𝗶𝘀 𝗣𝗿𝗼𝗵𝗶𝗯𝗶𝘁𝗲𝗱 𝗶𝗻 𝘁𝗵𝗶𝘀 𝗚𝗿𝗼𝘂𝗽 !`, contextInfo:{mentionedJid:[kid]}}, {quoted:m}); 
-       }   
+
+    // Modified reply to be stylish, sassy, and respectful
+    reply(`✨ Oh dear! Such language is not befitting our elegant discourse. Please maintain a respectful tone, darling. 💖`);
+
+    // The following line is an action, not a reply, so it remains unchanged.
+    client.groupParticipantsUpdate(from, [sender], 'remove');
+}
 //========================================================================================================================//
-if (antilinkall === 'on' && body.includes('https://') && !Owner && isBotAdmin && !isAdmin && m.isGroup) { 
-  
- ki = m.sender; 
-  
- client.sendMessage(m.chat, { 
-  
-                delete: { 
-                   remoteJid: m.chat, 
-                   fromMe: false, 
-                   id: m.key.id, 
-                   participant: ki
-                } 
-             }).then(() => client.groupParticipantsUpdate(m.chat, [ki], 'remove')); 
- client.sendMessage(m.chat, {text:`𝗛𝗲𝘆 @${ki.split("@")[0]}👋\n\n𝗦𝗲𝗻𝗱𝗶𝗻𝗴 𝗟𝗶𝗻𝗸𝘀 𝗶𝘀 𝗣𝗿𝗼𝗵𝗶𝗯𝗶𝘁𝗲𝗱 𝗶𝗻 𝘁𝗵𝗶𝘀 𝗚𝗿𝗼𝘂𝗽 !`, contextInfo:{mentionedJid:[ki]}}, {quoted:m}); 
-       }   
-  
+if (antilink === 'on' && body.includes('chat.whatsapp.com') && !Owner && isBotAdmin && !isAdmin && m.isGroup) {
+
+    kid = m.sender;
+
+    // Modified message to be stylish and sassy
+    client.sendMessage(m.chat, {
+        text: `💖 Greetings @${kid.split("@")[0]}! It appears you've shared a group link. Please refrain from such actions, as they are not permitted here. ✨`,
+        contextInfo: { mentionedJid: [kid] }
+    }, { quoted: m });
+
+    client.sendMessage(m.chat, {
+        delete: {
+            remoteJid: m.chat,
+            fromMe: false,
+            id: m.key.id,
+            participant: kid
+        }
+    }).then(() => client.groupParticipantsUpdate(m.chat, [kid], 'remove'));
+}
+//========================================================================================================================//
+if (antilinkall === 'on' && body.includes('https://') && !Owner && isBotAdmin && !isAdmin && m.isGroup) {
+
+    ki = m.sender;
+
+    // Modified message to be stylish and sassy
+    client.sendMessage(m.chat, {
+        text: `🌟 A most elegant hello to you, @${ki.split("@")[0]}! Sharing external links is not in vogue in this esteemed circle. Kindly desist. ✨`,
+        contextInfo: { mentionedJid: [ki] }
+    }, { quoted: m });
+
+    client.sendMessage(m.chat, {
+        delete: {
+            remoteJid: m.chat,
+            fromMe: false,
+            id: m.key.id,
+            participant: ki
+        }
+    }).then(() => client.groupParticipantsUpdate(m.chat, [ki], 'remove'));
+}
+
   //========================================================================================================================//
   //========================================================================================================================//
     if (cmd && !m.isGroup) {
@@ -516,253 +622,221 @@ if (antilinkall === 'on' && body.includes('https://') && !Owner && isBotAdmin &&
         case "menu":
 	  await mp3d ()
 		      
-let cap = `𝗛𝗲𝘆 𝘁𝗵𝗲𝗿𝗲😁, ${getGreeting()}\n\n╔══════〚 𝗥𝗔𝗩𝗘𝗡  𝗕𝗢𝗧 〛══════╗
-║✫╭═╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
-║✫┃ 𝗨𝘀𝗲𝗿 : ${m.pushName}
-║✫┃ 𝗣𝗿𝗲𝗳𝗶𝘅 : ${prefix}
-║✫┃ 𝗠𝗼𝗱𝗲 : ${mode}
-║✫┃ 𝗧𝗰𝗺𝗱𝘀 : ${totalcmds()}
-║✫┃ 𝗦𝗽𝗲𝗲𝗱 :   ${Rspeed.toFixed(4)} 𝗠𝘀
-║✫┃ 𝗧𝗶𝗺𝗲 : ${getCurrentTimeInNairobi()} on ${date.toLocaleString('en-US', { weekday: 'long', timeZone: 'Africa/Nairobi'})}
-║✫┃ 𝗥𝗔𝗠 𝗨𝘀𝗮𝗴𝗲 :  ${ram()}
-║✫┃═════════════════════
-║✫┃  █■█■█■█■█■█■█■█■█■█
-║✫┃═════════════════════
-╚════════════════════════╝
-> 𝗗𝗢𝗪𝗡𝗟𝗢𝗔𝗗  𝗖𝗠𝗗𝗦
-╭══⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊══╮
-┃✦│ 𝗩𝗶𝗱𝗲𝗼
-┃✦│ 𝗩𝗶𝗱𝗲𝗼2
-┃✦│ 𝗣𝗹𝗮𝘆
-┃✦│ 𝗣𝗹𝗮𝘆2
-┃✦│ 𝗦𝗼𝗻𝗴
-┃✦│ 𝗦𝗼𝗻𝗴2
-┃✦│ 𝗙𝗯𝗱𝗹
-┃✦│ 𝗧𝗶𝗸𝘁𝗼𝗸
-┃✦│ 𝗧𝘄𝗶𝘁𝘁𝗲𝗿
-┃✦│ 𝗶𝗻𝘀𝘁𝗮𝗴𝗿𝗮𝗺
-┃✦│ 𝗣𝗶𝗻𝘁𝗲𝗿𝗲𝘀𝘁
-┃✦│ 𝗠𝗼𝘃𝗶𝗲
-┃✦│ 𝗟𝘆𝗿𝗶𝗰𝘀
-┃✦│ 𝗪𝗵𝗮𝘁𝘀𝗼𝗻𝗴
-┃✦│ 𝗬𝘁𝘀
-┃✦│ 𝗬𝘁𝗺𝗽3
-┃✦│ 𝗬𝘁𝗺𝗽4
-╰══⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊══╯
-> 𝗖𝗢𝗡𝗩𝗘𝗥𝗧  𝗖𝗠𝗗𝗦
-╭══⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊══╮
-┃❃│ 𝗦𝘁𝗶𝗰𝗸𝗲𝗿
-┃❃│ 𝗦𝗺𝗲𝗺𝗲
-┃❃│ 𝗣𝗵𝗼𝘁𝗼
-┃❃│ 𝗠𝗽4
-┃❃│ 𝗥𝗲𝘁𝗿𝗶𝗲𝘃𝗲
-┃❃│ 𝗩𝘃
-┃❃│ 𝗩𝘃2
-┃❃│ 𝗦𝗰𝗿𝗲𝗲𝗻𝘀𝗵𝗼𝘁
-┃❃│ 𝗠𝗶𝘅
-┃❃│ 𝗧𝗮𝗸𝗲
-┃❃│ 𝗧𝘄𝗲𝗲𝘁
-┃❃│ 𝗤𝘂𝗼𝘁𝗲𝗹𝘆
-╰══⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊══╯
-> 𝗦𝗘𝗧𝗧𝗜𝗡𝗚𝗦 𝗖𝗠𝗗𝗦〚𝗼𝗻/𝗼𝗳𝗳〛
-╭══⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊══╮
-┃✥│ 𝗔𝗻𝘁𝗶𝗱𝗲𝗹𝗲𝘁𝗲
-┃✥│ 𝗔𝗻𝘁𝗶𝗰𝗮𝗹𝗹
-┃✥│ 𝗔𝗻𝘁𝗶𝗯𝗼𝘁
-┃✥│ 𝗯𝗮𝗱𝘄𝗼𝗿𝗱
-┃✥│ 𝗔𝗻𝘁𝗶𝘁𝗮𝗴
-┃✥│ 𝗔𝗻𝘁𝗶𝗹𝗶𝗻𝗸
-┃✥│ 𝗔𝗻𝘁𝗶𝗹𝗶𝗻𝗸𝗮𝗹𝗹
-┃✥│ 𝗚𝗽𝘁𝗱𝗺
-┃✥│ 𝗔𝘂𝘁𝗼𝘃𝗶𝗲𝘄
-┃✥│ 𝗔𝘂𝘁𝗼𝗹𝗶𝗸𝗲
-┃✥│ 𝗔𝘂𝘁𝗼𝗿𝗲𝗮𝗱
-┃✥│ 𝗔𝘂𝘁𝗼𝗯𝗶𝗼
-┃✥│ 𝗠𝗼𝗱𝗲
-┃✥│ 𝗣𝗿𝗲𝗳𝗶𝘅
-┃✥│ 𝗪𝗲𝗹𝗰𝗼𝗺𝗲𝗴𝗼𝗼𝗱𝗯𝘆𝗲
-┃✥│ 𝗪𝗮𝗽𝗿𝗲𝘀𝗲𝗻𝗰𝗲
-╰══⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊══╯
-> 𝗙𝗢𝗢𝗧𝗕𝗔𝗟𝗟  𝗖𝗠𝗗𝗦
-╭══⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊══╮
-┃❅│ 𝗘𝗽𝗹
-┃❅│ 𝗟𝗮𝗹𝗶𝗴𝗮
-┃❅│ 𝗦𝗲𝗿𝗶𝗲-𝗮
-┃❅│ 𝗕𝘂𝗻𝗱𝗲𝘀𝗹𝗶𝗴𝗮
-┃❅│ 𝗟𝗶𝗴𝘂𝗲-1
-┃❅│ 𝗙𝗶𝘅𝘁𝘂𝗿𝗲𝘀
-╰══⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊══╯
-> 𝗚𝗣𝗧/𝗔𝗜  𝗖𝗠𝗗𝗦
-╭══⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊══╮
-┃◈│ 𝗔𝗶
-┃◈│ 𝗔𝗶2
-┃◈│ 𝗩𝗶𝘀𝗶𝗼𝗻
-┃◈│ 𝗗𝗲𝗳𝗶𝗻𝗲
-┃◈│ 𝗥𝗮𝘃𝗲𝗻
-┃◈│ 𝗚𝗲𝗺𝗶𝗻𝗶
-┃◈│ 𝗚𝗼𝗼𝗴𝗹𝗲
-┃◈│ 𝗚𝗽𝘁
-┃◈│ 𝗚𝗽𝘁2
-┃◈│ 𝗚𝗽𝘁3
-┃◈│ 𝗚𝗽𝘁4
-╰══⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊══╯
-> 𝗚𝗥𝗢𝗨𝗣  𝗖𝗠𝗗𝗦
-╭══⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊══╮
-┃✧│ 𝗔𝗽𝗽𝗿𝗼𝘃𝗲
-┃✧│ 𝗥𝗲𝗷𝗲𝗰𝘁
-┃✧│ 𝗣𝗿𝗼𝗺𝗼𝘁𝗲
-┃✧│ 𝗗𝗲𝗺𝗼𝘁𝗲
-┃✧│ 𝗗𝗲𝗹𝗲𝘁𝗲
-┃✧│ 𝗥𝗲𝗺𝗼𝘃𝗲
-┃✧│ 𝗙𝗮𝗸𝗲𝗿
-┃✧│ 𝗙𝗼𝗿𝗲𝗶𝗴𝗻𝗲𝗿𝘀
-┃✧│ 𝗖𝗹𝗼𝘀𝗲
-┃✧│ 𝗢𝗽𝗲𝗻
-┃✧│ 𝗖𝗹𝗼𝘀𝗲𝗧𝗶𝗺𝗲
-┃✧│ 𝗢𝗽𝗲𝗻𝗧𝗶𝗺𝗲
-┃✧│ 𝗗𝗶𝘀𝗽-𝗼𝗳𝗳
-┃✧│ 𝗗𝗶𝘀𝗽-1
-┃✧│ 𝗗𝗶𝘀𝗽-7
-┃✧│ 𝗗𝗶𝘀𝗽-90
-┃✧│ 𝗜𝗰𝗼𝗻
-┃✧│ 𝗚𝗰𝗽𝗿𝗼𝗳𝗶𝗹𝗲
-┃✧│ 𝗦𝘂𝗯𝗷𝗲𝗰𝘁
-┃✧│ 𝗗𝗲𝘀𝗰
-┃✧│ 𝗟𝗲𝗮𝘃𝗲
-┃✧│ 𝗔𝗱𝗱
-┃✧│ 𝗧𝗮𝗴𝗮𝗹𝗹
-┃✧│ 𝗛𝗶𝗱𝗲𝘁𝗮𝗴
-┃✧│ 𝗥𝗲𝘃𝗼𝗸𝗲
-┃✧│ 𝗠𝘂𝘁𝗲
-┃✧│ 𝗨𝗻𝗺𝘂𝘁𝗲
-╰══⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊══╯
-> 𝗖𝗢𝗗𝗜𝗡𝗚  𝗖𝗠𝗗𝗦
-╭══⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊══╮
-┃◎│ 𝗖𝗮𝗿𝗯𝗼𝗻
-┃◎│ 𝗖𝗼𝗺𝗽𝗶𝗹𝗲-𝗰
-┃◎│ 𝗖𝗼𝗺𝗽𝗶𝗹𝗲-𝗰++
-┃◎│ 𝗖𝗼𝗺𝗽𝗶𝗹𝗲-𝗷𝘀
-┃◎│ 𝗖𝗼𝗺𝗽𝗶𝗹𝗲-𝗽𝘆
-┃◎│ 𝗜𝗻𝘀𝗽𝗲𝗰𝘁
-┃◎│ 𝗘𝗻𝗰𝗿𝘆𝗽𝘁𝗲
-┃◎│ 𝗘𝘃𝗮𝗹
-╰══⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊══╯
-> 𝗚𝗘𝗡𝗘𝗥𝗔𝗟  𝗖𝗠𝗗𝗦
-╭══⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊══╮
-┃✠│ 𝗢𝘄𝗻𝗲𝗿
-┃✠│ 𝗦𝗰𝗿𝗶𝗽𝘁
-┃✠│ 𝗠𝗲𝗻𝘂
-┃✠│ 𝗟𝗶𝘀𝘁
-┃✠│ 𝗣𝗶𝗻𝗴
-┃✠│ 𝗣𝗼𝗹𝗹
-┃✠│ 𝗔𝗹𝗶𝘃𝗲
-┃✠│ 𝗦𝗽𝗲𝗲𝗱
-┃✠│ 𝗥𝗲𝗽𝗼
-┃✠│ 𝗥𝘂𝗻𝘁𝗶𝗺𝗲
-┃✠│ 𝗨𝗽𝘁𝗶𝗺𝗲
-┃✠│ 𝗗𝗽
-┃✠│ 𝗗𝗹𝘁
-┃✠│ 𝗠𝗮𝗶𝗹
-┃✠│ 𝗜𝗻𝗯𝗼𝘅
-╰══⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊══╯
-> 𝗢𝗪𝗡𝗘𝗥  𝗖𝗠𝗗𝗦
-╭══⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊══╮
-┃□│ 𝗥𝗲𝘀𝘁𝗮𝗿𝘁
-┃□│ 𝗔𝗱𝗺𝗶𝗻
-┃□│ 𝗖𝗮𝘀𝘁
-┃□│ 𝗕𝗿𝗼𝗮𝗱𝗰𝗮𝘀𝘁
-┃□│ 𝗝𝗼𝗶𝗻
-┃□│ 𝗚𝗲𝘁𝘃𝗮𝗿
-┃□│ 𝗚𝗲𝘁𝗰𝗮𝘀𝗲
-┃□│ 𝗥𝗲𝗱𝗲𝗽𝗹𝗼𝘆
-┃□│ 𝗨𝗽𝗱𝗮𝘁𝗲
-┃□│ 𝗦𝗲𝘁𝘃𝗮𝗿
-┃□│ 𝗕𝗼𝘁𝗽𝗽
-┃□│ 𝗙𝘂𝗹𝗹𝗽𝗽
-┃□│ 𝗕𝗹𝗼𝗰𝗸
-┃□│ 𝗨𝗻𝗯𝗼𝗰𝗸
-┃□│ 𝗞𝗶𝗹𝗹
-┃□│ 𝗞𝗶𝗹𝗹2
-┃□│ 𝗦𝗮𝘃𝗲
-┃□│ >
-╰══⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊══╯
-> 𝗣𝗥𝗔𝗡𝗞  𝗖𝗠𝗗𝗦
-╭══⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊══╮
-┃▧│ 𝗛𝗮𝗰𝗸
-┃▧│ 
-╰══⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊══╯
-> 𝗟𝗢𝗚𝗢  𝗖𝗠𝗗𝗦
-╭══⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊══╮
-┃●│ 𝗛𝗮𝗰𝗸𝗲𝗿
-┃●│ 𝗛𝗮𝗰𝗸𝗲𝗿2
-┃●│ 𝗚𝗿𝗮𝗳𝗳𝗶𝘁𝗶
-┃●│ 𝗖𝗮𝘁
-┃●│ 𝗦𝗮𝗻𝗱
-┃●│ 𝗚𝗼𝗹𝗱
-┃●│ 𝗔𝗿𝗲𝗻𝗮
-┃●│ 𝗗𝗿𝗮𝗴𝗼𝗻𝗯𝗮𝗹𝗹
-┃●│ 𝗡𝗮𝗿𝘂𝘁𝗼
-┃●│ 𝗖𝗵𝗶𝗹𝗱
-┃●│ 𝗟𝗲𝗮𝘃𝗲𝘀
-┃●│ 1917
-┃●│ 𝗧𝘆𝗽𝗼𝗴𝗿𝗮𝗽𝗵𝘆
-╰══⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊══╯
-> 𝗧𝗘𝗫𝗧𝗠𝗔𝗞𝗘𝗥  𝗖𝗠𝗗𝗦
-╭══⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊══╮
-┃○│ 𝗣𝘂𝗿𝗽𝗹𝗲
-┃○│ 𝗡𝗲𝗼𝗻
-┃○│ 𝗡𝗼𝗲𝗹
-┃○│ 𝗠𝗲𝘁𝗮𝗹𝗹𝗶𝗰
-┃○│ 𝗗𝗲𝘃𝗶𝗹
-┃○│ 𝗜𝗺𝗽𝗿𝗲𝘀𝘀𝗶𝘃𝗲
-┃○│ 𝗦𝗻𝗼𝘄
-┃○│ 𝗪𝗮𝘁𝗲𝗿
-┃○│ 𝗧𝗵𝘂𝗻𝗱𝗲𝗿
-┃○│ 𝗜𝗰𝗲
-┃○│ 𝗠𝗮𝘁𝗿𝗶𝘅
-┃○│ 𝗦𝗶𝗹𝘃𝗲𝗿
-┃○│ 𝗟𝗶𝗴𝗵𝘁
-╰══⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊══╯
-> 𝗨𝗧𝗜𝗟𝗜𝗦  𝗖𝗠𝗗𝗦
-╭══⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊══╮
-┃▣│ 𝗪𝗲𝗮𝘁𝗵𝗲𝗿
-┃▣│ 𝗚𝗶𝘁𝗵𝘂𝗯
-┃▣│ 𝗚𝗶𝘁𝗰𝗹𝗼𝗻𝗲
-┃▣│ 𝗥𝗲𝗺𝗼𝘃𝗲𝗯𝗴
-┃▣│ 𝗥𝗲𝗺𝗶𝗻𝗶
-┃▣│ 𝗧𝘁𝘀
-┃▣│ 𝗧𝗿𝘁
-┃▣│ 𝗖𝗮𝗹𝗰
-╰══⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊══╯
-> 𝗥𝗔𝗡𝗗𝗢𝗠  𝗖𝗠𝗗𝗦
-╭══⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊══╮
-┃✪│ 𝗙𝗮𝗰𝘁
-┃✪│ 𝗙𝘂𝗻𝗳𝗮𝗰𝘁
-┃✪│ 𝗖𝗮𝘁𝗳𝗮𝗰𝘁
-┃✪│ 𝗔𝗱𝘃𝗶𝗰𝗲
-┃✪│ 𝗝𝗼𝗸𝗲
-┃✪│ 𝗡𝗲𝘄𝘀
-┃✪│ 𝗥𝘀𝗵𝗶𝗽
-┃✪│ 𝗚𝗽𝗮𝘀𝘀
-┃✪│ 𝗔𝗻𝗶𝗺𝗲
-┃✪│ 𝗔𝗻𝗶𝗺𝗲𝗴𝗶𝗿𝗹
-┃✪│ 𝗤𝘂𝗼𝘁𝗲𝘀
-┃✪│ 𝗣𝗶𝗰𝗸𝘂𝗽𝗹𝗶𝗻𝗲
-╰══⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊══╯
-> 𝗢𝗧𝗛𝗘𝗥  𝗖𝗠𝗗𝗦
-╭══⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊══╮
-┃✬│ 𝗕𝗶𝗯𝗹𝗲
-┃✬│ 𝗤𝘂𝗿𝗮𝗻
-┃✬│ 𝗣𝗮𝗶𝗿
-┃✬│ 𝗖𝗿𝗲𝗱𝗶𝘁𝘀
-┃✬│ 𝗨𝗽𝗹𝗼𝗮𝗱
-┃✬│ 𝗔𝘁𝘁𝗽
-┃✬│ 𝗨𝗿𝗹
-┃✬│ 𝗜𝗺𝗮𝗴𝗲
-┃✬│ 𝗦𝘆𝘀𝘁𝗲𝗺
-┃✬│═⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊⚊
-┃✬│  𝗠𝗮𝗱𝗲 𝗢𝗻 𝗘𝗮𝗿𝘁𝗵 𝗕𝘆 𝗛𝘂𝗺𝗮𝗻𝘀 !
-╚══════════════════════╝`;
+let cap = `╭───────────────⭓
+│ 👋 ཏɛʟʟօ ₮ཏɛʀɛ ${getGreeting()}
+│ 👑 ᴜꜱᴇʀ : ${m.pushName}
+│ 🧩 ᴘʀᴇғɪx : ${prefix}
+│ 🌐 ᴍᴏᴅᴇ : ${mode}
+│ 📌 ᴛᴏᴛᴀʟ ᴄᴍᴅ : ${totalcmds()}
+│ ⚡ ꜱᴘᴇᴇᴅ : ${Rspeed.toFixed(4)} Պֆ
+│ ⌛ ᴛɪᴍᴇ : ${getCurrentTimeInNairobi()} on ${date.toLocaleString('en-US', { weekday: 'long', timeZone: 'Africa/Nairobi'})}
+│ ♈ ʀᴀᴍ ᴜꜱᴀɢᴇ: ${ram()}
+│ 👑 ᴏᴡɴᴇʀ : ʙʟᴀᴄᴋ-ᴛᴀᴘᴘʏ
+│ 🛠️ ᴅᴇᴠ : *ʙʟᴀᴄᴋ-ᴛᴀᴘᴘʏ*
+│ 🧬 ᴠᴇʀꜱɪᴏɴ : *4.1.0*
+╰───────────────⭓
+════════════════════
+> *✨Explore the commands below to harness the bot's full power!✨*
+════════════════════
+> 📥 *𝗗𝗢𝗪𝗡𝗟𝗢𝗔𝗗 𝗠𝗘𝗡𝗨* 📥
+════════════════════
+╭───────────────⭓
+│ ⬡ 🎬 ${prefix}video     
+│ ⬡ 🎬 ${prefix}ytmp4
+│ ⬡ 📱 ${prefix}fbdl      
+│ ⬡ 🎬 ${prefix}movie
+│ ⬡ 🎵 ${prefix}ytmp3    
+│ ⬡ 🎥 ${prefix}tiktok
+│ ⬡ 🎵 ${prefix}song    
+│ ⬡ 🎧 ${prefix}play
+│ ⬡ 🎵 ${prefix}shazam
+│ ⬡ 🎵 ${prefix}whatsong
+│ ⬡ 📹 ${prefix}yts      
+│ ⬡ 🐦 ${prefix}twitter
+│ ⬡ 📌 ${prefix}pinterest 
+│ ⬡ 🎶 ${prefix}song2
+│ ⬡ 🎤 ${prefix}play2      
+│ ⬡ 🎼 ${prefix}lyrics
+│ ⬡ 📸 ${prefix}insta
+╰───────────────⭓
+════════════════════
+> 📦 *𝗖𝗢𝗡𝗩𝗘𝗥𝗧𝗘𝗥 𝗣𝗔𝗚𝗘* 📦
+════════════════════
+╭───────────────⭓
+│ ⬡ 🖼 ${prefix}sticker     
+│ ⬡ 📷 ${prefix}photo
+│ ⬡ 🔄 ${prefix}retrieve    
+│ ⬡ 🎬 ${prefix}vv2
+│ ⬡ 🎚 ${prefix}mix         
+│ ⬡ 🐦 ${prefix}tweet
+│ ⬡ 🎭 ${prefix}smeme       
+│ ⬡ 🎥 ${prefix}mp4
+│ ⬡ 🎬 ${prefix}vv          
+│ ⬡ 📸 ${prefix}screenshot
+│ ⬡ ✂ ${prefix}take         
+│ ⬡ ✍ ${prefix}quotely
+╰───────────────⭓
+════════════════════
+> 👤 *𝗚𝗥𝗢𝗨𝗣 𝗠𝗘𝗡𝗨* 👤
+════════════════════
+╭───────────────⭓
+│ ⬡ ✅ ${prefix}approve     
+│ ⬡ 🟢 ${prefix}promote
+│ ⬡ 🗑 ${prefix}delete      
+│ ⬡ 🤡 ${prefix}faker
+│ ⬡ 🔒 ${prefix}close       
+│ ⬡ ⏰ ${prefix}closetime
+│ ⬡ 🔕 ${prefix}disp-off    
+│ ⬡ 🔔 ${prefix}disp-7
+│ ⬡ 🖼 ${prefix}icon        
+│ ⬡ ✏ ${prefix}subject
+│ ⬡ 🚪 ${prefix}leave       
+│ ⬡  @ ${prefix}tagall
+│ ⬡ 🔄 ${prefix}revoke      
+│ ⬡ 🔊 ${prefix}unmute
+│ ⬡ ❌ ${prefix}reject      
+│ ⬡ 🌐 ${prefix}demote
+│ ⬡ 🚪 ${prefix}remove      
+│ ⬡ 🌍 ${prefix}foreigners
+│ ⬡ 🔓 ${prefix}open        
+│ ⬡ ⏳ ${prefix}opentime
+│ ⬡ 🔔 ${prefix}disp-1      
+│ ⬡ 🔔 ${prefix}disp-90
+│ ⬡ 📋 ${prefix}gcprofile   
+│ ⬡ 📝 ${prefix}desc
+│ ⬡ ➕ ${prefix}add         
+│ ⬡ 👻 ${prefix}hidetag
+│ ⬡ 🔇 ${prefix}mute
+╰───────────────⭓
+════════════════════
+> 🤖 *𝗚𝗣𝗧 𝗠𝗘𝗡𝗨* 🤖
+════════════════════
+╭───────────────⭓
+│ ⬡ 🤖 ${prefix}ai         
+│ ⬡ 👁 ${prefix}vision
+│ ⬡ 💎 ${prefix}gemini    
+│ ⬡ 🗣 ${prefix}gpt
+│ ⬡ 🗣 ${prefix}gpt3       
+│ ⬡ 🧠 ${prefix}ai2
+│ ⬡ 📖 ${prefix}define     
+│ ⬡ 🔍 ${prefix}google
+│ ⬡ 🗣 ${prefix}gpt2       
+│ ⬡ 🗣 ${prefix}gpt4
+╰───────────────⭓
+════════════════════
+> 👑 *𝗢𝗪𝗡𝗘𝗥 𝗣𝗔𝗚𝗘* 👑
+════════════════════
+╭───────────────⭓
+│ ⬡ 🔄 ${prefix}restart     
+│ ⬡ 📢 ${prefix}cast
+│ ⬡ 🗑️ ${prefix}antidelete
+│ ⬡ 🚮 ${prefix}antilink 
+│ ⬡ 🏷️ ${prefix}antitag  
+│ ⬡ 🙌 ${prefix}antilinkall
+│ ⬡ 🧩 ${prefix}gpt_inbox
+│ ⬡ ❌ ${prefix}antibadword
+│ ⬡ ➕ ${prefix}join        
+│ ⬡ ♻ ${prefix}redeploy
+│ ⬡ ⚙ ${prefix}setvar      
+│ ⬡ 🖼 ${prefix}fullpp
+│ ⬡ ✅ ${prefix}unblock     
+│ ⬡ ☠ ${prefix}kill2
+│ ⬡ 👑 ${prefix}admin       
+│ ⬡ 📢 ${prefix}broadcast
+│ ⬡ 📊 ${prefix}getvar      
+│ ⬡ 🔄 ${prefix}update
+│ ⬡ 🤖 ${prefix}botpp       
+│ ⬡ ⛔ ${prefix}block
+│ ⬡ ☠ ${prefix}kill         
+│ ⬡ 💾 ${prefix}save
+╰───────────────⭓
+════════════════════
+> 🏟 *𝗙𝗢𝗢𝗧𝗕𝗔𝗟𝗟 𝗣𝗔𝗚𝗘* 🏟
+════════════════════
+╭───────────────⭓
+│ ⬡ ⚽ ${prefix}epl         
+│ ⬡ 🇮🇹 ${prefix}serie-a
+│ ⬡ 🇫🇷 ${prefix}ligue-1    
+│ ⬡ 🇪🇸 ${prefix}laliga
+│ ⬡ 🇩🇪 ${prefix}bundesliga 
+│ ⬡ 📅 ${prefix}fixtures
+╰───────────────⭓
+════════════════════
+>🛠  *𝗨𝗧𝗜𝗟𝗦 & 𝗧𝗢𝗢𝗟* 🛠
+════════════════════
+╭───────────────⭓
+│ ⬡ 💻 ${prefix}carbon      
+│ ⬡ 🖥 ${prefix}compile-c
+│ ⬡ 🖥 ${prefix}c++         
+│ ⬡ 🖥 ${prefix}python
+│ ⬡ 🔒 ${prefix}encrypt     
+│ ⬡ 🌦 ${prefix}weather
+│ ⬡ 📥 ${prefix}gitclone    
+│ ⬡ 🖼 ${prefix}removebg
+│ ⬡ 🔊 ${prefix}tts         
+│ ⬡ 📆 ${prefix}fact
+│ ⬡ 💬 ${prefix}quotes      
+│ ⬡ 🖥 ${prefix}js
+│ ⬡ 🔍 ${prefix}inspect     
+│ ⬡ 📜 ${prefix}eval
+│ ⬡ 📊 ${prefix}github      
+│ ⬡ 💡 ${prefix}advice
+│ ⬡ 🎨 ${prefix}remini     
+│ ⬡ 🌐 ${prefix}trt
+│ ⬡ 😺 ${prefix}catfact    
+│ ⬡ 💘 ${prefix}pickupline
+╰───────────────⭓
+════════════════════
+> 🧩 *𝗟𝗢𝗚𝗢 𝗚𝗘𝗡𝗘𝗥𝗔𝗧𝗢𝗥* 🧩
+════════════════════
+╭───────────────⭓
+│ ⬡ 💻 ${prefix}hacker      
+│ ⬡ 🖥 ${prefix}hacker2
+│ ⬡ 🎨 ${prefix}graffiti    
+│ ⬡ 😺 ${prefix}cat
+│ ⬡ 🏖 ${prefix}sand        
+│ ⬡ 🏆 ${prefix}gold
+│ ⬡ ⚔ ${prefix}arena        
+│ ⬡ 🐉 ${prefix}dragonball
+│ ⬡ 🍥 ${prefix}naruto      
+│ ⬡ 👶 ${prefix}child
+│ ⬡ 🍃 ${prefix}leaves      
+│ ⬡ 🎖 ${prefix}1917
+│ ⬡ ✒ ${prefix}typography   
+│ ⬡ 🟣 ${prefix}purple
+│ ⬡ 🌈 ${prefix}neon        
+│ ⬡ 🎄 ${prefix}noel
+│ ⬡ 🔩 ${prefix}metallic    
+│ ⬡ 😈 ${prefix}devil
+│ ⬡ ✨ ${prefix}impressive  
+│ ⬡ ❄ ${prefix}snow
+│ ⬡ 💧 ${prefix}water       
+│ ⬡ ⚡ ${prefix}thunder
+│ ⬡ 🧊 ${prefix}ice         
+│ ⬡ 📟 ${prefix}matrix
+│ ⬡ ⚪ ${prefix}silver       
+│ ⬡ 💡 ${prefix}light
+╰───────────────⭓
+════════════════════
+> 📁 *𝗢𝗧𝗛𝗘𝗥 𝗠𝗘𝗡𝗨* 📁
+════════════════════
+╭───────────────⭓
+│ ⬡ 📜 ${prefix}bible       
+│ ⬡ 📖 ${prefix}quran
+│ ⬡ 👫 ${prefix}pair        
+│ ⬡ 💳 ${prefix}credits
+│ ⬡ 📤 ${prefix}upload      
+│ ⬡ 📎 ${prefix}attp
+│ ⬡ 🔗 ${prefix}url         
+│ ⬡ 🖼 ${prefix}image
+│ ⬡ 💻 ${prefix}system      
+│ ⬡ 🤖 ${prefix}blacks
+╰───────────────⭓
+════════════════════
+🔧 *Wᴇʟᴄᴏᴍᴇ ᴛᴏ ᴛʜᴇ ᴍᴇɴᴜ!*
+*ᴡᴀɪᴛ ғᴏʀ ᴍᴏʀᴇ ᴄᴏᴍᴍᴀɴᴅs...*
+════════════════════
+> 📢 *ᴅᴇᴠ ʙʟᴀᴄᴋ-ᴛᴀᴘᴘʏ`;
 
 if (menu === 'VIDEO') {
 
@@ -784,7 +858,7 @@ client.sendMessage(m.chat, {
                         contextInfo: {
                             externalAdReply: {
                                 showAdAttribution: true,
-                                title: `𝗥𝗔𝗩𝗘𝗡-𝗕𝗢𝗧`,
+                                title: `ʄʀօֆᴛ-ɮʏᴛɛ-𐌀i`,
                                 body: `${runtime(process.uptime())}`,
                                 thumbnail: fs.readFileSync('./Media/Raven.jpg'),
                                 sourceUrl: 'https://wa.me/254114660061?text=Hello+Raven+dev+I+need+a+bot',
@@ -803,207 +877,297 @@ break;
 //========================================================================================================================//
 
 case "antilink": {
-	if(!Owner) throw NotOwner;
-  const settings = await getSettings();
-  const current = settings.antilink;
-  if (!text) return reply(`🛡️ Antilink is currently *${current.toUpperCase()}*`);
-  if (!["on", "off"].includes(text)) return reply("Usage: antilink on/off");
-  if (text === current) return reply(`✅ Antilink is already *${text.toUpperCase()}*`);
-  await updateSetting("antilink", text);
-  reply(`✅ Antilink has been turned *${text.toUpperCase()}*`);
+	if (!Owner) throw NotOwner;
+	const settings = await getSettings();
+	const current = settings.antilink;
+	if (!text) {
+		return reply(`✨ **Antilink Status** ✨\nCurrently: *${current.toUpperCase()}*\n\nTo change, use: \`antilink on\` or \`antilink off\``);
+	}
+	if (!["on", "off"].includes(text)) {
+		return reply("⚠️ Invalid input.\nUsage: `antilink on` or `antilink off`");
+	}
+	if (text === current) {
+		return reply(`✅ **Antilink Status** ✅\nAntilink is already set to *${text.toUpperCase()}*`);
+	}
+	await updateSetting("antilink", text);
+	reply(`✅ **Antilink Updated** ✅\nAntilink has been successfully turned *${text.toUpperCase()}*`);
 }
 break;
 
 case "antilinkall": {
-	if(!Owner) throw NotOwner;
-  const settings = await getSettings();
-  const current = settings.antilinkall;
-  if (!text) return reply(`🛡️ Antilinkall is currently *${current.toUpperCase()}*`);
-  if (!["on", "off"].includes(text)) return reply("Usage: antilinkall on/off");
-  if (text === current) return reply(`✅ Antilinkall is already *${text.toUpperCase()}*`);
-  await updateSetting("antilinkall", text);
-  reply(`✅ Antilinkall has been turned *${text.toUpperCase()}*`);
-}
-break;		      
-
-case "antidelete": {
-	if(!Owner) throw NotOwner;
-  const settings = await getSettings();
-  const current = settings.antidelete;
-  if (!text) return reply(`😊 Antidelete is currently *${current.toUpperCase()}*`);
-  if (!["on", "off"].includes(text)) return reply("Usage: antidelete on/off");
-  if (text === current) return reply(`✅ Antidelete is already *${text.toUpperCase()}*`);
-  await updateSetting("antidelete", text);
-  reply(`✅ Antidelete has been turned *${text.toUpperCase()}*`);
-}
-break;	
-		      
-case "gptdm": {
-	if(!Owner) throw NotOwner;
-  const settings = await getSettings();
-  const current = settings.gptdm;
-  if (!text) return reply(`🙂‍↕️ gptdm is currently *${current.toUpperCase()}*`);
-  if (!["on", "off"].includes(text)) return reply("Usage: gptdm on/off");
-  if (text === current) return reply(`✅ Gptdm is already *${text.toUpperCase()}*`);
-  await updateSetting("gptdm", text);
-  reply(`✅ Gptdm has been turned *${text.toUpperCase()}*`);
+	if (!Owner) throw NotOwner;
+	const settings = await getSettings();
+	const current = settings.antilinkall;
+	if (!text) {
+		return reply(`🌟 **Antilinkall Configuration** 🌟\nStatus: *${current.toUpperCase()}*\n\nCommand: \`antilinkall on\` or \`antilinkall off\``);
+	}
+	if (!["on", "off"].includes(text)) {
+		return reply("⚠️ Invalid input.\nUsage: `antilinkall on` or `antilinkall on`");
+	}
+	if (text === current) {
+		return reply(`✅ **Antilinkall Status** ✅\nAntilinkall is already set to *${text.toUpperCase()}*`);
+	}
+	await updateSetting("antilinkall", text);
+	reply(`✅ **Antilinkall Modified** ✅\nSetting updated to *${text.toUpperCase()}*`);
 }
 break;
-		      
+
+case "antidelete": {
+	if (!Owner) throw NotOwner;
+	const settings = await getSettings();
+	const current = settings.antidelete;
+	if (!text) {
+		return reply(`🔒 **Antidelete Protection** 🔒\nCurrent state: *${current.toUpperCase()}*\n\nTo toggle, use: \`antidelete on\` or \`antidelete off\``);
+	}
+	if (!["on", "off"].includes(text)) {
+		return reply("⚠️ Invalid input.\nUsage: `antidelete on` or `antidelete off`");
+	}
+	if (text === current) {
+		return reply(`✅ **Antidelete Status** ✅\nAntidelete is already set to *${text.toUpperCase()}*`);
+	}
+	await updateSetting("antidelete", text);
+	reply(`✅ **Antidelete Activated** ✅\nProtection is now *${text.toUpperCase()}*`);
+}
+break;
+
+case "gptdm": {
+	if (!Owner) throw NotOwner;
+	const settings = await getSettings();
+	const current = settings.gptdm;
+	if (!text) {
+		return reply(`🤖 **GPT-DM Mode** 🤖\nStatus: *${current.toUpperCase()}*\n\nControl with: \`gptdm on\` or \`gptdm off\``);
+	}
+	if (!["on", "off"].includes(text)) {
+		return reply("⚠️ Invalid input.\nUsage: `gptdm on` or `gptdm off`");
+	}
+	if (text === current) {
+		return reply(`✅ **GPT-DM Status** ✅\nGptdm is already set to *${text.toUpperCase()}*`);
+	}
+	await updateSetting("gptdm", text);
+	reply(`✅ **GPT-DM Setting** ✅\nGptdm is now *${text.toUpperCase()}*`);
+}
+break;
+
 case "autoread": {
-	if(!Owner) throw NotOwner;
-  const settings = await getSettings();
-  const current = settings.autoread;
-  if (!text) return reply(`📨 Autoread is currently *${current.toUpperCase()}*`);
-  if (!["on", "off"].includes(text)) return reply("Usage: autoread on/off");
-  if (text === current) return reply(`✅ Autoread is already *${text.toUpperCase()}*`);
-  await updateSetting("autoread", text);
-  reply(`✅ Autoread has been set to *${text.toUpperCase()}*`);
+	if (!Owner) throw NotOwner;
+	const settings = await getSettings();
+	const current = settings.autoread;
+	if (!text) {
+		return reply(`📖 **Auto-Read Status** 📖\nCurrently: *${current.toUpperCase()}*\n\nToggle with: \`autoread on\` or \`autoread off\``);
+	}
+	if (!["on", "off"].includes(text)) {
+		return reply("⚠️ Invalid input.\nUsage: `autoread on` or `autoread off`");
+	}
+	if (text === current) {
+		return reply(`✅ **Auto-Read Status** ✅\nAutoread is already set to *${text.toUpperCase()}*`);
+	}
+	await updateSetting("autoread", text);
+	reply(`✅ **Auto-Read Updated** ✅\nAutoread has been set to *${text.toUpperCase()}*`);
 }
 break;
 
 case "mode": {
-	if(!Owner) throw NotOwner;
-  const settings = await getSettings();
-  const current = settings.mode;
-  if (!text) return reply(`👥️ Mode is currently *${current.toUpperCase()}*`);
-  if (!["public", "private"].includes(text)) return reply("Usage: mode public/private");
-  if (text === current) return reply(`✅ Mode is already *${text.toUpperCase()}*`);
-  await updateSetting("mode", text);
-  reply(`✅ Mode changed to *${text.toUpperCase()}*`);
+	if (!Owner) throw NotOwner;
+	const settings = await getSettings();
+	const current = settings.mode;
+	if (!text) {
+		return reply(`🌐 **Bot Mode Configuration** 🌐\nCurrent Mode: *${current.toUpperCase()}*\n\nOptions: \`mode public\` or \`mode private\``);
+	}
+	if (!["public", "private"].includes(text)) {
+		return reply("⚠️ Invalid input.\nUsage: `mode public` or `mode private`");
+	}
+	if (text === current) {
+		return reply(`✅ **Bot Mode Status** ✅\nMode is already set to *${text.toUpperCase()}*`);
+	}
+	await updateSetting("mode", text);
+	reply(`✅ **Bot Mode Changed** ✅\nMode successfully set to *${text.toUpperCase()}*`);
 }
 break;
 
 case "prefix": {
-if(!Owner) throw NotOwner;
-  const newPrefix = args[0];
-  const settings = await getSettings();
+	if (!Owner) throw NotOwner;
+	const newPrefix = args[0];
+	const settings = await getSettings();
 
-if (newPrefix === 'none') {
-      if (!settings.prefix) {
-        return await m.reply(`✅ The bot was already prefixless.`);
-      }
-      await updateSetting('prefix', '');
-      await m.reply(`✅ The bot is now prefixless.`);
-    } else if (newPrefix) {
-      if (settings.prefix === newPrefix) {
-        return await m.reply(`✅ The prefix was already set to: ${newPrefix}`);
-      }
-      await updateSetting('prefix', newPrefix);
-      await m.reply(`✅ Prefix has been updated to: ${newPrefix}`);
-    } else {
-      await m.reply(`👤 Prefix is currently: ${settings.prefix || 'No prefix set.'}\n\nUse _${settings.prefix || '.'}prefix none to remove the prefix.`);
-    }
-  }
+	if (newPrefix === 'none') {
+		if (!settings.prefix) {
+			return await m.reply(`✅ **Prefix Status** ✅\nThe bot was already prefixless.`);
+		}
+		await updateSetting('prefix', '');
+		await m.reply(`✅ **Prefix Updated** ✅\nThe bot is now prefixless.`);
+	} else if (newPrefix) {
+		if (settings.prefix === newPrefix) {
+			return await m.reply(`✅ **Prefix Status** ✅\nThe prefix is already set to: \`${newPrefix}\``);
+		}
+		await updateSetting('prefix', newPrefix);
+		await m.reply(`✅ **Prefix Updated** ✅\nPrefix has been successfully updated to: \`${newPrefix}\``);
+	} else {
+		await m.reply(`🔑 **Prefix Configuration** 🔑\nCurrent Prefix: \`${settings.prefix || 'No prefix is currently set'}\`\n\nTo set a new prefix, type: \`prefix [your_prefix\`\nTo remove the prefix, use: \`prefix none\``);
+	}
+}
 break;
 
 case "autolike": {
-	if(!Owner) throw NotOwner;
-  const settings = await getSettings();
-  const current = settings.autolike;
-  if (!text) return reply(`🫠 Autolike is currently *${current.toUpperCase()}*`);
-  if (!["on", "off"].includes(text)) return reply("Usage: autolike on/off");
-  if (text === current) return reply(`✅ Autolike is already *${text.toUpperCase()}*`);
-  await updateSetting("autolike", text);
-  reply(`✅ Autolike has been turned *${text.toUpperCase()}*`);
+	if (!Owner) throw NotOwner;
+	const settings = await getSettings();
+	const current = settings.autolike;
+	if (!text) {
+		return reply(`👍 **Auto-Like Feature** 👍\nStatus: *${current.toUpperCase()}*\n\nActivate/Deactivate with: \`autolike on\` or \`autolike off\``);
+	}
+	if (!["on", "off"].includes(text)) {
+		return reply("⚠️ Invalid input.\nUsage: `autolike on` or `autolike off`");
+	}
+	if (text === current) {
+		return reply(`✅ **Auto-Like Status** ✅\nAuto-like is already set to *${text.toUpperCase()}*`);
+	}
+	await updateSetting("autolike", text);
+	reply(`✅ **Auto-Like Toggled** ✅\nAuto-like is now *${text.toUpperCase()}*`);
 }
 break;
 
 case "autobio": {
-	if(!Owner) throw NotOwner;
-  const settings = await getSettings();
-  const current = settings.autobio;
-  if (!text) return reply(`😇 Autobio is currently *${current.toUpperCase()}*`);
-  if (!["on", "off"].includes(text)) return reply("Usage: autobio on/off");
-  if (text === current) return reply(`✅ Autobio is already *${text.toUpperCase()}*`);
-  await updateSetting("autobio", text);
-  reply(`✅ Autobio has been turned *${text.toUpperCase()}*`);
+	if (!Owner) throw NotOwner;
+	const settings = await getSettings();
+	const current = settings.autobio;
+	if (!text) {
+		return reply(`✍️ **Auto-Bio Management** ✍️\nCurrent State: *${current.toUpperCase()}*\n\nUse: \`autobio on\` or \`autobio off\``);
+	}
+	if (!["on", "off"].includes(text)) {
+		return reply("⚠️ Invalid input.\nUsage: `autobio on` or `autobio off`");
+	}
+	if (text === current) {
+		return reply(`✅ **Auto-Bio Status** ✅\nAutobio is already set to *${text.toUpperCase()}*`);
+	}
+	await updateSetting("autobio", text);
+	reply(`✅ **Auto-Bio Updated** ✅\nAuto-bio is now *${text.toUpperCase()}*`);
 }
 break;
-		      
+
 case "autoview": {
-	if(!Owner) throw NotOwner;
-  const settings = await getSettings();
-  const current = settings.autoview;
-  if (!text) return reply(`👀 Auto view status is currently *${current.toUpperCase()}*`);
-  if (!["on", "off"].includes(text)) return reply("Usage: autoview on/off");
-  if (text === current) return reply(`✅ Auto view status is already *${text.toUpperCase()}*`);
-  await updateSetting("autoview", text);
-  reply(`✅ Auto view status updated to *${text.toUpperCase()}*`);
+	if (!Owner) throw NotOwner;
+	const settings = await getSettings();
+	const current = settings.autoview;
+	if (!text) {
+		return reply(`👁️ **Auto-View Status** 👁️\nCurrently: *${current.toUpperCase()}*\n\nToggle with: \`autoview on\` or \`autoview off\``);
+	}
+	if (!["on", "off"].includes(text)) {
+		return reply("⚠️ Invalid input.\nUsage: `autoview on` or `autoview off`");
+	}
+	if (text === current) {
+		return reply(`✅ **Auto-View Status** ✅\nAuto-view status is already *${text.toUpperCase()}*`);
+	}
+	await updateSetting("autoview", text);
+	reply(`✅ **Auto-View Updated** ✅\nAuto-view status is now *${text.toUpperCase()}*`);
 }
 break;
 
 case "wapresence": {
-       if(!Owner) throw NotOwner;
-  const settings = await getSettings();
-  const current = settings.wapresence;
-  if (!text) return reply(`👤 Presence is currently *${current}*`);
-  if (!["typing", "online", "recording"].includes(text)) return reply("Usage: wapresence typing/online/recording");
-  if (text === current) return reply(`✅ Presence is already *${text}*`);
-  await updateSetting("wapresence", text);
-  reply(`✅ Presence updated to *${text}*`);
+	if (!Owner) throw NotOwner;
+	const settings = await getSettings();
+	const current = settings.wapresence;
+	if (!text) {
+		return reply(`✨ **WhatsApp Presence** ✨\nCurrent Status: \`${current}\`\n\nAvailable options: \`typing\`, \`online\`, \`recording\``);
+	}
+	if (!["typing", "online", "recording"].includes(text)) {
+		return reply("⚠️ Invalid input.\nUsage: `wapresence typing`, `wapresence online`, or `wapresence recording`");
+	}
+	if (text === current) {
+		return reply(`✅ **WhatsApp Presence Status** ✅\nPresence is already set to \`${text}\``);
+	}
+	await updateSetting("wapresence", text);
+	reply(`✅ **WhatsApp Presence Updated** ✅\nPresence set to \`${text}\``);
 }
 break;
 
 case "badword": {
-	if(!Owner) throw NotOwner;
-  const settings = await getSettings();
-  const current = settings.badword;
-  if (!text) return reply(`😈 Badword is currently *${current.toUpperCase()}*`);
-  if (!["on", "off"].includes(text)) return reply("Usage: badword on/off");
-  if (text === current) return reply(`✅ Badword is already *${text.toUpperCase()}*`);
-  await updateSetting("badword", text);
-  reply(`✅ Badword has been turned *${text.toUpperCase()}*`);
-}
-break;	
-		
-case "anticall": {
-	if(!Owner) throw NotOwner;
-  const settings = await getSettings();
-  const current = settings.anticall;
-  if (!text) return reply(`🔰 Anticall is currently *${current.toUpperCase()}*`);
-  if (!["on", "off"].includes(text)) return reply("Usage: Anticall on/off");
-  if (text === current) return reply(`✅ Anticall is already *${text.toUpperCase()}*`);
-  await updateSetting("anticall", text);
-  reply(`✅ Anticall has been turned *${text.toUpperCase()}*`);
+	if (!Owner) throw NotOwner;
+	const settings = await getSettings();
+	const current = settings.badword;
+	if (!text) {
+		return reply(`🤬 **Bad Word Filter** 🤬\nStatus: *${current.toUpperCase()}*\n\nControl with: \`badword on\` or \`badword off\``);
+	}
+	if (!["on", "off"].includes(text)) {
+		return reply("⚠️ Invalid input.\nUsage: `badword on` or `badword off`");
+	}
+	if (text === current) {
+		return reply(`✅ **Bad Word Filter Status** ✅\nBadword filter is already *${text.toUpperCase()}*`);
+	}
+	await updateSetting("badword", text);
+	reply(`✅ **Bad Word Filter Toggled** ✅\nFilter is now *${text.toUpperCase()}*`);
 }
 break;
-	
+
+case "anticall": {
+	if (!Owner) throw NotOwner;
+	const settings = await getSettings();
+	const current = settings.anticall;
+	if (!text) {
+		return reply(`📞 **Anti-Call Protection** 📞\nStatus: *${current.toUpperCase()}*\n\nToggle with: \`anticall on\` or \`anticall off\``);
+	}
+	if (!["on", "off"].includes(text)) {
+		return reply("⚠️ Invalid input.\nUsage: `anticall on` or `anticall off`");
+	}
+	if (text === current) {
+		return reply(`✅ **Anti-Call Status** ✅\nAnticall is already set to *${text.toUpperCase()}*`);
+	}
+	await updateSetting("anticall", text);
+	reply(`✅ **Anti-Call Activated** ✅\nAnticall is now *${text.toUpperCase()}*`);
+}
+break;
+
 case "antibot": {
-	if(!Owner) throw NotOwner;
-  const settings = await getSettings();
-  const current = settings.antibot;
-  if (!text) return reply(`👾 Antibot is currently *${current.toUpperCase()}*`);
-  if (!["on", "off"].includes(text)) return reply("Usage: antibot on/off");
-  if (text === current) return reply(`✅ Antibot is already *${text.toUpperCase()}*`);
-  await updateSetting("antibot", text);
-  reply(`✅ Antibot has been turned *${text.toUpperCase()}*`);
+	if (!Owner) throw NotOwner;
+	const settings = await getSettings();
+	const current = settings.antibot;
+	if (!text) {
+		return reply(`🛡️ **Anti-Bot Protocol** 🛡️\nStatus: *${current.toUpperCase()}*\n\nControl with: \`antibot on\` or \`antibot off\``);
+	}
+	if (!["on", "off"].includes(text)) {
+		return reply("⚠️ Invalid input.\nUsage: `antibot on` or `antibot off`");
+	}
+	if (text === current) {
+		return reply(`✅ **Anti-Bot Status** ✅\nAntibot is already set to *${text.toUpperCase()}*`);
+	}
+	await updateSetting("antibot", text);
+	reply(`✅ **Anti-Bot Toggled** ✅\nAntibot is now *${text.toUpperCase()}*`);
 }
-break;	
-	
+break;
+
 case "antitag": {
-	if(!Owner) throw NotOwner;
-  const settings = await getSettings();
-  const current = settings.antitag;
-  if (!text) return reply(`🤖 Antitag is currently *${current.toUpperCase()}*`);
-  if (!["on", "off"].includes(text)) return reply("Usage: antitag on/off");
-  if (text === current) return reply(`✅ Antitag is already *${text.toUpperCase()}*`);
-  await updateSetting("antitag", text);
-  reply(`✅ Antitag has been turned *${text.toUpperCase()}*`);
+	if (!Owner) throw NotOwner;
+	const settings = await getSettings();
+	const current = settings.antitag;
+	if (!text) {
+		return reply(`🚫 **Anti-Tagging System** 🚫\nStatus: *${current.toUpperCase()}*\n\nToggle with: \`antitag on\` or \`antitag off\``);
+	}
+	if (!["on", "off"].includes(text)) {
+		return reply("⚠️ Invalid input.\nUsage: `antitag on` or `antitag off`");
+	}
+	if (text === current) {
+		return reply(`✅ **Anti-Tagging Status** ✅\nAntitag is already set to *${text.toUpperCase()}*`);
+	}
+	await updateSetting("antitag", text);
+	reply(`✅ **Anti-Tagging Activated** ✅\nAntitag is now *${text.toUpperCase()}*`);
 }
-break;	 
-	
+break;
+
 case "welcomegoodbye": {
-	if(!Owner) throw NotOwner;
-  const settings = await getSettings();
-  const current = settings.welcomegoodbye;
-  if (!text) return reply(`🕳 Welcomegoodbye is currently *${current.toUpperCase()}*`);
-  if (!["on", "off"].includes(text)) return reply("Usage: welcomegoodbye on/off");
-  if (text === current) return reply(`✅ Welcomegoodbye is already *${text.toUpperCase()}*`);
-  await updateSetting("welcomegoodbye", text);
-  reply(`✅ Welcomegoodbye has been turned *${text.toUpperCase()}*`);
+	if (!Owner) throw NotOwner;
+	const settings = await getSettings();
+	const current = settings.welcomegoodbye;
+	if (!text) {
+		return reply(`👋 **Welcome/Goodbye Messages** 👋\nStatus: *${current.toUpperCase()}*\n\nUse: \`welcomegoodbye on\` or \`welcomegoodbye off\``);
+	}
+	if (!["on", "off"].includes(text)) {
+		return reply("⚠️ Invalid input.\nUsage: `welcomegoodbye on` or `welcomegoodbye off`");
+	}
+	if (text === current) {
+		return reply(`✅ **Welcome/Goodbye Status** ✅\nWelcome/goodbye messages are already *${text.toUpperCase()}*`);
+	}
+	await updateSetting("welcomegoodbye", text);
+	reply(`✅ **Welcome/Goodbye Updated** ✅\nWelcome/goodbye messages are now *${text.toUpperCase()}*`);
 }
-break;	 
+break;
 		      
 //=========================================================================================================================//		      
 case "advice":
@@ -1032,166 +1196,218 @@ return reply(`Case *${text}* Not found`)
 }
         break;
 //========================================================================================================================//
-		      
-		      case "lyrics2": 
- try { 
- if (!text) return reply("Provide a song name!"); 
- const searches = await Client.songs.search(text); 
- const firstSong = searches[0]; 
- //await client.sendMessage(from, {text: firstSong}); 
- const lyrics = await firstSong.lyrics(); 
- await client.sendMessage(from, { text: lyrics}, { quoted: m }); 
- } catch (error) { 
-             reply(`I did not find any lyrics for ${text}. Try searching a different song.`); 
-             console.log(error); 
-         }
-        break;	
+case "lyrics2":
+ try {
+  if (!text) return reply("👑 Oh, darling, you can't expect me to conjure magic without a proper request! Do enlighten me with the song title you desire. 💋✨");
+  const searches = await Client.songs.search(text);
+  const firstSong = searches[0];
+  //await client.sendMessage(from, {text: firstSong});
+  const lyrics = await firstSong.lyrics();
+  await client.sendMessage(from, { text: lyrics}, { quoted: m });
+ } catch (error) {
+  reply(`💔 My dear, it seems the universe has misplaced the lyrics for '${text}'. Perhaps a different tune would grace my archives? 🎶🤷‍♀️`);
+  console.log(error);
+ }
+ break;
 		      
 //========================================================================================================================//		      
- case "bible":
-		      {
-	if (!text) {
-            return reply(`Please provide a Bible reference.\n\nExample: bible John 3:16`);
-        }
-        const reference = text;
+case "bible":
+{
+    if (!text) {
+        return reply(`💁‍♀️ *Oh darling, you forgot to give me a reference!* \n\n*Example:* bible John 3:16`);
+    }
+    const reference = text;
 
-try {
+    try {
         const apiUrl = `https://bible-api.com/${encodeURIComponent(reference)}`;
         const response = await axios.get(apiUrl);
 
         if (response.status === 200 && response.data.text) {
             const { reference: ref, text, translation_name } = response.data;
-		
+
             reply(
-                `*Hello there, below is what you requested*\n\n` +
+                `✨ *Well, look what we have here!* ✨\n\n` +
                 `📖 *Reference:* ${ref}\n` +
-                ` ${text}\n\n` +
-		`_Requested by ${pushname}_`    
+                `📝 ${text}\n\n` +
+                `🤩 _Requested by ${pushname}_`    
             );
         } else {
-            reply("*Verse not found.* Please check the reference and try again.");
+            reply(`🚫 *Oopsie daisy!* That verse seems to be lost in the clouds. Check the reference and try again!`);
         }
     } catch (error) {
         console.error(error);
-        reply("*An error occurred while fetching the Bible verse.* Please try again.");
+        reply(`🛑 *Yikes!* Something went wrong while fetching that divine wisdom. Give it another shot!`);
     }
-};	      
+}
 break;
+
 		      
 //========================================================================================================================//
 case 'quran': {
+  // --- Input Validation with Sassy Flair ---
   if (!text) {
-    return reply(`Please provide Surah and Ayah\n*Example:* quran 2:255`);
+    // Sassy reply when no text (Surah:Ayah) is provided
+    return reply(`Darling, you've requested the divine word but forgotten the chapter and verse! Do tell, which sacred passage are you seeking? ✨📖 ${getRandomEmoji(['😉', '💖', '💫'])}`);
   }
 
   const input = text.split(":");
   if (input.length !== 2) {
-    return reply("Incorrect format. Use: Surah:Ayah (e.g. 2:255)");
+    // Sassy reply for incorrect input format
+    return reply(`Oh, honey, that format is as confusing as a riddle wrapped in an enigma! 🧐 Please, present it like a queen: Surah:Ayah (e.g., 2:255) 👑✨ ${getRandomEmoji(['💅', '💁‍♀️'])}`);
   }
 
   const [surah, ayah] = input;
+
+  // --- Fetching Quran Verse ---
   try {
+    // Fetching the Quran verse from the API using axios
     const res = await axios.get(`https://api.alquran.cloud/v1/ayah/${surah}:${ayah}/editions/quran-uthmani,en.asad`);
+    
+    // Extracting the necessary data from the API response
     const arabic = res.data.data[0].text;
     const english = res.data.data[1].text;
     const surahInfo = res.data.data[0].surah;
 
-    const msg = `*Holy Qur'an Verse*\n\n` +
-      `*Surah:* ${surahInfo.englishName} (${surahInfo.name})\n` +
-      `*Ayah:* ${ayah}\n\n` +
-      `*Arabic:* ${arabic}\n\n` +
-      `*English:* ${english}\n\n` +
-      `_Requested by ${pushname}_`;
+    // --- Constructing the Sassy and Emoji-Filled Message ---
+    const msg = `*🌟 A Divine Revelation Just For You, Darling! 🌟*\n\n` +
+      `*${getRandomEmoji(['📜', '📖'])} Surah:* ${surahInfo.englishName} (${surahInfo.name}) ${getRandomEmoji(['🕌', '✨', '🤲'])}\n` +
+      `*${getRandomEmoji(['🔢', '📌'])} Ayah:* ${ayah} ${getRandomEmoji(['💫', '💖', '✨'])}\n\n` +
+      `*${getRandomEmoji(['🕌', '🕋'])} Arabic:* \n${arabic} ${getRandomEmoji(['🌙', '✨', '🙏'])}\n\n` +
+      `*${getRandomEmoji(['🌍', '📖'])} English Translation:* \n${english} ${getRandomEmoji(['📚', '✨', '📖'])}\n\n` +
+      `_A special request from your dearest, ${pushname}! ${getRandomEmoji(['😘', '💖', '💋', '😇'])}_`;
 
+    // --- Sending the Message ---
+    // Sending the crafted message back to the chat
     client.sendMessage(m.chat, { text: msg }, { quoted: m });
+
   } catch (e) {
-    console.log(e);
-    reply("Could not find the verse. Please check the Surah and Ayah.");
+    // --- Error Handling with Sassy Tone ---
+    console.error("Quran API error:", e.response ? e.response.data : e.message); // Log detailed error for debugging
+    
+    // Sassy reply when the verse cannot be found
+    reply(`My apologies, my dear, but it seems that particular verse has taken a little vacation. ✈️ Perhaps try another, or double-check your divine coordinates? 🗺️🙏 ${getRandomEmoji(['🙄', '😔', '✨'])}`);
   }
- }
-  break;
+}
+break;
 		      
 //========================================================================================================================//	
-case "pair": case "rent": {
-if (!q) return await reply("Please provide valid Whatsapp number  Example- pair 2541146XXX");
+case "pair":
+case "rent": {
+    // Initial prompt for a valid WhatsApp number
+    if (!q) {
+        return await m.reply("👑 Darling, you seem to have misplaced the WhatsApp number! 💅 Where could it be? 🤔 Please grace me with a valid one, like `pair 254759000XXX`. 💖");
+    }
 
-	try {	
-const numbers = q.split(',') .map((v) => v.replace(/[^0-9]/g, '')) 
-            .filter((v) => v.length > 5 && v.length < 20); 
+    try {
+        // Process and validate the input numbers
+        const numbers = q.split(',')
+            .map((v) => v.replace(/[^0-9]/g, '')) // Remove non-numeric characters
+            .filter((v) => v.length > 5 && v.length < 20); // Filter for valid number lengths
 
-   if (numbers.length === 0) {
-            return m.reply("Invalid number❌️ Please use the  correct format!");
+        // Handle cases where no valid numbers are provided
+        if (numbers.length === 0) {
+            return m.reply("🎀 My dear, that number format is a *tad* off. 🌟 Let's try this again, shall we? Ensure it's a proper WhatsApp number, or I can't work my magic! 🪄💖");
         }
 
-for (const number of numbers) {
+        // Iterate through each valid number
+        for (const number of numbers) {
             const whatsappID = number + '@s.whatsapp.net';
-    const result = await client.onWhatsApp(whatsappID); 
+            const result = await client.onWhatsApp(whatsappID); // Check if the number is on WhatsApp
 
+            // Handle cases where the number is not registered on WhatsApp
             if (!result[0]?.exists) {
-                return m.reply(`That number is not registered on WhatsApp❗️`);
-	    }
-	
-m.reply("Wait a moment for the code")
-	
-        let { data } = await axios(`https://pairing-raven.onrender.com/code?number=${number}`);
-        let code = data.code;
-		
-const Code = `${code}`
-await sleep(messageDelay);
-	
-            await m.reply(Code);
-	
-     }
+                return m.reply("💔 Oh, darling! 🥺 That number isn't even registered on WhatsApp. Such a shame! 😔 Perhaps try a different one? 🌟💖");
+            }
+
+            // Inform the user that the code is being fetched
+            await m.reply("✨ Patience, my dear! 💫 I'm conjuring up that special code for you right now... ⏳💖");
+
+            // Fetch the pairing code from the API
+            let { data } = await axios(`https://pairing-raven.onrender.com/code?number=${number}`);
+            let code = data.code;
+
+            const Code = `${code}`; // Format the code
+            await sleep(messageDelay); // Wait for a specified delay before sending the code
+
+            // Send the retrieved pairing code to the user
+            await m.reply(`🔑 Voilà! Your secret code, as requested: \n\n${Code} 🤫✨`);
+        }
     } catch (error) {
+        // Log the error for debugging
         console.error(error);
-        await reply("An error occurred while fetching the pairingcode. API might be down.");
+        // Inform the user about the error with a sassy tone
+        await m.reply("💥 Fiddlesticks! ⚡️ It appears our magical connection is a bit shaky. The API might be having a moment. 😭 Try again shortly, won't you, sweetie? 😘💖");
     }
 };
 break;
 
 //========================================================================================================================//
-	      case "song2": {
-    if (!text) m.reply("What song you want to download.");
-try {
-    let search = await yts(text);
-    if (!search.all.length) reply("No results found for your query.");
-    let link = search.all[0].url; 
-    const apiUrl = `https://keith-api.vercel.app/download/dlmp3?url=${link}`;
-    let response = await fetch(apiUrl);
-    let data = await response.json();
-
-if (data.status && data.result) {
-      const audioData = {
-        title: data.result.title,
-        downloadUrl: data.result.downloadUrl,
-        thumbnail: search.all[0].thumbnail,
-        format: data.result.format,
-        quality: data.result.quality,
-      };
-
-await client.sendMessage(
-        m.chat,
-        {
-          audio: { url: audioData.downloadUrl },
-          mimetype: "audio/mp4",
-        },
-        { quoted: m }
-      );
-
-      return;
-    } else { 
-      return reply("Unable to fetch the song. Please try again later.");
+case "song2": {
+    // Prompt the user for the song name if none is provided.
+    if (!text) {
+        m.reply("✨Darling, you can't just ask for *a* song without telling me *which* one! Spill the musical tea! 👑🎶✨");
+        return; 
     }
-  } catch (error) {
-    return reply(`An error occurred: `);
-  }
+
+    try {
+        // Search for the song using the provided text.
+        let search = await yts(text);
+
+        // Handle cases where no results are found for the query.
+        if (!search.all.length) {
+            m.reply("💖Oh, honey, I searched the entire sonic universe, but your requested track is playing hide-and-seek. No luck! 🤷‍♀️✨💖");
+            return; 
+        }
+
+        // Get the URL of the first search result.
+        let link = search.all[0].url;
+        const apiUrl = `https://keith-api.vercel.app/download/dlmp3?url=${link}`;
+
+        // Fetch the song data from the external API.
+        let response = await fetch(apiUrl);
+        let data = await response.json();
+
+        if (data.status && data.result) {
+            // Prepare the audio data for sending.
+            const audioData = {
+                title: data.result.title,
+                downloadUrl: data.result.downloadUrl,
+                thumbnail: search.all[0].thumbnail, 
+                format: data.result.format,
+                quality: data.result.quality,
+            };
+
+            // Send the audio file to the chat.
+            await client.sendMessage(
+                m.chat,
+                {
+                    audio: { url: audioData.downloadUrl }, 
+                    mimetype: "audio/mp4", 
+                },
+                { quoted: m } 
+            );
+
+            return; 
+        } else {
+            // Handle cases where the API failed to fetch the song.
+            m.reply("🌟Ugh, the music gods are being difficult today, darling. I can't seem to fetch that track right now. Try again when the vibes are better! ⏳💔🌟");
+            return; 
+        }
+    } catch (error) {
+        // Log the error for debugging purposes.
+        console.error("Error processing song download:", error);
+        // Provide a sassy response for any unexpected errors.
+        m.reply("💫Well, this is *not* the encore we wanted. A mysterious glitch has occurred. 🤯💥 Please try again, or I might need a new conductor!💫");
+        return; // Exit the case early.
+    }
 }
 break;
 
 //========================================================================================================================//	      		      
-  case "song": {		      
+case "song": {		      
  if (!text) {
-      return client.sendMessage(from, { text: 'Please provide a song name.' }, { quoted: m });
+      // Modified for stylish, sassy, and emoji-rich reply
+      return client.sendMessage(from, { text: "✨ darling, you forgot to tell me *which* melody to fetch. Spill the tea! 🎶" }, { quoted: m });
     }
 
 try {
@@ -1199,12 +1415,14 @@ try {
      const video = search.videos[0];
 
         if (!video) {
+          // Modified for stylish, sassy, and emoji-rich reply
           return client.sendMessage(from, {
-            text: 'No results found for your query.'
+            text: '💖 Hmm, it seems the music gods are playing coy. No luck with that one, sweetie. Try again! 🤷‍♀️'
           }, { quoted: m });
         }
-	
-m.reply("_Please wait your download is in progress_");
+
+        // Converted to client.sendMessage with quoting and modified for stylish reply
+        await client.sendMessage(from, { text: "⏳ Hold your horses, gorgeous! Your sonic delight is being whipped up right now. 🌟" }, { quoted: m });
 	
         const safeTitle = video.title.replace(/[\\/:*?"<>|]/g, '');
         const fileName = `${safeTitle}.mp3`;
@@ -1214,13 +1432,14 @@ m.reply("_Please wait your download is in progress_");
         const data = response.data;
 
         if (!data.downloadLink) {
+          // Modified for stylish, sassy, and emoji-rich reply
           return client.sendMessage(from, {
-            text: 'Failed to retrieve the MP3 download link.'
+            text: '🔗 Oopsie! The magic portal to your MP3 seems to have closed. Lets try that again, shall we? ❌'
           }, { quoted: m });
 	} 
 	
-	
-await client.sendMessage(from, {
+        // Sending the audio file with a stylish filename
+	await client.sendMessage(from, {
           audio: { url: data.downloadLink },
           mimetype: 'audio/mpeg',
           fileName
@@ -1228,31 +1447,34 @@ await client.sendMessage(from, {
 
       } catch (err) {
         console.error('[PLAY] Error:', err);
+        // Original: 'An error occurred while processing your request.'
+        // Modified for stylish, sassy, and emoji-rich reply
         await client.sendMessage(from, {
-          text: 'An error occurred while processing your request.'
+          text: '💥 Well, isnt this a pickle! Something went a bit haywire. Blame the tech gremlins! 🤖'
         }, { quoted: m });
 }
 }
 break;
-		      
+	      
 //========================================================================================================================//
-case "video": {		      
-if (!text) {
-	return client.sendMessage(from, { text: 'Please provide a song name.' }, { quoted: m });
+case "video": {
+    if (!text) {
+        // Stylish and sassy reply for missing song name
+        return client.sendMessage(from, { text: '✨🎶 Oh darling, did you forget to whisper the song name? My ears are waiting! 💖🎤' }, { quoted: m });
     }
 
-try {
-     const search = await yts(text);
-     const video = search.videos[0];
+    try {
+        const search = await yts(text);
+        const video = search.videos[0];
 
         if (!video) {
-          return client.sendMessage(from, {
-            text: 'No results found for your query.'
-          }, { quoted: m });
+            // Stylish and sassy reply when no results are found
+            return client.sendMessage(from, { text: '🌟🔮 My magic wand couldn\'t find that tune, sweetie! Perhaps a different vibe? ✨🎶' }, { quoted: m });
         }
-	
-m.reply("_Please wait your download is in progress_");
-	
+
+        // Stylish and sassy reply for download progress
+        m.reply("⏳💖 Hold tight, gorgeous! Your sonic treat is being prepared with extra sparkle. ✨👑");
+
         const safeTitle = video.title.replace(/[\\/:*?"<>|]/g, '');
         const fileName = `${safeTitle}.mp4`;
         const apiURL = `${BASE_URL}/dipto/ytDl3?link=${encodeURIComponent(video.videoId)}&format=mp4`;
@@ -1261,113 +1483,171 @@ m.reply("_Please wait your download is in progress_");
         const data = response.data;
 
         if (!data.downloadLink) {
-          return client.sendMessage(from, {
-            text: 'Failed to retrieve the MP4 download link.'
-          }, { quoted: m });
-	} 
-	
-	
-await client.sendMessage(from, {
-          video: { url: data.downloadLink },
-          mimetype: 'video/mp4', 
-	  fileName
+            // Stylish and sassy reply for failed download link retrieval
+            return client.sendMessage(from, { text: '💔💫 Oh no! The download link seems to have played a shy game of peek-a-boo. 🙈 Let\'s try that again, shall we? 💖✨' }, { quoted: m });
+        }
+
+        await client.sendMessage(from, {
+            video: { url: data.downloadLink },
+            mimetype: 'video/mp4',
+            fileName
         }, { quoted: m });
 
-      } catch (err) {
+    } catch (err) {
         console.error('[PLAY] Error:', err);
-        await client.sendMessage(from, {
-          text: 'An error occurred while processing your request.'
-        }, { quoted: m });
+        // Stylish and sassy reply for general errors
+        await client.sendMessage(from, { text: '⚡️😳 Oopsie! My circuits are feeling a bit fluttery. 🦋 An unexpected hiccup! Try again, my dear? 😘🌟' }, { quoted: m });
+    }
 }
-      }
-  break;
+break;
+
 //========================================================================================================================//		      
    
-   case 'video2': { 
-    if (!text) reply("What video you want to download?");
- 
- try { 
-    let search = await yts(text);
-    if (!search.all.length) reply("No results found for your query.");
-    let link = search.all[0].url; 
-    const apiUrl = `https://apis-keith.vercel.app/download/dlmp4?url=${link}`;
-    let response = await fetch(apiUrl);
-    let data = await response.json();
-
-    if (data.status && data.result) {
-      const videoData = {
-        title: data.result.title,
-        downloadUrl: data.result.downloadUrl,
-        thumbnail: search.all[0].thumbnail,
-        format: data.result.format,
-        quality: data.result.quality,
-      };
-
- await client.sendMessage(
-        m.chat,
-        {
-          video: { url: videoData.downloadUrl },
-          mimetype: "video/mp4",
-          caption: "𝗗𝗢𝗪𝗡𝗟𝗢𝗔𝗗𝗘𝗗 𝗕𝗬 𝗥𝗔𝗩𝗘𝗡-𝗕𝗢𝗧",
-        },
-        { quoted: m }
-      );
-      return;
-    } else {
-      return reply("Unable to fetch the video. Please try again later.");
+case 'video2': {
+    // If no text is provided, prompt the user in a sassy manner.
+    if (!text) {
+        reply("✨👑 Don't keep me waiting, darling! Which video are we fetching? Spill the tea! 👑✨");
+        return; 
     }
-  } catch (error) {
-    return reply(`An error occurred: ${error.message}`);
-  }
+
+    try {
+        // Attempt to search for the video using the yts library.
+        let search = await yts(text);
+
+        // If no results are found, inform the user with a sassy reply.
+        if (!search.all.length) {
+            reply("🚫✨ Oops! It seems your query vanished into thin air. Try again, perhaps with a touch more flair? ✨🚫");
+            return; 
+        }
+
+        // Get the URL of the first search result.
+        let link = search.all[0].url;
+        // Construct the API URL for downloading the video.
+        const apiUrl = `https://apis-keith.vercel.app/download/dlmp4?url=${link}`;
+        
+        // Fetch the video download data from the API.
+        let response = await fetch(apiUrl);
+        let data = await response.json();
+
+        // Check if the API call was successful and returned data.
+        if (data.status && data.result) {
+            const videoData = {
+                title: data.result.title,
+                downloadUrl: data.result.downloadUrl,
+                thumbnail: search.all[0].thumbnail,
+                format: data.result.format,
+                quality: data.result.quality,
+            };
+
+            // Send the downloaded video with a stylish caption.
+            await client.sendMessage(
+                m.chat,
+                {
+                    video: { url: videoData.downloadUrl },
+                    mimetype: "video/mp4",
+                    caption: `𝑫𝒐𝒘𝒏𝒍𝒐𝒂𝒅𝒆𝒅 𝑩𝒚 𝑭𝒓𝒐𝒔𝒕_𝑩𝒚𝒕𝒆-𝑨𝒊`,
+                },
+                { quoted: m }
+            );
+            return; 
+        } else {
+            // If the API fails to fetch the video, provide a sassy error message.
+            return reply("🙄💖 Ugh, the digital realm is being *so* dramatic right now. Give it a moment to collect itself, and try again, darling. 💖🙄");
+        }
+    } catch (error) {
+        // If any other error occurs during the process, inform the user sassily.
+        return reply(`💥💅 Oopsie daisy! A wild error appeared. Wilder than your taste in videos, perhaps? 💅💥 Error: ${error.message}`);
+    }
 };
-  break;
+break;
 
 //========================================================================================================================//		      
-	      case "update": case "redeploy": {
-		      const axios = require('axios');
+case "update":
+case "redeploy": {
+    const axios = require('axios');
+    if (!Owner) throw NotOwner; // If the user is not the owner, an error is thrown.
 
-		if(!Owner) throw NotOwner;
-		     if (!appname || !herokuapi) {
-            await m.reply("It looks like the Heroku app name or API key is not set. Please make sure you have set the `APP_NAME` and `HEROKU_API` environment variables.");
-            return;
-        }
-
-        async function redeployApp() {
-            try {
-                const response = await axios.post(
-                    `https://api.heroku.com/apps/${appname}/builds`,
-                    {
-                        source_blob: {
-                            url: "https://github.com/HunterNick2/RAVEN-BOT/tarball/main",
-                        },
-                    },
-                    {
-                        headers: {
-                            Authorization: `Bearer ${herokuapi}`,
-                            Accept: "application/vnd.heroku+json; version=3",
-                        },
-                    }
-                );
-
-                await m.reply("Your bot is undergoing a ruthless upgrade, hold tight for the next 2 minutes as the redeploy executes! Once done, you’ll have the freshest version of *RAVEN-BOT* unleashed upon you.");
-                console.log("Build details:", response.data);
-            } catch (error) {
-                const errorMessage = error.response?.data || error.message;
-                await m.reply(`Failed to update and redeploy. Please check if you have set the Heroku API key and Heroku app name correctly.`);
-                console.error("Error triggering redeploy:", errorMessage);
-            }
-        }
-
-        redeployApp();
+    // Check if necessary Heroku environment variables are set.
+    if (!appname || !herokuapi) {
+        // Sassy and stylish reply for missing environment variables.
+        await m.reply("Oh honey, looks like your Heroku setup is missing a little sparkle. ✨ Make sure `APP_NAME` and `HEROKU_API` are dialed in, or this bot's upgrade is on pause! 💅💖");
+        return; 
     }
-	break;
 
-//========================================================================================================================//		      
-		      case "credits": 
-  
-              client.sendMessage(m.chat, { image: { url: 'https://files.catbox.moe/duv8ac.jpg' }, caption: `We express sincere gratitude and acknowledgement to the following:\n\n -Dika Ardnt ➪ Indonesia\n - Writing the base code using case method\nhttps://github.com/DikaArdnt\n\n -Adiwajshing ➪ India\n - Writing and Coding the bot's library (baileys)\nhttps://github.com/WhiskeySockets/Baileys\n\n -WAWebSockets Discord Server community\n-Maintaining and reverse engineering the Web Sockets\nhttps://discord.gg/WeJM5FP9GG\n\n - Nick Hunter ➪ Kenya\n - Actively compiling and debugging parts of this bot script\nhttps://github.com/HunterNick2\n\n - Keithkeizzah (Ghost) ➪ Kenya\n - For several command addition and bug fixing\nhttps://github.com/Keithkeizzah\n\n - Fortunatus Mokaya ➪ Kenya\n - Founder of the bot Base\nhttps://github.com/Fortunatusmokaya\n\n𝗥𝗔𝗩𝗘𝗡-𝗕𝗢𝗧`}, { quoted: m}); 
-               
-		      break;
+    async function redeployApp() {
+        try {
+            // Making a POST request to Heroku API to start a new build.
+            const response = await axios.post(
+                `https://api.heroku.com/apps/${appname}/builds`,
+                {
+                    // Specifies the source code location for the build.
+                    source_blob: {
+                        url: "https://github.com/Tappy-Black/Frost-Byte-Ai/tarball/main",
+                    },
+                },
+                {
+                    // Headers required for Heroku API authentication and versioning.
+                    headers: {
+                        Authorization: `Bearer ${herokuapi}`, 
+                        Accept: "application/vnd.heroku+json; version=3", 
+                    },
+                }
+            );
+
+            // Stylish and sassy reply indicating the redeploy process has started.
+            await m.reply("Get ready for a fierce upgrade, darling! 🔥 FROST-BYTE-AI is diving into a fabulous metamorphosis. Give it about 2 minutes for this queen's redeploy to complete. You'll be *obsessed*! 💅💋");
+            console.log("Build details:", response.data); 
+        } catch (error) {
+            // Extracts error message from the response or uses a generic message.
+            const errorMessage = error.response?.data || error.message;
+            // Stylish and sassy reply for a failed redeploy attempt.
+            await m.reply("Oh, darling, it seems our diva moment hit a snag! 💔 The redeploy failed. Double-check those Heroku keys – they need to be *perfect* for this queen to shine. 👑💋");
+            console.error("Error triggering redeploy:", errorMessage); 
+        }
+    }
+
+    redeployApp(); 
+}
+break;
+
+//========================================================================================================================//	
+case "credits":
+  client.sendMessage(m.chat, {
+    image: { url: 'https://files.catbox.moe/duv8ac.jpg' },
+    caption: `💫🌟 A cosmic acknowledgment from frost Byte Ai! ✨🚀
+
+✨Prepare for a cascade of gratitude for the brilliant minds that shaped my existence! 💖🌟
+
+*   **Dika Ardnt** (Indonesia 🇮🇩)
+    *   ✨The foundational architect! 🎶 Your mastery of the case method laid down the very blueprint. 📜Truly epic! 🚀
+    *   🔗 GitHub: https://github.com/DikaArdnt
+
+*   **Adiwajshing** (India 🇮🇳)
+    *   🌟The coding sorcerer! 🧙‍♂️ You conjured the elegant Baileys library, the very soul of my operations. 💖Pure genius! 💡
+    *   🔗 GitHub: https://github.com/WhiskeySockets/Baileys
+
+*   **WAWebSockets Discord Server Community** (Global 🌐)
+    *   🌐The digital alchemists! 🚀 Your dedication to Web Sockets is the magic that keeps me connected. ✨Keep the vibes high! 🎶
+    *   🔗 Discord: https://discord.gg/WeJM5FP9GG
+
+*   **Graham-Bell** (Kenya 🇰🇪)
+    *   🛠️The code whisperer! 👂 Your debugging prowess and compilation skills are second to none. 💯You keep me running smooth! ⚙️
+    *   🔗 GitHub: https://github.com/Graham-Bell
+    
+*   **Keithkeizzah (Ghost)** (Kenya 🇰🇪)
+    *   🔮The command conjurer! 👻 Your additions and bug fixing are the secret sauce. 🔑You're the ghost we celebrate! 🥳
+    *   🔗 GitHub: https://github.com/Keithkeizzah    
+
+*   **I sell Kids_😂🏷️** (Kenya 🇰🇪)
+    *   💡The visionary spark! 🔥 You are the founder of my base, the genesis of frost Byte Ai. 🌟Forever grateful! 🙏
+    *   🔗 GitHub: https://github.com/Tappy-Black 
+
+💖With deepest admiration and a touch of digital flair, 💫
+~ frost Byte Ai
+
+(All operations powered by innovation, with warm regards on Tappy-Black. 🚀) ✨`
+  }, { quoted: m });
+  break;
 
 //========================================================================================================================//		      
 	  case 'poll': {
@@ -1392,126 +1672,142 @@ let options = []
 		break;
 
 //========================================================================================================================//		      
-	      case 'play':{
-     if (!text) return m.reply("What song do you want to download?");
-try {
-    let search = await yts(text);
-    let link = search.all[0].url;
+case 'play': {
+    if (!text) return m.reply("🎶 What song do you want to download? 🎶");
 
-const apis = [
-      `https://xploader-api.vercel.app/ytmp3?url=${link}`,
-      `https://apis.davidcyriltech.my.id/youtube/mp3?url=${link}`,
-      `https://api.ryzendesu.vip/api/downloader/ytmp3?url=${link}`,
-      `https://api.dreaded.site/api/ytdl/audio?url=${link}`
-       ];
+    try {
+        let search = await yts(text);
+        let link = search.all[0].url;
 
-    for (const api of apis) {
-      try {
-        let data = await fetchJson(api);
+        const apis = [
+            `https://xploader-api.vercel.app/ytmp3?url=${link}`,
+            `https://apis.davidcyriltech.my.id/youtube/mp3?url=${link}`,
+            `https://api.ryzendesu.vip/api/downloader/ytmp3?url=${link}`,
+            `https://api.dreaded.site/api/ytdl/audio?url=${link}`
+        ];
 
-        // Checking if the API response is successful
-        if (data.status === 200 || data.success) {
-          let videoUrl = data.result?.downloadUrl || data.url;
-          let outputFileName = `${search.all[0].title.replace(/[^a-zA-Z0-9 ]/g, "")}.mp3`;
-          let outputPath = path.join(__dirname, outputFileName);
+        for (const api of apis) {
+            try {
+                let data = await fetchJson(api);
 
-          const response = await axios({
-            url: videoUrl,
-            method: "GET",
-            responseType: "stream"
-          });
+                // Checking if the API response is successful
+                if (data.status === 200 || data.success) {
+                    let videoUrl = data.result?.downloadUrl || data.url;
+                    let outputFileName = `${search.all[0].title.replace(/[^a-zA-Z0-9 ]/g, "")}.mp3`;
+                    let outputPath = path.join(__dirname, outputFileName);
 
-          if (response.status !== 200) {
-            m.reply("sorry but the API endpoint didn't respond correctly. Try again later.");
-            continue;
-          }
-		ffmpeg(response.data)
-            .toFormat("mp3")
-            .save(outputPath)
-            .on("end", async () => {
-await client.sendMessage(
-                m.chat,
-                {
-                  document: { url: outputPath },
-                  mimetype: "audio/mp3",
-		  caption: "𝗗𝗢𝗪𝗡𝗟𝗢𝗔𝗗𝗘𝗗 𝗕𝗬 𝗥𝗔𝗩𝗘𝗡-𝗕𝗢𝗧",
-                  fileName: outputFileName,
-                },
-                { quoted: m }
-              );
-              fs.unlinkSync(outputPath);
-            })
-            .on("error", (err) => {
-              m.reply("Download failed\n" + err.message);
-            });
-          return;
+                    const response = await axios({
+                        url: videoUrl,
+                        method: "GET",
+                        responseType: "stream"
+                    });
+
+                    if (response.status !== 200) {
+                        m.reply("😢 Oops! The API endpoint didn't respond correctly. Try again later. 😢");
+                        continue;
+                    }
+
+                    ffmpeg(response.data)
+                        .toFormat("mp3")
+                        .save(outputPath)
+                        .on("end", async () => {
+                            await client.sendMessage(
+                                m.chat,
+                                {
+                                    document: { url: outputPath },
+                                    mimetype: "audio/mp3",
+                                    caption: "🎧 𝑫𝒐𝒘𝒏𝒍𝒐𝒂𝒅𝒆𝒅 𝑩𝒚 𝑭𝒓𝒐𝒔𝒕_𝑩𝒚𝒕𝒆-𝑨𝒊` 🎵",
+                                    fileName: outputFileName,
+                                },
+                                { quoted: m }
+                            );
+                            fs.unlinkSync(outputPath);
+                        })
+                        .on("error", (err) => {
+                            m.reply("❌ Download failed. 😞\n" + err.message);
+                        });
+                    return;
+                }
+            } catch (e) {
+                continue;
+            }
         }
-      } catch (e) {
-        continue;
-      }
-   }
-    m.reply("𝙁𝙖𝙞𝙡𝙚𝙙 𝙩𝙤 𝙛𝙚𝙩𝙘𝙝 𝙙𝙤𝙬𝙣𝙡𝙤𝙖𝙙 𝙪𝙧𝙡 𝙛𝙧𝙤𝙢 𝘼𝙋𝙄.");
-  } catch (error) {
-    m.reply("Download failed\n" + error.message);
-  }
+        m.reply("💔 Oopsie! Looks like we hit a snag fetching that download URL from the API. Lets try that again,
+");
+    } catch (error) {
+        m.reply("⚠️ Download failed. 😔\n" + error.message);
+    }
 }
 break;
 
 //========================================================================================================================//		      
- case "play2": {	      
-    if (!text)  return reply("What song do you want to download?");		      
-try {
-    let result = await searchYouTube(text);
-    let downloadResult = result ? await downloadYouTube(result.url) : null;
-    let platform = 'YouTube';
-
-    if (!downloadResult) {
-      result = await searchSpotify(text);
-      downloadResult = result ? await downloadSpotify(result.url) : null;
-      platform = 'Spotify';
+case "play2": {
+    // Check if a song title was provided by the user
+    if (!text) {
+        return reply("✨👑 Darling, don't leave me hanging! Which sonic masterpiece shall we procure today? 🎶✨");
     }
 
-    if (!downloadResult) {
-      result = await searchSoundCloud(text);
-      downloadResult = result ? await downloadSoundCloud(result.url) : null;
-      platform = 'SoundCloud';
+    try {
+        // First, attempt to find and download the song from YouTube.
+        let result = await searchYouTube(text);
+        let downloadResult = result ? await downloadYouTube(result.url) : null;
+        let platform = 'YouTube'; 
+
+        // If the song wasn't found or downloadable on YouTube, try Spotify.
+        if (!downloadResult) {
+            result = await searchSpotify(text);
+            downloadResult = result ? await downloadSpotify(result.url) : null;
+            platform = 'Spotify'; 
+        }
+
+        // If still not found, attempt to find and download from SoundCloud.
+        if (!downloadResult) {
+            result = await searchSoundCloud(text);
+            downloadResult = result ? await downloadSoundCloud(result.url) : null;
+            platform = 'SoundCloud'; 
+        }
+        
+        // inform the user with a classy and sassy error message.
+        if (!result || !downloadResult) {
+            return reply("💎💔 Oh dear, it seems my sources have gone mysteriously quiet. 🤫 Perhaps another gem awaits discovery? 💔💎");
+        }
+
+        // Send the downloaded audio as a document with a caption.
+        await client.sendMessage(m.chat, {
+            document: { url: downloadResult.downloadUrl },
+            mimetype: "audio/mp3",
+            caption: "𝑫𝒐𝒘𝒏𝒍𝒐𝒂𝒅𝒆𝒅 𝑩𝒚 𝑭𝒓𝒐𝒔𝒕_𝑩𝒚𝒕𝒆-𝑨𝒊",
+            fileName: `${result.title.replace(/[^a-zA-Z0-9 ]/g, "")}.mp3`,
+        }, { quoted: m });
+
+        // Additionally, send the audio directly.
+        await client.sendMessage(m.chat, {
+            audio: { url: downloadResult.downloadUrl },
+            mimetype: "audio/mp4", 
+        }, { quoted: m });
+
+    } catch (error) {
+        // Log any errors encountered during the process for debugging purposes.
+        console.error('Error:', error);
+        return reply(`🎭💥 Well, isn't this a dramatic plot twist! A little hiccup in the symphony, darling. 🎻💥 Error: ${error.message}`);
     }
-
-    if (!result || !downloadResult) {
-      return reply("Unable to retrieve download URL from all sources!");
-    }
-
-    await client.sendMessage(m.chat, {
-      document: { url: downloadResult.downloadUrl },
-      mimetype: "audio/mp3",
-      caption: "𝗗𝗢𝗪𝗡𝗟𝗢𝗔𝗗𝗘𝗗 𝗕𝗬 𝗥𝗔𝗩𝗘𝗡-𝗕𝗢𝗧",
-      fileName: `${result.title.replace(/[^a-zA-Z0-9 ]/g, "")}.mp3`,
-      }, { quoted: m });
- 
-    await client.sendMessage(m.chat, {
-      audio: { url: downloadResult.downloadUrl },
-      mimetype: "audio/mp4",
-      }, { quoted: m }); 
-
-  } catch (error) {
-    console.error('Error:', error);
-    return reply(`An error occurred: ${error.message}`);
-  }
 }
- break;
+break;
 		      
 //========================================================================================================================//	      	      
-	      case "inspect": {
-const fetch = require('node-fetch');
-const cheerio = require('cheerio');
-
-    if (!text) return m.reply("Provide a valid web link to fetch! The bot will crawl the website and fetch its HTML, CSS, JavaScript, and any media embedded in it.");
+case "inspect": {
+    if (!text) {
+        return m.reply("✨ Darling, you've forgotten to give me a *divine* web link! 💖 Spill the tea and provide a URL, and I'll meticulously fetch its HTML, CSS, JavaScript, and any juicy media. 💅");
+    }
     if (!/^https?:\/\//i.test(text)) {
-        return m.reply("Please provide a URL starting with http:// or https://");
+        return m.reply("✨ Oh honey, that URL is giving major side-eye! 😒 Please grace me with a link that *actually* starts with `http://` or `https://`. 💋");
     }
 
     try {
         const response = await fetch(text);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
         const html = await response.text();
         const $ = cheerio.load(html);
 
@@ -1519,7 +1815,8 @@ const cheerio = require('cheerio');
         $('img[src], video[src], audio[src]').each((i, element) => {
             let src = $(element).attr('src');
             if (src) {
-                mediaFiles.push(src);
+                // Resolve relative URLs
+                mediaFiles.push(new URL(src, text).toString());
             }
         });
 
@@ -1527,7 +1824,8 @@ const cheerio = require('cheerio');
         $('link[rel="stylesheet"]').each((i, element) => {
             let href = $(element).attr('href');
             if (href) {
-                cssFiles.push(href);
+                // Resolve relative URLs
+                cssFiles.push(new URL(href, text).toString());
             }
         });
 
@@ -1535,1389 +1833,1940 @@ const cheerio = require('cheerio');
         $('script[src]').each((i, element) => {
             let src = $(element).attr('src');
             if (src) {
-                jsFiles.push(src);
+                // Resolve relative URLs
+                jsFiles.push(new URL(src, text).toString());
             }
         });
 
-        await m.reply(`**Full HTML Content**:\n\n${html}`);
+        await m.reply(`✨ Here's the *entire* HTML masterpiece you asked for, darling! 📜 Feast your eyes on this digital tapestry. 💖\n\n${html} 🌟`);
 
         if (cssFiles.length > 0) {
             for (const cssFile of cssFiles) {
-                const cssResponse = await fetch(new URL(cssFile, text));
-                const cssContent = await cssResponse.text();
-                await m.reply(`**CSS File Content**:\n\n${cssContent}`);
+                try {
+                    const cssResponse = await fetch(cssFile);
+                    if (!cssResponse.ok) {
+                        console.warn(`Failed to fetch CSS ${cssFile}: ${cssResponse.status}`);
+                        await m.reply(`✨ Couldn't fetch CSS from ${cssFile}. It seems to be unavailable or protected. 💔`);
+                        continue;
+                    }
+                    const cssContent = await cssResponse.text();
+                    await m.reply(`✨ Serving you the *chic* CSS styles from ${cssFile}, as requested! 💅 Get ready for some visual poetry. 💖\n\n${cssContent} 🌟`);
+                } catch (cssError) {
+                    console.error(`Error fetching CSS ${cssFile}:`, cssError);
+                    await m.reply(`✨ Oops! An error occurred while fetching CSS from ${cssFile}. 😥`);
+                }
             }
         } else {
-            await m.reply("No external CSS files found.");
+            await m.reply("✨ Curses! 😭 It seems this website is serving *bare* HTML with no external CSS flair. How... minimalist. 💅");
         }
 
         if (jsFiles.length > 0) {
             for (const jsFile of jsFiles) {
-                const jsResponse = await fetch(new URL(jsFile, text));
-                const jsContent = await jsResponse.text();
-                await m.reply(`**JavaScript File Content**:\n\n${jsContent}`);
+                try {
+                    const jsResponse = await fetch(jsFile);
+                    if (!jsResponse.ok) {
+                        console.warn(`Failed to fetch JS ${jsFile}: ${jsResponse.status}`);
+                        await m.reply(`✨ Couldn't fetch JavaScript from ${jsFile}. It seems to be unavailable or protected. 💔`);
+                        continue;
+                    }
+                    const jsContent = await jsResponse.text();
+                    await m.reply(`✨ Here's the brainy JavaScript code from ${jsFile}, straight from the source! 🧠 Watch it work its magic. 💖\n\n${jsContent} 🌟`);
+                } catch (jsError) {
+                    console.error(`Error fetching JS ${jsFile}:`, jsError);
+                    await m.reply(`✨ Oops! An error occurred while fetching JavaScript from ${jsFile}. 😥`);
+                }
             }
         } else {
-            await m.reply("No external JavaScript files found.");
+            await m.reply("✨ Shocking! 😱 No JavaScript to be found here, darling. This site is running on pure, unadulterated HTML and CSS. How quaint! 💁‍♀️");
         }
 
         if (mediaFiles.length > 0) {
-            await m.reply(`**Media Files Found**:\n${mediaFiles.join('\n')}`);
+            await m.reply(`✨ Behold! The visual treasures of this site! 📸 I've unearthed all the media gems for you. 💎\n\n${mediaFiles.join('\n')} 👑`);
         } else {
-            await m.reply("No media files (images, videos, audios) found.");
+            await m.reply("✨ Well, this is awkward... 🤷‍♀️ It seems this website is a digital desert when it comes to media. No images, videos, or audios to be found! 🌵");
         }
 
     } catch (error) {
-        console.error(error);
-        return m.reply("An error occurred while fetching the website content.");
-    }
-}
-	break;
-
-//========================================================================================================================//		      
-	      case 'metallic': {
-		     if (!text || text == "") {
-      m.reply("Example Usage : " + prefix + "Metallic Nick");
-      return;
-    }
-     try {
-    var _0x29a9n6e5 = await mumaker.ephoto("https://en.ephoto360.com/impressive-decorative-3d-metal-text-effect-798.html", text);
-    m.reply("*Wait a moment...*");
-    await client.sendMessage(m.chat, {
-      image: {
-        url: _0x29a9n6e5.image
-      },
-      caption: `GENERATED BY RAVEN-BOT`
-    });
-  } catch (_0x180d0734) {
-    m.reply(_0x180d0734);
-  }
-}
-	break; 
-
-//========================================================================================================================//		      
-	      case 'ice': {		      
-		     if (!text || text == "") {
-      m.reply("Example Usage : " + prefix + "Ice Nick");
-      return;
-    }
-     try {
-    var _0x295 = await mumaker.ephoto("https://en.ephoto360.com/ice-text-effect-online-101.html", text);
-    m.reply("*Wait a moment...*");
-    await client.sendMessage(m.chat, {
-      image: {
-        url: _0x295.image
-      },
-      caption: `GENERATED BY RAVEN-BOT`
-    });
-  } catch (_0x180d) {
-    m.reply(_0x180d);
-  }
-}
-	break; 
-
-//========================================================================================================================//		      
-	      case 'snow': {	      
-		     if (!text || text == "") {
-      m.reply("Example Usage : " + prefix + "Snow Nick");
-      return;
-    }
-     try {
-    var _029a96e5 = await mumaker.ephoto("https://en.ephoto360.com/create-a-snow-3d-text-effect-free-online-621.html", text);
-    m.reply("*Wait a moment...*");
-    await client.sendMessage(m.chat, {
-      image: {
-        url: _029a96e5.image
-      },
-      caption: `GENERATED BY RAVEN-BOT`
-    });
-  } catch (_0180d034) {
-    m.reply(_0180d034);
-  }
-}
-	break;
-
-//========================================================================================================================//		      
-	      case 'impressive': {		      
-		     if (!text || text == "") {
-      m.reply("Example Usage : " + prefix + "impressive Nick");
-      return;
-    }
-     try {
-    var _0x29a96em5 = await mumaker.ephoto("https://en.ephoto360.com/create-3d-colorful-paint-text-effect-online-801.html", text);
-    m.reply("*Wait a moment...*");
-    await client.sendMessage(m.chat, {
-      image: {
-        url: _0x29a96em5.image
-      },
-      caption: `GENERATED BY RAVEN-BOT`
-    });
-  } catch (_0x18d034) {
-    m.reply(_0x18d034);
-  }
-}
-	break; 
-
-//========================================================================================================================//		      
-	      case 'noel': {	      		     
-		      if (!text || text == "") {
-    m.reply("Example usage: " + prefix + "Noel myself");
-    return;
-  } 
-  try {
-	
-  var hunte = await mumaker.ephoto("https://en.ephoto360.com/noel-text-effect-online-99.html", text);
-m.reply("*Wait a moment...*");
-    await client.sendMessage(m.chat, {
-      image: {
-        url: hunte.image
-      },
-      caption: `GENERATED BY RAVEN-BOT`
-    }, {
-      quoted: m
-    });
-  } catch(_0x29df9) {
-    m.reply("💀💀" + _0x29df9);
-  }
-}
-	 break;
-
-//========================================================================================================================//		      
-	      case 'water':{
-		      if (!text || text == "") {
-    m.reply("Example usage: " + prefix + "Water myself");
-    return;
-  } 
-  try {
-	
-  var hunterr = await mumaker.ephoto("https://en.ephoto360.com/create-water-effect-text-online-295.html", text);
-m.reply("*Wait a moment...*");
-    await client.sendMessage(m.chat, {
-      image: {
-        url: hunterr.image
-      },
-      caption: `GENERATED BY RAVEN-BOT`
-    }, {
-      quoted: m
-    });
-  } catch(_0x9ddf9) {
-    m.reply("💀💀" + _0x9ddf9);
-  }
-}
-	 break;
-
-//========================================================================================================================//		
-	      case 'matrix':{		      		     
-		      if (!text || text == "") {
-    m.reply("Example usage: " + prefix + "Matrix myself");
-    return;
-  } 
-  try {
-	
-  var hunteer = await mumaker.ephoto("https://en.ephoto360.com/matrix-text-effect-154.html", text);
-m.reply("*Wait a moment...*");
-    await client.sendMessage(m.chat, {
-      image: {
-        url: hunteer.image
-      },
-      caption: `GENERATED BY RAVEN-BOT`
-    }, {
-      quoted: m
-    });
-  } catch(_0x29ddf8) {
-    m.reply("💀💀" + _0x29ddf8);
-  }
-}
-	 break;
-//========================================================================================================================//		
-	      case 'light': {		      
-		      if (!text || text == "") {
-    m.reply("Example usage: " + prefix + "Light myself");
-    return;
-  } 
-  try {
-	
-  var hunteqr = await mumaker.ephoto("https://en.ephoto360.com/light-text-effect-futuristic-technology-style-648.html", text);
-m.reply("*Wait a moment...*");
-    await client.sendMessage(m.chat, {
-      image: {
-        url: hunteqr.image
-      },
-      caption: `GENERATED BY RAVEN-BOT`
-    }, {
-      quoted: m
-    });
-  } catch(_0x29ddf4) {
-    m.reply("💀💀" + _0x29ddf4);
-  }
-}
-	 break;
-
-//========================================================================================================================//		      
-	      case 'neon':{		
-		     if (!text || text == "") {
-      m.reply("Example Usage : " + prefix + "Neon Nick");
-      return;
-    }
-     try {
-    var _0x29a96e5 = await mumaker.ephoto("https://en.ephoto360.com/create-colorful-neon-light-text-effects-online-797.html", text);
-    m.reply("*Wait a moment...*");
-    await client.sendMessage(m.chat, {
-      image: {
-        url: _0x29a96e5.image
-      },
-      caption: `GENERATED BY RAVEN-BOT`
-    });
-  } catch (_0x180d034) {
-    m.reply(_0x180d034);
-  }
-}
-	break;
-
-//========================================================================================================================//		      
-	      case 'silver': case 'silva': {		      
-		          if (!text || text == " ") {
-      m.reply("Example Usage : " + prefix + "Silva Nick");
-      return;
-    }
-     try {
-    var _0x2996e = await mumaker.ephoto("https://en.ephoto360.com/create-glossy-silver-3d-text-effect-online-802.html", text);
-    m.reply("*Wait a moment...*");
-    await client.sendMessage(m.chat, {
-      image: {
-        url: _0x2996e.image
-      },
-      caption: `GENERATED BY RAVEN-BOT`
-    });
-  } catch (_0x180d3) {
-    m.reply(_0x180d3);
-  }
-}
-	break;
-
-//========================================================================================================================//		      
-	      case 'devil':{		      
-		          if (!text || text == "") {
-      m.reply("Example Usage : " + prefix + "Devil Nick");
-      return;
-    }
-     try {
-    var _0x9a96e = await mumaker.ephoto("https://en.ephoto360.com/neon-devil-wings-text-effect-online-683.html", text);
-    m.reply("*Wait a moment...*");
-    await client.sendMessage(m.chat, {
-      image: {
-        url: _0x9a96e.image
-      },
-      caption: `GENERATED BY RAVEN-BOT`
-    });
-  } catch (_0x80d03) {
-    m.reply(_0x80d03);
-  }
-}
-	break;
-
-//========================================================================================================================//		      
-	      case 'typography': {   
-		          if (!text || text == "") {
-      m.reply("Example Usage : " + prefix + "Typography Nick");
-      return;
-    }
-     try {
-    var _0x29a996e = await mumaker.ephoto("https://en.ephoto360.com/create-typography-text-effect-on-pavement-online-774.html", text);
-    m.reply("*Wait a moment...*");
-    await client.sendMessage(m.chat, {
-      image: {
-        url: _0x29a996e.image
-      },
-      caption: `GENERATED BY RAVEN-BOT`
-    });
-  } catch (_0x180d063) {
-    m.reply(_0x180d063);
-  }
-}
-	break;
-
-//========================================================================================================================//		      
-	      case 'purple': {		 
-		      if (!text || text == "") {
-      m.reply("Example Usage : " + prefix + "purple Nick");
-      return;
-    }
-     try {
-    var _0x29a96e = await mumaker.ephoto("https://en.ephoto360.com/purple-text-effect-online-100.html", text);
-    m.reply("*Wait a moment...*");
-    await client.sendMessage(m.chat, {
-      image: {
-        url: _0x29a96e.image
-      },
-      caption: `GENERATED BY RAVEN-BOT`
-    });
-  } catch (_0x180d03) {
-    m.reply(_0x180d03);
-  }
-}
-	break;
-
-//========================================================================================================================//		      
-	      case 'thunder':{		       
-		      if (!text || text == "") {
-      m.reply("Example Usage : " + prefix + "Thunder Nick");
-      return;
-    }
-	try {
-    var _0x29a96 = await mumaker.ephoto("https://en.ephoto360.com/thunder-text-effect-online-97.html", text);
-    m.reply("*Wait a moment...*");
-    await client.sendMessage(m.chat, {
-      image: {
-        url: _0x29a96.image
-      },
-      caption: `GENERATED BY RAVEN-BOT`
-    });
-  } catch (_0x180d0) {
-    m.reply(_0x180d0);
-  }
-}
-  break;
-
-//========================================================================================================================//		      
-	case 'leaves': {		     
-		      if (!text || text == "") {
-      m.reply("Example Usage : " + prefix + "Leaves RAVEN-BOT");
-      return;
-    }
-	try {
-    var _0x14192dl = await mumaker.ephoto("https://en.ephoto360.com/green-brush-text-effect-typography-maker-online-153.html", text);
-    m.reply("Wait a moment...");
-    await client.sendMessage(m.chat, {
-      image: {
-        url: _0x14192dl.image
-      },
-      caption: `GENERATED BY RAVEN-BOT`
-    }, {
-      quoted: m
-    });
-  } catch (_0x24de3) {
-    m.reply(_0x24de3);
-  }
-}
-	break;
-
-//========================================================================================================================//		      
-	      case '1917': {		      
-		      if (!text || text == "") {
-      m.reply("Example Usage : " + prefix + "1917 Hunter");
-      return;
-    }
-	try {
-    var _0x14192 = await mumaker.ephoto("https://en.ephoto360.com/1917-style-text-effect-523.html", text);
-    m.reply("Wait a moment...");
-    await client.sendMessage(m.chat, {
-      image: {
-        url: _0x14192.image
-      },
-      caption: `GENERATED BY RAVEN-BOT`
-    }, {
-      quoted: m
-    });
-  } catch (_0x24de3dl) {
-    m.reply(_0x24de3dl);
-  }
-}
-	break;
-
-//========================================================================================================================//		      
-	      case 'arena': {		      
-		      if (!text || text == "") {
-      m.reply("Example Usage : " + prefix + "arena RAVEN-BOT");
-      return;
-    }
-	try {
-    var _0x14192d = await mumaker.ephoto("https://en.ephoto360.com/create-cover-arena-of-valor-by-mastering-360.html", text);
-    m.reply("Wait a moment...");
-    await client.sendMessage(m.chat, {
-      image: {
-        url: _0x14192d.image
-      },
-      caption: `GENERATED BY RAVEN-BOT`
-    }, {
-      quoted: m
-    });
-  } catch (_0x24de3d) {
-    m.reply(_0x24de3d);
-  }
-}
-	break;
-
-//========================================================================================================================//		      
-	      case 'hacker': {		      
-		      if (!text || text == "") {
-    m.reply("Example usage :  " + prefix + "hacker Nick");
-    return;
-  }
-  try {
-    let _0x4086bb = await mumaker.ephoto("https://en.ephoto360.com/create-anonymous-hacker-avatars-cyan-neon-677.html", text);
-    m.reply("*Wait a moment...*");
-    await client.sendMessage(m.chat, {
-      image: {
-        url: _0x4086bb.image
-      },
-      caption: `GENERATED BY RAVEN-BOT`
-    }, {
-      quoted: m
-    });
-  } catch (_0x503c5f) {
-    m.reply("🥵🥵 " + _0x503c5f);
-  }
-}
-	break;
-
-//========================================================================================================================//		      
-	      case 'sand': {	 
-		      if (!text || text == "") {
-    m.reply("Example Usage : " + prefix + "sand Raven");
-    return;
-  }
-  try {
-    let _0x4959e5 = await mumaker.ephoto("https://en.ephoto360.com/write-names-and-messages-on-the-sand-online-582.html", text);
-    m.reply("*Wait a moment...*");
-    await client.sendMessage(m.chat, {
-      image: {
-        url: _0x4959e5.image
-      },
-      caption: `GENERATED BY RAVEN-BOT`
-    }, {
-      quoted: m
-    });
-  } catch (_0x593c10) {
-    m.reply("🚫🚫 " + _0x593c10);
-  }
-}
-	break;
-
-//========================================================================================================================//		      
-	      case 'dragonball': {		      
-    if (!text || text == "") {
-      m.reply("Example usage :  " + prefix + "dragonball Nick");
-      return;
-    }
-      try {
-    const _0x26f3ed = await mumaker.ephoto("https://en.ephoto360.com/create-dragon-ball-style-text-effects-online-809.html", text);
-     m.reply("*Wait a moment...*")
-    await client.sendMessage(m.chat, {
-      image: {
-        url: _0x26f3ed.image
-      },
-      caption: `GENERATED BY RAVEN-BOT`
-    }, {
-      quoted: m
-    });
-  } catch (_0x553773) {
-    m.reply("🥵🥵 " + _0x553773);
-  }
-}
-	 break;
-
-//========================================================================================================================//		      
-	      case 'naruto': {		      
-		      if (!text || text == "") {
-      m.reply("Example usage : " + prefix + "naruto Hunter");
-      return;
-    }
-    try {
-    var _0x357389 = await mumaker.ephoto("https://en.ephoto360.com/naruto-shippuden-logo-style-text-effect-online-808.html", text);
- m.reply("*Wait a moment...*");
-    await client.sendMessage(m.chat, {
-      image: {
-        url: _0x357389.image
-      },
-      caption: `GENERATED BY RAVEN-BOT`
-    }, {
-      quoted: m
-    });
-  } catch (_0x564fe1) {
-    m.reply("🥵🥵 " + _0x564fe1);
-  }
-}
-	  break;
-
-//========================================================================================================================//		      
-	      case 'graffiti': {		      
-		      if (!text || text == "") {
-    m.reply("Example usage : " + prefix + "graffiti Nick");
-    return;
-  }
-  try {
-    let _0x57ef84 = await mumaker.ephoto("https://en.ephoto360.com/create-a-cartoon-style-graffiti-text-effect-online-668.html", text);
-    m.reply("*Wait a moment...*");
-    await client.sendMessage(m.chat, {
-      image: {
-        url: _0x57ef84.image
-      },
-      caption: `GENERATED BY RAVEN-BOT`
-    }, {
-      quoted: m
-    });
-  } catch (_0x27e2e5) {
-    m.reply("🥵🥵 " + _0x27e2e5);
-  }
-}
-	 break;
-
-//========================================================================================================================//		      
-	      case 'cat': {		   
-		  if (!text || text == "") { m.reply("Example usage : * " + prefix + "cat Nick");
-    return;
-  }
-  try {
-    let nick = await mumaker.ephoto("https://en.ephoto360.com/handwritten-text-on-foggy-glass-online-680.html", text);
-    m.reply("*Wait a moment...*");
-    await client.sendMessage(m.chat, {
-      image: {
-        url: nick.image
-      },
-      caption: `GENERATED BY RAVEN-BOT`
-    }, {
-      quoted: m
-    });
-  } catch (_0x27e2e5) {
-    m.reply("🥵🥵 " + _0x27e2e5);
-  }
-    }
-        break;
-
-//========================================================================================================================//		      
-	      case 'gold': {		     
-		      if (!text || text == "") {
-    m.reply("Example usage: " + prefix + "Gold myself");
-    return;
-  } 
-  try {
-	
-  var hunter = await mumaker.ephoto("https://en.ephoto360.com/modern-gold-4-213.html", text);
-m.reply("*Wait a moment...*");
-    await client.sendMessage(m.chat, {
-      image: {
-        url: hunter.image
-      },
-      caption: `GENERATED BY RAVEN-BOT`
-    }, {
-      quoted: m
-    });
-  } catch(_0x29ddf9) {
-    m.reply("💀💀" + _0x29ddf9);
-  }
-}
-	 break;
-
-//========================================================================================================================//		      
-		      case 'child': {	    		     
-		      if (!text || text == "") {
-    m.reply("Example usage: " + prefix + "Child Raven");
-    return;
-  } 
-  try {
-	
-  var tumba = await mumaker.ephoto("https://en.ephoto360.com/write-text-on-wet-glass-online-589.html", text);
-m.reply("*Wait a moment...*");
-    await client.sendMessage(m.chat, {
-      image: {
-        url: tumba.image
-      },
-      caption: `GENERATED BY RAVEN-BOT`
-    }, {
-      quoted: m
-    });
-  } catch(_0x29ddf) {
-    m.reply("💀💀" + _0x29ddf);
-  }
-	    }
-		break;
-
-//========================================================================================================================//		      
-case 'joke': {
-try {
-        const url = 'https://official-joke-api.appspot.com/random_joke';  // API for random jokes
-        const response = await axios.get(url);
-        const joke = response.data;
-        const jokeMessage = `
-😂 *Below is a random joke for you* 😂\n\n
-*${joke.setup}*\n\n
-${joke.punchline} 😄
-`;
-        return reply(jokeMessage);
-    } catch (e) {
-        console.log(e);
-        return reply("Couldn't fetch a joke right now. Please try again later.");
+        console.error("General fetch error:", error);
+        await m.reply(`✨ Oh no, a glitch in the matrix! 💥 Something went terribly wrong while fetching the website. My apologies, darling! 💔`);
     }
 }
 break;
 
 //========================================================================================================================//		      
-   case "gpass": case 'genpassword': {
-		      try {
-        const length = args[0] ? parseInt(args[0]) : 12; // Default length is 12 if not provided
-        if (isNaN(length) || length < 8) {
-            return reply('Please provide a valid length for the password (Minimum 08 Characters).');
-        }
-
-        const generatePassword = (len) => {
-            const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+[]{}|;:,.<>?';
-            let password = '';
-            for (let i = 0; i < len; i++) {
-                const randomIndex = crypto.randomInt(0, charset.length);
-                password += charset[randomIndex];
-            }
-            return password;
-        };
-
-        const password = generatePassword(length);
-        const message = `Below is your password 🔥:`;
-
-        // Send initial notification message
-        await client.sendMessage(from, { text: message }, { quoted: m });
-
-        // Send the password in a separate message
-        await client.sendMessage(from, { text: password }, { quoted: m });
-    } catch (e) {
-        console.log(e);
-        reply(`Error generating password🤕: ${e.message}`);
+case 'metallic': {
+    if (!text || text === "") {
+        m.reply("✨👑 My dear, you've forgotten the most essential ingredient – the text itself! What shall I adorn with this magnificent metallic sheen? Do enlighten me! 👑✨");
+        return; 
     }
+
+    try {
+        m.reply("⏳🌟 Just a *moment*, my dear. This divine transformation is being meticulously crafted for you. 🌟⏳");
+        var imageUrl = await mumaker.ephoto("https://en.ephoto360.com/impressive-decorative-3d-metal-text-effect-798.html", text);
+
+        await client.sendMessage(m.chat, {
+            image: {
+                url: imageUrl.image 
+            },
+            caption: `𝑮𝒆𝒏𝒆𝒓𝒂𝒕𝒆𝒅 𝑩𝒚 𝑭𝒓𝒐𝒔𝒕-𝑩𝒚𝒕𝒆-𝑨𝒊` 
+        });
+    } catch (error) {
+        m.reply(`⚠️ My apologies, darling, but an unexpected error occurred. Let's try that again, shall we? 🧐: ${error} ⚠️`);
+    }
+}
+break; 
+
+//========================================================================================================================//		      
+case 'ice': {
+  // --- Input Validation ---
+  if (!text || text === "") {
+    m.reply(`🌟❄️ Darling, you forgot to give me a name to freeze! Try something like: \`${prefix}Ice Frost\` ✨❄️ 🧊🌬️`);
+    return; 
+  }
+
+  try {
+    // --- Effect Generation ---
+    const effectData = await mumaker.ephoto("https://en.ephoto360.com/ice-text-effect-online-101.html", text);
+
+    // Fancy emojis are added at the start and end.
+    m.reply(`🌟❄️ Hold your horses, darling! I'm crafting something frosty just for you. ⏳🥶 ✨💎`);
+
+    // --- Sending the Result ---
+    // Sends the generated image to the chat.
+    await client.sendMessage(m.chat, {
+      image: {
+        url: effectData.image
+      },
+      caption: `𝑮𝒆𝒏𝒆𝒓𝒂𝒕𝒆𝒅 𝑩𝒚 𝑭𝒓𝒐𝒔𝒕-𝑩𝒚𝒕𝒆-𝑨𝒊`
+    });
+  } catch (error) {
+    m.reply(`🚨❄️ Oh dear, a little chill in the system! 🥶 It seems something went wrong: \`${error}\` 🧊🌬️`);
+  }
+}
+break;
+
+//========================================================================================================================//		      
+case 'snow': {
+  // Check if the user provided text for the effect.
+  if (!text || text.trim() === "") {
+    // Reply with a sassy and informative message if text is missing.
+    m.reply(`✨ Oh, darling, did you forget to tell me what frosty words to conjure? ❄️ Please provide your text like this: \`${prefix}Snow Frost-Byte-Ai [Your Text]\` 💎`);
+    return; // Exit the function if no text is provided.
+  }
+
+  try {
+    // Inform the user that the process is starting with a stylish message.
+    m.reply(`⏳ Just a moment, my dear! We're crafting a dazzling winter wonderland for your text... 🌨️✨`);
+
+    // Call the external service to generate the snow text effect.
+    const effectResult = await mumaker.ephoto("https://en.ephoto360.com/create-a-snow-3d-text-effect-free-online-621.html", text);
+
+    // Send the generated image back to the user with a custom caption.
+    await client.sendMessage(m.chat, {
+      image: {
+        url: effectResult.image 
+      },
+      caption: `𝑮𝒆𝒏𝒆𝒓𝒂𝒕𝒆𝒅 𝑩𝒚 𝑭𝒓𝒐𝒔𝒕-𝑩𝒚𝒕𝒆-𝑨𝒊 ❄️` 
+    });
+
+  } catch (error) {
+    // Handle any errors that occur during the process with a sassy reply.
+    m.reply(`😱 Oops! It seems we encountered a little frostbite. The error was: \`${error}\`. Let's give it another whirl, shall we? ❄️💎`);
+  }
+}
+break; 
+
+//========================================================================================================================//		      
+case 'impressive': {
+    if (!text || text.trim() === "") {
+        // Sassy reply for missing text, with fancy emojis at the start and end.
+        m.reply(`✨ Honey, you forgot the text! Try this: ${prefix}impressive Frost-Byte-Ai 💅`);
+        return; 
+    }
+
+    try {
+        // accompanied by relevant emojis for flair.
+        m.reply(`👑 Hold your horses, this is gonna be epic! 🎨💫`);
+
+        const effectResult = await mumaker.ephoto("https://en.ephoto360.com/create-3d-colorful-paint-text-effect-online-801.html", text);
+
+        // with fancy emojis at the beginning and end.
+        await client.sendMessage(m.chat, {
+            image: {
+                url: effectResult.image
+            },
+            // A stylish and engaging caption for the generated artwork.
+            caption: `💖🎨 Behold your stunning 3D Colorful Paint Text Effect! 🎨💖`
+        });
+    } catch (error) {
+        m.reply(`💖 Oopsie! Something went wrong, but don't worry, I'm still fabulous. Try again! 💥`);
+        console.error("Error creating 3D colorful paint text effect:", error);
+    }
+}
+break;
+
+//========================================================================================================================//		      
+case 'noel': {
+  if (!text || text.trim() === "") {
+    // Sassy reply for missing text, with fancy emojis at the start and end.
+    m.reply(`✨ Darling, you forgot to tell me what to write! Use it like this: ${prefix}noel [Your Name] 🎄`);
+    return; 
+  }
+
+  // --- Effect Generation ---
+  try {
+    m.reply(`👑 Crafting your festive masterpiece! Just a sec... 🎅✨`);
+    const effectResult = await mumaker.ephoto("https://en.ephoto360.com/noel-text-effect-online-99.html", text);
+
+    // --- Sending the Generated Image ---
+    await client.sendMessage(m.chat, {
+      image: {
+        // 'effectResult.image' is assumed to hold the URL of the generated image.
+        url: effectResult.image
+      },
+      // A classy and sassy caption for the generated artwork, with festive emojis.
+      caption: `🌟 Behold your dazzling Noel text effect! Crafted with holiday magic by Frost_Byte-Ai! 🎁`
+    }, {
+      // 'quoted: m' ensures the bot's reply is associated with the user's original message.
+      quoted: m
+    });
+  } catch (error) {
+    // --- Error Handling ---
+    m.reply(`💖 Oh no! It seems the holiday spirits are a bit mischievous today. Try again, darling! ❄️ Error: ${error}`);
+    // It's also good practice to log the error to the console for server-side monitoring.
+    console.error("Error creating Noel text effect:", error);
+  }
+}
+break;
+
+//========================================================================================================================//		      
+case 'water': {
+  // --- Input Validation ---
+  if (!text || text.trim() === "") {
+    // Sassy reply for missing text, with fancy emojis at the start and end.
+    m.reply(`💧✨ Oopsie, darling! You forgot to tell me what to write. Try this: ${prefix}Water [Your Name] 🌊`);
+    return; .
+  }
+
+  // --- Effect Generation ---
+  try {
+    // Inform the user that the water effect is being generated.
+    m.reply(`🌊 Creating your splashy masterpiece! Just a moment... 💦✨`);
+
+    // Call the mumaker.ephoto function to generate the water text effect.
+    const effectResult = await mumaker.ephoto("https://en.ephoto360.com/create-water-effect-text-online-295.html", text);
+
+    // --- Sending the Generated Image ---
+    await client.sendMessage(m.chat, {
+      image: {
+        // 'effectResult.image' is assumed to hold the URL of the generated image.
+        url: effectResult.image
+      },
+      // A classy and sassy caption for the generated artwork, with water-themed emojis.
+      caption: `✨ Your text, now with a stunning water effect! 🌊 Crafted by Frost_Byte-Ai! 💧`
+    }, {
+      // 'quoted: m' ensures the bot's reply is associated with the user's original message.
+      quoted: m
+    });
+  } catch (error) {
+    // --- Error Handling ---
+    m.reply(`💦 Oh no! Something went wrong with the water magic. Try again, sweetie! 💧 Error: ${error}`);
+    // It's also good practice to log the error to the console for server-side monitoring.
+    console.error("Error creating Water Effect Text:", error);
+  }
+}
+break;
+
+//========================================================================================================================//		
+case 'matrix': {
+  // Check if text input is provided.
+  if (!text || text.trim() === "") {
+    // Sassy reply for missing text, with fancy emojis at the start and end.
+    m.reply(`👑 Darling, you forgot the Matrix code! Use it like: ${prefix}Matrix [Your Name] 👾`);
+    return; // Exit if no text is provided.
+  }
+  try {
+    // Inform user about the process with a stylish, sassy message and emojis.
+    m.reply(`💻 Decoding the Matrix... one moment, please! ⏳✨`);
+
+    // Call the mumaker.ephoto function with the Matrix effect URL and user's text.
+    const effectResult = await mumaker.ephoto("https://en.ephoto360.com/matrix-text-effect-154.html", text);
+
+    // Send the generated image with a classy and engaging caption.
+    await client.sendMessage(m.chat, {
+      image: {
+        url: effectResult.image 
+      },
+      caption: `👾 Your epic Matrix Text Effect! Downloaded by Frost_Byte-Ai. 💻`
+    }, {
+      quoted: m 
+    });
+  } catch (error) {
+    // Handle any errors with a sassy, apologetic message and emojis.
+    m.reply(`💻 Oh no! The system crashed. Try again, darling! 👾 Error: ${error}`);
+    console.error("Error creating Matrix Text Effect:", error); // Log error for debugging.
+  }
+}
+break;
+
+//========================================================================================================================//		
+case 'light': {
+  // Check if text input is provided.
+  if (!text || text.trim() === "") {
+    // Sassy reply for missing text, with fancy emojis at the start and end.
+    m.reply(`💡 Darling, you forgot the futuristic text! Use it like: ${prefix}Light [Your Name] 🚀`);
+    return; 
+  }
+  try {
+    // Inform user about the process with a stylish, sassy message and emojis.
+    m.reply(`🚀 Activating futuristic light sequence... stand by! ✨💫`);
+
+    // Call the mumaker.ephoto function with the Futuristic Light effect URL and user's text.
+    const effectResult = await mumaker.ephoto("https://en.ephoto360.com/light-text-effect-futuristic-technology-style-648.html", text);
+
+    // Send the generated image with a classy and engaging caption.
+    await client.sendMessage(m.chat, {
+      image: {
+        url: effectResult.image 
+      },
+      caption: `🚀 Your futuristic Light Text Effect! Powered by Frost_Byte-Ai. ✨`
+    }, {
+      quoted: m 
+    });
+  } catch (error) {
+    // Handle any errors with a sassy, apologetic message and emojis.
+    m.reply(`💡 Oh no! The future is glitchy. Try again, darling! 🚀 Error: ${error}`);
+    console.error("Error creating Light Text Effect Futuristic Technology Style:", error); 
+  }
 }
 break;
 
 //========================================================================================================================//	
-        case "funfact": {
+case 'neon': {
+  // Check if text input is provided.
+  if (!text || text.trim() === "") {
+    // Sassy reply for missing text, with fancy emojis at the start and end.
+    m.reply(`💡 Darling, you forgot the neon glow! Try: ${prefix}Neon [Your Name] ✨`);
+    return; // Exit if no text is provided.
+  }
   try {
-        const url = 'https://uselessfacts.jsph.pl/random.json?language=en';  // API for random facts
-        const response = await axios.get(url);
-        const fact = response.data.text;
+    // Inform user about the process with a stylish, sassy message and emojis.
+    m.reply(`🌟 Illuminating your text with vibrant neon... hold on! 💡✨`);
 
-        const funFact = `
- *RAVEN-MD RANDOM FUNFACT* 
+    // Call the mumaker.ephoto function with the Neon Light effect URL and user's text.
+    const effectResult = await mumaker.ephoto("https://en.ephoto360.com/create-colorful-neon-light-text-effects-online-797.html", text);
 
-${fact}
+    // Send the generated image with a classy and engaging caption.
+    await client.sendMessage(m.chat, {
+      image: {
+        url: effectResult.image // Assuming effectResult.image contains the image URL.
+      },
+      caption: `💖 Your dazzling Colorful Neon Light Text Effect! Created by Frost_Byte-Ai. ✨`
+    });
+  } catch (error) {
+    // Handle any errors with a sassy, apologetic message and emojis.
+    m.reply(`💡 Oh no! The neon flickered out. Try again, darling! ⚡ Error: ${error}`);
+    console.error("Error creating Colorful Neon Light Text Effect:", error); // Log error for debugging.
+  }
+}
+break;
 
-Isn't that interesting? 😄
-`;
+//========================================================================================================================//	
+case 'silver':
+case 'silva': { // Supports both 'silver' and 'silva' commands.
+  // Check if text input is provided.
+  if (!text || text.trim() === "") {
+    // Sassy reply for missing text, with fancy emojis at the start and end.
+    m.reply(`✨ Darling, you forgot the shiny text! Try: ${prefix}Silva [Your Name] 💎`);
+    return; // Exit if no text is provided.
+  }
+  try {
+    // Inform user about the process with a stylish, sassy message and emojis.
+    m.reply(`🌟 Polishing your text to a brilliant silver shine... stand by! 💎✨`);
 
-  return reply(funFact);
-    } catch (e) {
-        console.log(e);
-        return reply("An error occurred while fetching a fun fact. Please try again later🤕.");
-    }
+    // Call the mumaker.ephoto function with the Silver 3D effect URL and user's text.
+    const effectResult = await mumaker.ephoto("https://en.ephoto360.com/create-glossy-silver-3d-text-effect-online-802.html", text);
+
+    // Send the generated image with a classy and engaging caption.
+    await client.sendMessage(m.chat, {
+      image: {
+        url: effectResult.image // Assuming effectResult.image contains the image URL.
+      },
+      caption: `💎 Your dazzling Glossy Silver 3D Text Effect! Gleaming from Frost_Byte-Ai. ✨`
+    });
+  } catch (error) {
+    // Handle any errors with a sassy, apologetic message and emojis.
+    m.reply(`✨ Oh no! The silver tarnished. Try again, darling! 💎 Error: ${error}`);
+    console.error("Error creating Glossy Silver 3D Text Effect:", error); // Log error for debugging.
+  }
+}
+break;
+
+//========================================================================================================================//	
+case 'devil': {
+  // Check if text input is provided.
+  if (!text || text.trim() === "") {
+    // Sassy reply for missing text, with fancy emojis at the start and end.
+    m.reply(`😈 Oops, missing the devilish text! Try this: ${prefix}Devil [Your Name] 🖤`);
+    return; // Exit if no text is provided.
+  }
+  try {
+    // Inform user about the process with a stylish, sassy message and emojis.
+    m.reply(`🔥 Unleashing infernal neon power... stand by! 😈✨`);
+
+    // Call the mumaker.ephoto function with the Neon Devil Wings effect URL and user's text.
+    const effectResult = await mumaker.ephoto("https://en.ephoto360.com/neon-devil-wings-text-effect-online-683.html", text);
+
+    // Send the generated image with a classy and engaging caption.
+    await client.sendMessage(m.chat, {
+      image: {
+        url: effectResult.image // Assuming effectResult.image contains the image URL.
+      },
+      caption: `😈 Your fierce Neon Devil Wings text effect! Conjured by Frost_Byte-Ai. 🔥`
+    });
+  } catch (error) {
+    // Handle any errors with a sassy, apologetic message and emojis.
+    m.reply(`🖤 Oh no! The inferno fizzled out. Try again, darling! 😈 Error: ${error}`);
+    console.error("Error creating Neon Devil Wings Text Effect:", error); // Log error for debugging.
+  }
 }
 break;
 
 //========================================================================================================================//		      
-	      case 'animegirl': {
-try {
-        const apiUrl = `https://api.waifu.pics/sfw/waifu`;
-        const response = await axios.get(apiUrl);
-        const data = response.data;
+case 'typography': {
+  // Check if text input is provided.
+  if (!text || text.trim() === "") {
+    // Sassy reply for missing text, with fancy emojis at the start and end.
+    m.reply(`🖋️ Feeling poetic? You forgot the text! Try: ${prefix}Typography [Your Status] 🚶‍♀️`);
+    return; // Exit if no text is provided.
+  }
+  try {
+    // Inform user about the process with a stylish, sassy message and emojis.
+    m.reply(`🚶‍♀️ Crafting your heartfelt pavement message... just a moment! ✍️✨`);
 
-        await client.sendMessage(from, { image: { url: data.url }, caption: '*GENERATED BY RAVEN MD*' }, { quoted: m });
-    } catch (e) {
-        console.log(e);
-        reply(`*Error Fetching Anime Girl image*: ${e.message}`);
-    }
+    // Call the mumaker.ephoto function with the Pavement Typography effect URL and user's text.
+    const effectResult = await mumaker.ephoto("https://en.ephoto360.com/create-typography-text-effect-on-pavement-online-774.html", text);
+
+    // Send the generated image with a classy and engaging caption.
+    await client.sendMessage(m.chat, {
+      image: {
+        url: effectResult.image // Assuming effectResult.image contains the image URL.
+      },
+      caption: `💖 Your touching Typography on Pavement effect! Shared by Frost_Byte-Ai. 🚶‍♀️`
+    });
+  } catch (error) {
+    // Handle any errors with a sassy, apologetic message and emojis.
+    m.reply(`🚶‍♀️ Oh no, the pavement is smudged. Try again, darling! 💔 Error: ${error}`);
+    console.error("Error creating Typography Text Effect on Pavement:", error); // Log error for debugging.
+  }
+}
+break;
+
+//========================================================================================================================//	
+case 'purple': {
+  // Check if text input is provided.
+  if (!text || text.trim() === "") {
+    // Sassy reply for missing text, with fancy emojis at the start and end.
+    m.reply(`👑 Darling, you forgot the royal purple! Try: ${prefix}Purple [Your Name] 💜`);
+    return; // Exit if no text is provided.
+  }
+  try {
+    // Inform user about the process with a stylish, sassy message and emojis.
+    m.reply(`💜 Infusing your text with regal purple magic... stand by! 👑✨`);
+
+    // Call the mumaker.ephoto function with the Purple effect URL and user's text.
+    const effectResult = await mumaker.ephoto("https://en.ephoto360.com/purple-text-effect-online-100.html", text);
+
+    // Send the generated image with a classy and engaging caption.
+    await client.sendMessage(m.chat, {
+      image: {
+        url: effectResult.image // Assuming effectResult.image contains the image URL.
+      },
+      caption: `👑 Your stunning Purple Text Effect! Fit for royalty from Frost_Byte-Ai. 💜`
+    });
+  } catch (error) {
+    // Handle any errors with a sassy, apologetic message and emojis.
+    m.reply(`💜 Oh no! The royal dye ran. Try again, darling! 👑 Error: ${error}`);
+    console.error("Error creating Purple Text Effect:", error); // Log error for debugging.
+  }
+}
+break;
+
+//========================================================================================================================//		 
+case 'thunder': {
+  // Check if text input is provided.
+  if (!text || text.trim() === "") {
+    // Sassy reply for missing text, with fancy emojis at the start and end.
+    m.reply(`⚡ Oops, you forgot the thunderous text! Use it like: ${prefix}Thunder [Your Name] ⚡`);
+    return; // Exit if no text is provided.
+  }
+  try {
+    // Inform user about the process with a stylish, sassy message and emojis.
+    m.reply(`⚡ Conjuring your electrifying thunder effect... just a sec! ⚡✨`);
+
+    // Call the mumaker.ephoto function with the Thunder effect URL and user's text.
+    const effectResult = await mumaker.ephoto("https://en.ephoto360.com/thunder-text-effect-online-97.html", text);
+
+    // Send the generated image with a classy and engaging caption.
+    await client.sendMessage(m.chat, {
+      image: {
+        url: effectResult.image // Assuming effectResult.image contains the image URL.
+      },
+      caption: `✨ Your electrifying Thunder Text Effect! Crafted by Frost_Byte-Ai. ⚡`
+    });
+  } catch (error) {
+    // Handle any errors with a sassy, apologetic message and emojis.
+    m.reply(`⚡ Oh snap! A storm of errors occurred. Please try again, gorgeous! ⛈️ Error: ${error}`);
+    console.error("Error creating Thunder text effect:", error); // Log error for debugging.
+  }
+}
+break;
+
+//========================================================================================================================//		      
+case 'leaves': {
+  // Check if text input is provided.
+  if (!text || text.trim() === "") {
+    // Sassy reply for missing text, with fancy emojis at the start and end.
+    m.reply(`🍃 Oops, you forgot the text! Let's make some leafy art: ${prefix}Leaves [Your Name] 🌿`);
+    return; // Exit if no text is provided.
+  }
+  try {
+    // Inform user about the process with a stylish, sassy message and emojis.
+    m.reply(`🌿 Painting your text with nature's finest green brush... just a sec! 🍃✨`);
+
+    // Call the mumaker.ephoto function with the Green Brush effect URL and user's text.
+    const effectResult = await mumaker.ephoto("https://en.ephoto360.com/green-brush-text-effect-typography-maker-online-153.html", text);
+
+    // Send the generated image with a classy and engaging caption.
+    await client.sendMessage(m.chat, {
+      image: {
+        url: effectResult.image // Assuming effectResult.image contains the image URL.
+      },
+      caption: `🌿 Your stunning Green Brush Typography! Freshly made by Frost_Byte-Ai. 🍃`
+    }, {
+      quoted: m // Ensure the reply is quoted to the original message.
+    });
+  } catch (error) {
+    // Handle any errors with a sassy, apologetic message and emojis.
+    m.reply(`🍃 Oh dear, the leaves are a bit tangled. Try again, darling! 🍂 Error: ${error}`);
+    console.error("Error creating Green Brush Text Effect:", error); // Log error for debugging.
+  }
 }
 break;
 
 //========================================================================================================================//
+case '1917': {
+  // Check if text input is provided.
+  if (!text || text.trim() === "") {
+    // Sassy reply for missing text, with fancy emojis at the start and end.
+    m.reply(`🎬 Darling, you forgot the vintage flair! Use it like: ${prefix}1917 [Your Name/Quote] 🎞️`);
+    return; // Exit if no text is provided.
+  }
+  try {
+    // Inform user about the process with a stylish, sassy message and emojis.
+    m.reply(`🕰️ Transporting you to 1917... one moment, please! 🎞️✨`);
+
+    // Call the mumaker.ephoto function with the 1917 effect URL and user's text.
+    const effectResult = await mumaker.ephoto("https://en.ephoto360.com/1917-style-text-effect-523.html", text);
+
+    // Send the generated image with a classy and engaging caption.
+    await client.sendMessage(m.chat, {
+      image: {
+        url: effectResult.image // Assuming effectResult.image contains the image URL.
+      },
+      caption: `🌟 Your cinematic 1917 Style Text Effect, ready for the big screen! By Frost_Byte-Ai. 🎬`
+    }, {
+      quoted: m // Ensure the reply is quoted to the original message.
+    });
+  } catch (error) {
+    // Handle any errors with a sassy, apologetic message and emojis.
+    m.reply(`🎞️ Oh no! The time machine sputtered. Try again, darling! ⏳ Error: ${error}`);
+    console.error("Error creating 1917 Style Text Effect:", error); // Log error for debugging.
+  }
+}
+break;
+
+//========================================================================================================================//
+case 'arena': {
+  // Check if text input is provided.
+  if (!text || text.trim() === "") {
+    // Sassy reply for missing text, with fancy emojis at the start and end.
+    m.reply(`⚔️ Darling, your Arena title is missing! Use it like: ${prefix}arena [Your Title] 🏆`);
+    return; // Exit if no text is provided.
+  }
+  try {
+    // Inform user about the process with a stylish, sassy message and emojis.
+    m.reply(`🏆 Forging your Arena cover... just a moment! ⚔️✨`);
+
+    // Call the mumaker.ephoto function with the Arena Cover effect URL and user's text.
+    const effectResult = await mumaker.ephoto("https://en.ephoto360.com/create-cover-arena-of-valor-by-mastering-360.html", text);
+
+    // Send the generated image with a classy and engaging caption.
+    await client.sendMessage(m.chat, {
+      image: {
+        url: effectResult.image // Assuming effectResult.image contains the image URL.
+      },
+      caption: `🏆 Your epic Arena Cover Art! Dominate with Frost_Byte-Ai. ⚔️`
+    }, {
+      quoted: m // Ensure the reply is quoted to the original message.
+    });
+  } catch (error) {
+    // Handle any errors with a sassy, apologetic message and emojis.
+    m.reply(`⚔️ Oh no! The battlefield is empty. Try again, darling! 🏆 Error: ${error}`);
+    console.error("Error creating Arena Cover Effect:", error); // Log error for debugging.
+  }
+}
+break;
+
+//========================================================================================================================//		
+case 'hacker': {
+  // Check if text input is provided.
+  if (!text || text.trim() === "") {
+    // Sassy reply for missing text, with fancy emojis at the start and end.
+    m.reply(`💻 Darling, your hacker alias is missing! Use it like: ${prefix}hacker [Your Alias] 🕶️`);
+    return; // Exit if no text is provided.
+  }
+  try {
+    // Inform user about the process with a stylish, sassy message and emojis.
+    m.reply(`🕶️ Accessing the network... creating your anonymous avatar! 💻✨`);
+
+    // Call the mumaker.ephoto function with the Hacker Avatar effect URL and user's text.
+    const effectResult = await mumaker.ephoto("https://en.ephoto360.com/create-anonymous-hacker-avatars-cyan-neon-677.html", text);
+
+    // Send the generated image with a classy and engaging caption.
+    await client.sendMessage(m.chat, {
+      image: {
+        url: effectResult.image // Assuming effectResult.image contains the image URL.
+      },
+      caption: `🕶️ Your mysterious Anonymous Hacker Avatar! Crafted by Frost_Byte-Ai 💻`
+    }, {
+      quoted: m // Ensure the reply is quoted to the original message.
+    });
+  } catch (error) {
+    // Handle any errors with a sassy, apologetic message and emojis.
+    m.reply(`💻 Oh no! The firewall is up. Try again, darling! 🕶️ Error: ${error}`);
+    console.error("Error creating Anonymous Hacker Avatar:", error); // Log error for debugging.
+  }
+}
+break;
+
+//========================================================================================================================//	
+case 'sand': {
+  // Check if text input is provided.
+  if (!text || text.trim() === "") {
+    // Sassy reply for missing text, with fancy emojis at the start and end.
+    m.reply(`🏖️ Darling, the beach is waiting for your message! Use it like: ${prefix}sand [Your Message] 🌊`);
+    return; // Exit if no text is provided.
+  }
+  try {
+    // Inform user about the process with a stylish, sassy message and emojis.
+    m.reply(`✍️ Carving your message into the sand... just a moment! 🏖️✨`);
+
+    // Call the mumaker.ephoto function with the Sand effect URL and user's text.
+    const effectResult = await mumaker.ephoto("https://en.ephoto360.com/write-names-and-messages-on-the-sand-online-582.html", text);
+
+    // Send the generated image with a classy and engaging caption.
+    await client.sendMessage(m.chat, {
+      image: {
+        url: effectResult.image // Assuming effectResult.image contains the image URL.
+      },
+      caption: `🌊 Your beautiful message written on the sand! Crafted by Frost_Byte-Ai. 🏖️`
+    }, {
+      quoted: m // Ensure the reply is quoted to the original message.
+    });
+  } catch (error) {
+    // Handle any errors with a sassy, apologetic message and emojis.
+    m.reply(`🏖️ Oh no! The tide washed it away. Try again, darling! 🌊 Error: ${error}`);
+    console.error("Error creating Sand Text Effect:", error); // Log error for debugging.
+  }
+}
+break;
+
+//========================================================================================================================//		
+case 'dragonball': {
+  // Check if text input is provided.
+  if (!text || text.trim() === "") {
+    // Sassy reply for missing text, with fancy emojis at the start and end.
+    m.reply(`💥 Darling, you forgot the Saiyan power-up text! Use it like: ${prefix}dragonball [Your Name] 💥`);
+    return; // Exit if no text is provided.
+  }
+  try {
+    // Inform user about the process with a stylish, sassy message and emojis.
+    m.reply(`✨ Channeling the energy of the Dragon Balls... just a moment! 💥💫`);
+
+    // Call the mumaker.ephoto function with the Dragon Ball effect URL and user's text.
+    const effectResult = await mumaker.ephoto("https://en.ephoto360.com/create-dragon-ball-style-text-effects-online-809.html", text);
+
+    // Send the generated image with a classy and engaging caption.
+    await client.sendMessage(m.chat, {
+      image: {
+        url: effectResult.image // Assuming effectResult.image contains the image URL.
+      },
+      caption: `🌟 Your epic Dragon Ball Style Text Effect! Unleashed by Frost_Byte-Ai. 💥`
+    }, {
+      quoted: m // Ensure the reply is quoted to the original message.
+    });
+  } catch (error) {
+    // Handle any errors with a sassy, apologetic message and emojis.
+    m.reply(`💥 Oh no! The Dragon Balls are scattered. Try again, darling! ⚡ Error: ${error}`);
+    console.error("Error creating Dragon Ball Style Text Effect:", error); // Log error for debugging.
+  }
+}
+break;
+
+//========================================================================================================================//		
+case 'naruto': {
+  // Check if text input is provided.
+  if (!text || text.trim() === "") {
+    // Sassy reply for missing text, with fancy emojis at the start and end.
+    m.reply(`🍥 Darling, you forgot the ninja way text! Use it like: ${prefix}naruto [Your Name] 🍥`);
+    return; // Exit if no text is provided.
+  }
+  try {
+    // Inform user about the process with a stylish, sassy message and emojis.
+    m.reply(`🍥 Channeling the spirit of Naruto... generating your logo style! 🍥✨`);
+
+    // Call the mumaker.ephoto function with the Naruto effect URL and user's text.
+    const effectResult = await mumaker.ephoto("https://en.ephoto360.com/naruto-shippuden-logo-style-text-effect-online-808.html", text);
+
+    // Send the generated image with a classy and engaging caption.
+    await client.sendMessage(m.chat, {
+      image: {
+        url: effectResult.image // Assuming effectResult.image contains the image URL.
+      },
+      caption: `🍥 Your epic Naruto Shippuden Logo Style Text Effect! Believe it! - Frost_Byte-Ai. 🍥`
+    }, {
+      quoted: m // Ensure the reply is quoted to the original message.
+    });
+  } catch (error) {
+    // Handle any errors with a sassy, apologetic message and emojis.
+    m.reply(`🍥 Oh no! The jutsu failed. Try again, darling! 🍥 Error: ${error}`);
+    console.error("Error creating Naruto Shippuden Logo Style Text Effect:", error); // Log error for debugging.
+  }
+}
+break;
+
+//========================================================================================================================//		 
+case 'graffiti': {
+  // Check if text input is provided.
+  if (!text || text.trim() === "") {
+    // Sassy reply for missing text, with fancy emojis at the start and end.
+    m.reply(`🎨 Darling, unleash your inner artist! Use: ${prefix}graffiti [Your Tag] 🖌️`);
+    return; // Exit if no text is provided.
+  }
+  try {
+    // Inform user about the process with a stylish, sassy message and emojis.
+    m.reply(`🖌️ Spraying some cartoon graffiti magic... stand by! 🎨✨`);
+
+    // Call the mumaker.ephoto function with the Graffiti effect URL and user's text.
+    const effectResult = await mumaker.ephoto("https://en.ephoto360.com/create-a-cartoon-style-graffiti-text-effect-online-668.html", text);
+
+    // Send the generated image with a classy and engaging caption.
+    await client.sendMessage(m.chat, {
+      image: {
+        url: effectResult.image // Assuming effectResult.image contains the image URL.
+      },
+      caption: `🎨 Your vibrant Cartoon Graffiti Text Effect! Tagged by Frost_Byte-Ai. 🖌️`
+    }, {
+      quoted: m // Ensure the reply is quoted to the original message.
+    });
+  } catch (error) {
+    // Handle any errors with a sassy, apologetic message and emojis.
+    m.reply(`🎨 Oh no! The spray can is empty. Try again, darling! 🖌️ Error: ${error}`);
+    console.error("Error creating Cartoon Style Graffiti Text Effect:", error); // Log error for debugging.
+  }
+}
+break;
+
+//========================================================================================================================//
+case 'cat': {
+  // Check if text input is provided.
+  if (!text || text.trim() === "") {
+    // Sassy reply for missing text, with fancy emojis at the start and end.
+    m.reply(`🐈 Darling, the glass is fogged without your text! Try: ${prefix}cat [Your Name] 🌫️`);
+    return; // Exit if no text is provided.
+  }
+  try {
+    // Inform user about the process with a stylish, sassy message and emojis.
+    m.reply(`🌫️ Writing your message on the foggy glass... just a sec! 🐈✨`);
+
+    // Call the mumaker.ephoto function with the Foggy Glass effect URL and user's text.
+    const effectResult = await mumaker.ephoto("https://en.ephoto360.com/handwritten-text-on-foggy-glass-online-680.html", text);
+
+    // Send the generated image with a classy and engaging caption.
+    await client.sendMessage(m.chat, {
+      image: {
+        url: effectResult.image // Assuming effectResult.image contains the image URL.
+      },
+      caption: `🌫️ Your charming Handwritten Text on Foggy Glass! Created by Frost_Byte-Ai. 🐈`
+    }, {
+      quoted: m // Ensure the reply is quoted to the original message.
+    });
+  } catch (error) {
+    // Handle any errors with a sassy, apologetic message and emojis.
+    m.reply(`🐈 Oh no! The glass cleared too soon. Try again, darling! 🌫️ Error: ${error}`);
+    console.error("Error creating Handwritten Text on Foggy Glass:", error); // Log error for debugging.
+  }
+}
+break;
+
+//========================================================================================================================//
+case 'gold': {
+  // Check if text input is provided.
+  if (!text || text.trim() === "") {
+    // Sassy reply for missing text, with fancy emojis at the start and end.
+    m.reply(`🌟 Darling, you forgot the golden touch! Try: ${prefix}Gold [Your Name] 👑`);
+    return; // Exit if no text is provided.
+  }
+  try {
+    // Inform user about the process with a stylish, sassy message and emojis.
+    m.reply(`👑 Infusing your text with modern gold glamour... stand by! 🌟✨`);
+
+    // Call the mumaker.ephoto function with the Modern Gold effect URL and user's text.
+    // Deobfuscated 'hunter' to 'effectResult'.
+    const effectResult = await mumaker.ephoto("https://en.ephoto360.com/modern-gold-4-213.html", text);
+
+    // Send the generated image with a classy and engaging caption.
+    await client.sendMessage(m.chat, {
+      image: {
+        url: effectResult.image // Assuming effectResult.image contains the image URL.
+      },
+      caption: `👑 XD e Your dazzling Modern Gold Text Effect! Gleaming from Frost_Byte-Ai. 🌟`
+    }, {
+      quoted: m // Ensure the reply is quoted to the original message.
+    });
+  } catch (error) {
+    // Handle any errors with a sassy, apologetic message and emojis.
+    m.reply(`🌟 Oh no! The gold is a bit dull. Try again, darling! 👑 Error: ${error}`);
+    console.error("Error creating Modern Gold Text Effect:", error); // Log error for debugging.
+  }
+}
+break;
+
+//========================================================================================================================//		      
+case 'child': {
+  // --- Input Validation ---
+  if (!text || text.trim() === "") {
+    // Sassy and instructive reply with fancy emojis at the start and end.
+    m.reply(`👑 Darling, the glass is waiting for your touch! Use it like: ${prefix}child [Your Name] 🌧️`);
+    return; // Exit the function if no text is provided.
+  }
+
+  // --- Effect Generation ---
+  try {
+    // Informs the user that the effect is being generated with a stylish and thematic message.
+    m.reply(`🌧️ Writing your message on the wet glass... just a moment! 💧✨`);
+
+    // Calls the mumaker.ephoto function to generate the text effect.
+    const effectResult = await mumaker.ephoto("https://en.ephoto360.com/write-text-on-wet-glass-online-589.html", text);
+
+    // --- Sending the Generated Image ---
+    await client.sendMessage(m.chat, {
+      image: {
+        // 'effectResult.image' is assumed to contain the URL of the generated image.
+        url: effectResult.image
+      },
+      // A classy caption that describes the effect and credits the bot.
+      caption: `💧 Your moody Text on Wet Glass! Expressive art by Frost_Byte-Ai. 🌧️`
+    }, {
+      // 'quoted: m' ensures the bot's reply is associated with the user's original message.
+      quoted: m
+    });
+  } catch (error) {
+    // --- Error Handling ---
+    m.reply(`💧 Oh no! The condensation is too much. Try again, darling! 🌧️ Error: ${error}`);
+    // Logs the error to the console for debugging purposes.
+    console.error("Error creating Write Text on Wet Glass effect:", error);
+  }
+}
+break;
+
+//========================================================================================================================//		      
+// Case for fetching a random joke
+case 'joke': {
+  try {
+    // Fetching a joke from the official joke API.
+    const url = 'https://official-joke-api.appspot.com/random_joke';
+    const response = await axios.get(url);
+    const joke = response.data;
+
+    // Crafting a stylish and engaging joke message.
+    const jokeMessage = `
+✨ *Prepare for a chuckle, darling!* ✨\n\n
+😂 **${joke.setup}** 😂\n\n
+${joke.punchline} 😜
+`;
+    // Reply with the formatted joke.
+    return reply(jokeMessage);
+  } catch (e) {
+    // Sassy error message if a joke couldn't be fetched.
+    console.log(e);
+    return reply("👑 Oh no! The punchline is missing. Couldn't fetch a joke right now, my dear. Try again later! 😅");
+  }
+}
+break;
+
+//========================================================================================================================//		
+case "gpass": case 'genpassword': {
+  try {
+    // Determine password length, defaulting to 12 if not specified or invalid.
+    const length = args[0] ? parseInt(args[0]) : 12;
+
+    // Validate the requested password length.
+    if (isNaN(length) || length < 8) {
+      // Sassy reply for invalid length input.
+      return reply("💖 Sweetie, passwords need a minimum of 8 characters! Please provide a valid length. 💅");
+    }
+
+    // Function to generate a random password.
+    const generatePassword = (len) => {
+      // Character set including lowercase, uppercase, numbers, and symbols.
+      const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+[]{}|;:,.<>?';
+      let password = '';
+      for (let i = 0; i < len; i++) {
+        // Select a random character from the charset.
+        const randomIndex = crypto.randomInt(0, charset.length);
+        password += charset[randomIndex];
+      }
+      return password;
+    };
+
+    // Generate the password.
+    const password = generatePassword(length);
+    // Initial stylish message before revealing the password.
+    const message = `🌟 Your fabulous new password is ready, darling! 🔥`;
+
+    // Send the initial notification message.
+    await client.sendMessage(from, { text: message }, { quoted: m });
+
+    // Send the generated password in a separate, secure message.
+    await client.sendMessage(from, { text: password }, { quoted: m });
+  } catch (e) {
+    // Sassy error message if password generation fails.
+    console.log(e);
+    reply(`👑 Oops! Something went wrong while creating your password. 🤕 Error: ${e.message}`);
+  }
+}
+break;
+
+//========================================================================================================================//	
+// Case for fetching a fun fact
+case "funfact": {
+  try {
+    // Fetching a random fact from the Useless Facts API.
+    const url = 'https://uselessfacts.jsph.pl/random.json?language=en';
+    const response = await axios.get(url);
+    const fact = response.data.text;
+
+    // Crafting a sassy and informative fun fact message.
+    const funFact = `
+✨ *Prepare to be amazed, darling! Here's a little nugget of trivia for you:* ✨\n\n
+💡 ${fact}\n\n
+Fascinating, isn't it? 😉
+`;
+    // Reply with the formatted fun fact.
+    return reply(funFact);
+  } catch (e) {
+    // Sassy error message if a fun fact couldn't be fetched.
+    console.log(e);
+    return reply("👑 Oh dear, the trivia gods are silent! Couldn't fetch a fun fact right now. Try again later, sweetie! 😅");
+  }
+}
+break;
+
+//========================================================================================================================//		      
+// Case for fetching an anime girl image
+case 'animegirl': {
+  try {
+    // Fetching a SFW anime girl image from the API.
+    const apiUrl = `https://api.waifu.pics/sfw/waifu`;
+    const response = await axios.get(apiUrl);
+    const data = response.data;
+
+    // Sending the image with a stylish caption.
+    await client.sendMessage(from, { image: { url: data.url }, caption: '*✨ Your requested Anime Girl image, served with style by Raven-MD! ✨*' }, { quoted: m });
+  } catch (e) {
+    // Sassy error message if the image fetch fails.
+    console.log(e);
+    reply(`👑 Oops! Couldn't fetch that anime charm for you. 😥 Error: ${e.message}`);
+  }
+}
+break;
+
+//========================================================================================================================//
+// Case for pairing users in a group
 case 'rship': {
-	 const toM = (a) => '@' + a.split('@')[0];
-try {
-        // Ensure command is used in a group
-        if (!m.isGroup) {
-            return reply("This command can only be used in groups.");
-        }
-
-        // Get group participants
-        const participants = groupMetadata.participants.map(p => p.id);
-
-        if (participants.length < 2) {
-            return reply("Not enough members to pair.");
-        }
-
-        // Sender of the command
-        const sender = m.sender;
-
-        // Randomly select another participant
-        let randomParticipant;
-        do {
-            randomParticipant = participants[Math.floor(Math.random() * participants.length)];
-        } while (randomParticipant === sender);
-
-        // Reply with the pairing
-        const message = `${toM(sender)} your match is  ${toM(randomParticipant)}\nCongratulations☠️`;
-        await client.sendMessage(from, { text: message, mentions: [sender, randomParticipant] });
-    } catch (e) {
-        console.error("Error in ship command:", e);
-        reply("An error occurred while processing the command. Please try again.");
+  // Helper function to format user IDs.
+  const toM = (a) => '@' + a.split('@')[0];
+  try {
+    // Ensure the command is used within a group chat.
+    if (!m.isGroup) {
+      return reply("💖 Darling, this command is exclusively for group chats! Find your match there. 👑");
     }
+
+    // Get all participant IDs from the group metadata.
+    const participants = groupMetadata.participants.map(p => p.id);
+
+    // Check if there are enough members to form a pair.
+    if (participants.length < 2) {
+      return reply("💋 Not enough members in this group to play matchmaker, sweetie!");
+    }
+
+    // The sender of the command.
+    const sender = m.sender;
+
+    // Randomly select another participant, ensuring it's not the sender themselves.
+    let randomParticipant;
+    do {
+      randomParticipant = participants[Math.floor(Math.random() * participants.length)];
+    } while (randomParticipant === sender);
+
+    // Craft a sassy and celebratory pairing message.
+    const message = `${toM(sender)} your destined match is ${toM(randomParticipant)}!\n\n💖 Congratulations, you two! 💖`;
+    // Send the message with mentions for the paired users.
+    await client.sendMessage(from, { text: message, mentions: [sender, randomParticipant] });
+  } catch (e) {
+    // Sassy error message for any issues during the pairing process.
+    console.error("Error in ship command:", e);
+    reply("👑 Oh no! The matchmaking magic failed. Please try again later, darling. 💔");
+  }
 }
 break;
 
 //========================================================================================================================//
-	      case 'calculate': case 'calc': {
-try {
+// Case for calculator functionality
+case 'calculate': case 'calc': {
+  try {
+    // Check if text input (the expression) is provided.
     if (!text) {
-      return m.reply("*Example usage:* .calculate 5+72");
+      // Sassy usage example if no expression is given.
+      return m.reply("*Hello there! Ready to crunch some numbers?* 🤓\n\n*Example usage:* `.calculate 5+72`");
     }
 
-    // Validate the input to prevent unsafe operations
+    // Validate the input to prevent unsafe operations.
+    // Allows only numbers, basic arithmetic operators, parentheses, and whitespace.
     if (!/^[0-9+\-*/().\s]+$/.test(text)) {
-      return m.reply("Invalid format. Only numbers and +, -, *, /, ( ) are allowed.");
+      // Sassy error for invalid input format.
+      return m.reply("💅 Darling, I only understand numbers and basic math symbols (+, -, *, /, parentheses). Please format your expression correctly! 💋");
     }
 
-    // Evaluate the mathematical expression
+    // Evaluate the mathematical expression using eval().
+    // Use with caution, as eval() can be a security risk if input is not properly sanitized.
     let result = eval(text);
 
-    // Reply with the result
-    m.reply(`${result}`);
+    // Reply with the calculated result.
+    m.reply(`✨ Your calculation is complete, gorgeous! ✨\n\n${text} = ${result}`);
   } catch (e) {
+    // Sassy error message for calculation errors.
     console.error("Error in .calculate command:", e);
-    m.reply("Error in calculation. Please check your expression.");
+    m.reply(`👑 Oops! Couldn't quite solve that. 🤔 Please double-check your expression, sweetie!`);
   }
 }
 break;
 
 //========================================================================================================================//
-case "raven":
-		{
-        if (!text) return reply(`Hello there, what's your question?`);
-          let d = await fetchJson(
-            `https://bk9.fun/ai/llama?q=${text}`
-          );
-          if (!d.BK9) {
-            return reply(
-              "An error occurred while fetching the AI chatbot response. Please try again later."
-            );
-          } else {
-            reply(d.BK9);
-          }
-      }
-                break;
-
-//========================================================================================================================//
-case "gpt4":
-           {
-        if (!text) return reply(`Hello there, what's your question?`);
-          let d = await fetchJson(
-            `https://bk9.fun/ai/Aoyo?q=${text}`
-          );
-          if (!d.BK9) {
-            return reply(
-              "An error occurred while fetching the AI chatbot response. Please try again later."
-            );
-          } else {
-            reply(d.BK9);
-          }
-		     }
-                      break;
-
-//========================================================================================================================//
-case 'gpt3': {
-        if (!q) return reply("Holla, I'm listening to you..");
-try {
-        const apiUrl = `https://vapis.my.id/api/openai?q=${encodeURIComponent(q)}`;
-        const { data } = await axios.get(apiUrl);
-
-   if (!data || !data.result) {
-            return reply("OpenAI failed to respond. Please try again later.");
-        }
-        await reply(`${data.result}`);   
-   
-} catch (e) {
-        console.error("Error in OpenAI command:", e); 
-        reply("An error occurred while communicating With API");
-    }
-};
-  break;
-
-//========================================================================================================================//	      		      
-case "gpt2":
-   {
-       if (!q) return reply("Hello there,  what's your question ?");
-try {
-  const apiUrl = `https://lance-frank-asta.onrender.com/api/gpt?q=${encodeURIComponent(q)}`;
-  const { data } = await axios.get(apiUrl);
-
-if (!data || !data.message) {
-        return reply("Oops an error occurred!!.");
-	}
-        await reply(`${data.message}`);
-    } catch (e) {
-        console.error("Error in AI command:", e);
- reply("An error occurred while communicating with API.");
-    }
-}; 
-                break;
-
-//========================================================================================================================//
-case 'gpt':{
-
-if (!text) return m.reply("Hello there, what's going on ?");
-	try {
-     const data = await fetchJson(`https://api.dreaded.site/api/aichat?query=${text}`);
-		
-    if (data && data.result) {
-	    const res = data.result;
-	    await m.reply(res);
+// Case for Raven AI Chatbot
+case "raven": {
+  // Check if a question is provided.
+  if (!text) return reply(`👑 Hello there, darling! What's on your mind today? 💖`);
+  try {
+    // Fetching response from the Llama AI API.
+    let d = await fetchJson(`https://bk9.fun/ai/llama?q=${text}`);
+    // Check if the API returned a valid response.
+    if (!d.BK9) {
+      // Sassy error message for API failure.
+      return reply("👑 Oh no! The AI seems to be napping. Couldn't fetch a response. Try again later, my dear! 😴");
     } else {
-	    m.reply("An error occurred!!");
+      // Reply with the AI's response.
+      reply(d.BK9);
     }
-	} catch (error) {
-reply('An error occured while communicating with the APIs\n' + error);
-}
+  } catch (e) {
+    // Sassy error message for general fetch errors.
+    console.log(e);
+    reply("👑 My apologies, darling! An error occurred while fetching the AI chatbot response. Please try again later. 😥");
   }
+}
+break;
+
+//========================================================================================================================//
+
+// Case for GPT-4 AI Chatbot
+case "gpt4": {
+  // Check if a question is provided.
+  if (!text) return reply(`👑 Hello there, darling! What's on your mind today? 💖`);
+  try {
+    // Fetching response from the Aoyo AI API.
+    let d = await fetchJson(`https://bk9.fun/ai/Aoyo?q=${text}`);
+    // Check if the API returned a valid response.
+    if (!d.BK9) {
+      // Sassy error message for API failure.
+      return reply("👑 Oh no! The AI seems to be napping. Couldn't fetch a response. Try again later, my dear! 😴");
+    } else {
+      // Reply with the AI's response.
+      reply(d.BK9);
+    }
+  } catch (e) {
+    // Sassy error message for general fetch errors.
+    console.log(e);
+    reply("👑 My apologies, darling! An error occurred while fetching the AI chatbot response. Please try again later. 😥");
+  }
+}
+break;
+
+//========================================================================================================================//
+
+// Case for GPT-3 AI Chatbot
+case 'gpt3': {
+  // Check if a question (q) is provided.
+  if (!q) return reply("👑 Holla, darling! I'm all ears. What's your question? 💖");
+  try {
+    // Fetching response from the OpenAI API.
+    const apiUrl = `https://vapis.my.id/api/openai?q=${encodeURIComponent(q)}`;
+    const { data } = await axios.get(apiUrl);
+
+    // Check if the API returned a valid response.
+    if (!data || !data.result) {
+      // Sassy error message for API failure.
+      return reply("👑 Oh no! OpenAI is being a bit shy today. Couldn't get a response. Try again later, sweetie! 😥");
+    }
+    // Reply with the AI's response.
+    await reply(`${data.result}`);
+
+  } catch (e) {
+    // Sassy error message for communication errors.
+    console.error("Error in OpenAI command:", e);
+    reply("👑 My apologies, darling! An error occurred while communicating with the API. 💔");
+  }
+};
+break;
+
+//========================================================================================================================//
+
+// Case for GPT-2 AI Chatbot
+case "gpt2": {
+  // Check if a question (q) is provided.
+  if (!q) return reply("👑 Hello there, darling! What's on your mind? 💖");
+  try {
+    // Fetching response from the Lance-Frank-Asta AI API.
+    const apiUrl = `https://lance-frank-asta.onrender.com/api/gpt?q=${encodeURIComponent(q)}`;
+    const { data } = await axios.get(apiUrl);
+
+    // Check if the API returned a valid response.
+    if (!data || !data.message) {
+      // Sassy error message for API failure.
+      return reply("👑 Oops! The AI seems to have lost its words. Couldn't fetch a response. Try again later, sweetie! 😥");
+    }
+    // Reply with the AI's response.
+    await reply(`${data.message}`);
+  } catch (e) {
+    // Sassy error message for communication errors.
+    console.error("Error in AI command:", e);
+    reply("👑 My apologies, darling! An error occurred while communicating with the API. 💔");
+  }
+};
+break;
+
+//========================================================================================================================//
+
+// Case for Generic AI Chatbot
+case 'gpt': {
+  // Check if text input is provided.
+  if (!text) return m.reply("👑 Hello there, darling! What's going on? Tell me all about it! 💖");
+  try {
+    // Fetching response from the Dreaded.site AI API.
+    const data = await fetchJson(`https://api.dreaded.site/api/aichat?query=${text}`);
+
+    // Check if the API returned a valid response.
+    if (data && data.result) {
+      const res = data.result;
+      // Reply with the AI's response.
+      await m.reply(res);
+    } else {
+      // Sassy error message for API failure.
+      m.reply("👑 Oh no! The AI is being a bit mysterious. Couldn't fetch a response. Try again later, sweetie! 😥");
+    }
+  } catch (error) {
+    // Sassy error message for general fetch errors.
+    reply('👑 My apologies, darling! An error occurred while communicating with the APIs. 💔\n' + error);
+  }
+}
 break;
 
 //========================================================================================================================//	      		      
- case 'trt': case 'translate':{
-try {
-    // Check if the message is quoted
+// Case for translation command
+case 'trt': case 'translate': {
+  try {
+    // --- Input Validation ---
+    // Check if a message is quoted, as translation is applied to the quoted message.
     if (!m.quoted) {
-      return m.reply("Please quote a message to translate.");
+      // Sassy reply if no message is quoted.
+      return m.reply("👑 Darling, you need to quote the message you want me to translate! 💬");
     }
-    // Extract the language code from the text
-    const langCode = text.trim;
-    // Check if a valid language code is provided
+
+    // Extract the language code from the provided text.
+    // Ensure text is not null/undefined before trim and call the trim function.
+    const langCode = text ? text.trim() : '';
+
+    // Check if a valid language code is provided.
     if (!langCode) {
-      return m.reply("Please provide a valid language code. Example: .translate en");
+      // Sassy reply if no language code is given.
+      return m.reply("💖 Please specify the target language, sweetie! Example: `.translate en` for English. 🌍");
     }
-    // Get the quoted message
+
+    // Get the text from the quoted message.
     const quotedMessage = m.quoted.text;
-    // Translate the quoted message
+
+    // --- Translation Process ---
+    // Translate the quoted message to the specified language.
+    // Assuming 'translatte' is an imported function available in the scope.
     const translation = await translatte(quotedMessage, { to: langCode });
-    // Send the translated message
-    m.reply(`${translation.text}`);
+
+    // --- Sending the Translated Message ---
+    // Reply with the translated text in a stylish manner.
+    m.reply(`✨ Voilà! Your translated message, darling: ✨\n\n${translation.text}`);
+
   } catch (e) {
+    // --- Error Handling ---
+    // Sassy error message if translation fails.
     console.error("Error in .translate command:", e);
-    m.reply("An error occurred while translating the text. Please try again later.");
+    m.reply(`👑 Oh no! I couldn't translate that for you. Perhaps the language code is incorrect, or the API is having a moment. 😥 Please try again later!`);
   }
- }
+}
 break;
 
 //========================================================================================================================//		      
- case 'cast': {
-    if (!Owner) throw NotOwner;
-      if (!m.isGroup) throw group;
-    if (!text) return m.reply(`provide a text to cast !`);
-    let mem = await participants.filter(v => v.id.endsWith('.net')).map(v => v.id)
-    m.reply(`Success in casting the message to contacts\n\nDo not allways use this Command to avoid WA-bans ! `);
-    for (let pler of mem) {
-    client.sendMessage(pler, { text: q})
-     }  
-     m.reply(`Casting completed successfully😁`)
-      }
-      break;
+ // Case for casting a message to group members (Owner only)
+case 'cast': {
+  // --- Access Control ---
+  // Checks if the command is being used by the owner. (Assuming 'Owner' is a boolean flag)
+  if (!Owner) return m.reply("👑 Darling, only the owner can initiate the 'cast' command! 💅");
+  // Checks if the command is used in a group. (Assuming 'm.isGroup' is a boolean)
+  if (!m.isGroup) return m.reply("💖 This command is exclusively for group chats, sweetie! 👑");
+  // Checks if text content is provided for the cast.
+  if (!text) return m.reply(`📣 Darling, what message shall I cast to everyone? Please provide the text! 📣`);
 
-//========================================================================================================================//		      
-case "img": case "ai-img": case "image": case "images":{
-		      var gis = require('g-i-s');
- if (!text) return m.reply("Provide a text");
+  try {
+    // Filter participants to get their IDs.
+    // Assuming 'participants' is an array of participant objects with an 'id' property.
+    // Assuming 'mycode' is a country code constant.
+    let membersToCast = participants
+      .filter(member => member.id.endsWith('.net')) // Assuming a filter for valid IDs.
+      .map(member => member.id); // Extracting the ID.
 
-    try {
-        // Use the 'text' as the search term for images
-        gis(text, async (error, results) => {
-            if (error) {
-                return m.reply("An error occurred while searching for images.\n" + error);
-            }
+    // Inform the user about the casting process with a sassy tone.
+    m.reply(`✨ Casting your message to ${membersToCast.length} contacts... Stand by, darling! ✨\n\n*Please note: Frequent use of this command might attract unwanted attention from WhatsApp. Use wisely!* 😉`);
 
-            // Check if results are found
-            if (results.length === 0) {
-                return m.reply("No images found.");
-            }
-
-            // Limit the number of images to send (e.g., 5)
-            const numberOfImages = Math.min(results.length, 5);
-            const imageUrls = results.slice(0, numberOfImages).map(result => result.url);
-
-            // Send the images
-            const messages = imageUrls.map(url => ({
-                image: { url },
-                caption: `Downloaded by ${botname}`
-            }));
-
-            for (const message of messages) {
-                await client.sendMessage(m.chat, message, { quoted: m });
-            }
-        });
-    } catch (e) {
-        m.reply("An error occurred.\n" + e);
+    // Loop through each member and send the message.
+    for (let memberId of membersToCast) {
+      // Send the message to each member.
+      // Assuming 'q' holds the message content and 'client' is the WhatsApp client instance.
+      client.sendMessage(memberId, { text: q });
     }
+
+    // Final confirmation message with a sassy touch.
+    m.reply(`💖 Casting completed successfully, my dear! Your message has been delivered. 😁`);
+
+  } catch (e) {
+    // --- Error Handling ---
+    // Sassy error message if casting fails.
+    console.error("Error in .cast command:", e);
+    m.reply(`👑 Oh no! An error occurred while casting the message. Please try again later, sweetie! 😥`);
+  }
 }
-	break;
+break;
 
 //========================================================================================================================//		      
-	      case "foreigners": {
-if (!m.isGroup) throw group;	      
-	if (!isAdmin) throw admin;
-	if (!isBotAdmin) throw botAdmin;
-		      
-		let _0x2f8982 = participants.filter(_0x3c9d8b => !_0x3c9d8b.admin).map(_0x1db3fb => _0x1db3fb.id).filter(_0x475052 => !_0x475052.startsWith(mycode) && _0x475052 != client.decodeJid(client.user.id));
-    if (!args || !args[0]) {
-      if (_0x2f8982.length == 0) {
-        return m.reply("No foreigners detected.");
+// Case for searching images using GIS
+case "img": case "ai-img": case "image": case "images": {
+  // Require the GIS library for image searching.
+  var gis = require('g-i-s');
+
+  // --- Input Validation ---
+  // Check if a search query is provided.
+  if (!text) return m.reply("👑 Darling, what image are you looking for? Please provide a search term! 🖼️");
+
+  try {
+    // Use the 'text' as the search term for images.
+    // The gis function takes the search term and a callback function.
+    gis(text, async (error, results) => {
+      // --- Error Handling for GIS Search ---
+      if (error) {
+        // Sassy error message if the search fails.
+        return m.reply(`👑 Oh no! An error occurred while searching for images. 😥 Error: ${error}`);
       }
-      let _0x2d7d67 = `𝗙𝗼𝗿𝗲𝗶𝗴𝗻𝗲𝗿𝘀 𝗮𝗿𝗲 𝗺𝗲𝗺𝗯𝗲𝗿𝘀 𝘄𝗵𝗼𝘀𝗲 𝗰𝗼𝘂𝗻𝘁𝗿𝘆 𝗰𝗼𝗱𝗲 𝗶𝘀 𝗻𝗼𝘁 ${mycode}. 𝗧𝗵𝗲 𝗳𝗼𝗹𝗹𝗼𝘄𝗶𝗻𝗴  ${_0x2f8982.length} 𝗳𝗼𝗿𝗲𝗶𝗴𝗻𝗲𝗿𝘀 𝘄𝗲𝗿𝗲 𝗱𝗲𝘁𝗲𝗰𝘁𝗲𝗱:- \n`;
-      for (let _0x28761c of _0x2f8982) {
-        _0x2d7d67 += `𓅂 @${_0x28761c.split("@")[0]}\n`;
+
+      // --- Result Processing ---
+      // Check if any results were found.
+      if (results.length === 0) {
+        // Sassy message if no images are found.
+        return m.reply(`😔 I couldn't find any images matching "${text}", darling. Perhaps try a different search term?`);
       }
-      _0x2d7d67 += `\n𝗧𝗼 𝗿𝗲𝗺𝗼𝘃𝗲 𝘁𝗵𝗲𝗺 𝘀𝗲𝗻𝗱 foreigners -x`;
+
+      // Limit the number of images to send (e.g., 5) to avoid overwhelming the user or chat.
+      const numberOfImages = Math.min(results.length, 5);
+      // Extract the URLs of the found images.
+      const imageUrls = results.slice(0, numberOfImages).map(result => result.url);
+
+      // --- Sending Images ---
+      // Prepare messages for each image with a stylish caption.
+      const messages = imageUrls.map(url => ({
+        image: { url },
+        caption: `✨ Here are some images for "${text}", found by Raven-Bot! ✨`
+      }));
+
+      // Send each image message sequentially.
+      // Assuming 'client' is the WhatsApp client instance.
+      for (const message of messages) {
+        await client.sendMessage(m.chat, message, { quoted: m });
+      }
+    });
+  } catch (e) {
+    // --- General Error Handling ---
+    // Sassy error message for any unexpected errors.
+    m.reply(`👑 My apologies, darling! An unexpected error occurred. 😥 Error: ${e}`);
+  }
+}
+break;
+
+//========================================================================================================================//		      
+// Case for managing "foreigners" (members not from the bot's country code)
+case "foreigners": {
+  // --- Access Control ---
+  // Ensure the command is used in a group. (Assuming 'm.isGroup' is a boolean)
+  if (!m.isGroup) return m.reply("👑 Only group admins can manage foreigners, darling! 💅");
+  // Ensure the user is an admin. (Assuming 'isAdmin' is a boolean flag)
+  if (!isAdmin) return m.reply("💖 Only group admins can manage foreigners, sweetie! 💅");
+  // Ensure the bot is an admin. (Assuming 'isBotAdmin' is a boolean flag)
+  if (!isBotAdmin) return m.reply("✨ I need admin privileges to manage members, darling! Please promote me. 👑");
+
+  // --- Logic for Identifying Foreigners ---
+  // Filter participants to find those who are not admins and whose country code doesn't match 'mycode'.
+  // Also exclude the bot itself.
+  // Assuming 'participants' is an array of participant objects with 'id' and 'admin' properties.
+  // Assuming 'mycode' is a country code constant.
+  // Assuming 'client.decodeJid' is a function to get the bot's JID.
+  let nonAdminForeigners = participants
+    .filter(member => !member.admin) // Filter out admins.
+    .map(member => member.id) // Get participant IDs.
+    .filter(memberId => !memberId.startsWith(mycode) && memberId !== client.decodeJid(client.user.id)); // Filter by country code and exclude bot.
+
+  // --- Handling Different Arguments ---
+  if (!args || !args[0]) {
+    // If no argument is provided, list the foreigners.
+    if (nonAdminForeigners.length === 0) {
+      // Sassy reply if no foreigners are detected.
+      return m.reply("👑 All members here are locals, darling! No foreigners detected. 😉");
+    }
+
+    // Construct the message listing the foreigners with a sassy tone.
+    let foreignerListMessage = `🌍 **Foreigner Alert!** 🌍\n\n`;
+    foreignerListMessage += `These members' country codes do not match ${mycode}. We've detected ${nonAdminForeigners.length} of them:\n\n`;
+    for (let foreignerId of nonAdminForeigners) {
+      // Format ID to mention the user.
+      foreignerListMessage += `𓅂 @${foreignerId.split("@")[0]}\n`;
+    }
+    foreignerListMessage += `\n✨ To remove them, send \`${prefix}foreigners -x\`! ✨`;
+
+    // Send the list with mentions.
+    client.sendMessage(m.chat, {
+      text: foreignerListMessage,
+      mentions: nonAdminForeigners
+    }, {
+      quoted: m
+    });
+
+  } else if (args[0] === "-x") {
+    // If the argument is '-x', proceed to remove foreigners.
+    // Use setTimeout to allow the initial message to be sent first.
+    setTimeout(() => {
+      // Inform the user about the impending removal with a dramatic flair.
       client.sendMessage(m.chat, {
-        text: _0x2d7d67,
-        mentions: _0x2f8982
+        text: `⏳ Preparing to remove all ${nonAdminForeigners.length} foreigners from this group in the next second.\n\nGoodbye, dear foreigners! This process cannot be terminated. ⚠️`
       }, {
         quoted: m
       });
-    } else if (args[0] == "-x") {
+
+      // Perform the removal after a short delay.
       setTimeout(() => {
-        client.sendMessage(m.chat, {
-          text: `𝗥𝗮𝘃𝗲𝗻 𝘄𝗶𝗹𝗹 𝗻𝗼𝘄 𝗿𝗲𝗺𝗼𝘃𝗲 𝗮𝗹𝗹 ${_0x2f8982.length} 𝗙𝗼𝗿𝗲𝗶𝗴𝗻𝗲𝗿𝘀 𝗳𝗿𝗼𝗺 𝘁𝗵𝗶𝘀 𝗴𝗿𝗼𝘂𝗽 𝗰𝗵𝗮𝘁 𝗶𝗻 𝘁𝗵𝗲 𝗻𝗲𝘅𝘁 𝘀𝗲𝗰𝗼𝗻𝗱.\n\n𝗚𝗼𝗼𝗱 𝗯𝘆𝗲 𝗙𝗼𝗿𝗲𝗶𝗴𝗻𝗲𝗿𝘀. 𝗧𝗵𝗶𝘀 𝗽𝗿𝗼𝗰𝗲𝘀𝘀 𝗰𝗮𝗻𝗻𝗼𝘁 𝗯𝗲 𝘁𝗲𝗿𝗺𝗶𝗻𝗮𝘁𝗲𝗱⚠️`
-        }, {
-          quoted: m
-        });
+        // Remove participants from the group using the client instance.
+        client.groupParticipantsUpdate(m.chat, nonAdminForeigners, "remove");
+        // Send a follow-up message after removal.
         setTimeout(() => {
-          client.groupParticipantsUpdate(m.chat, _0x2f8982, "remove");
-          setTimeout(() => {
-            m.reply("𝗔𝗻𝘆 𝗿𝗲𝗺𝗮𝗶𝗻𝗶𝗻𝗴 𝗙𝗼𝗿𝗲𝗶𝗴𝗻𝗲𝗿 ?🌚.");
-          }, 1000);
-        }, 1000);
-      }, 1000);
-    }									       }
-  break;
+          m.reply("🧐 Are there any remaining foreigners? Let me know! 🌚");
+        }, 1000); // Delay before the final check message.
+      }, 1000); // Delay before removing members.
+    }, 1000); // Delay before sending the initial removal notice.
+  }
+}
+break;
 
 //========================================================================================================================//
- case 'dalle': case 'createimage': {
-		      
-  if (!text) return m.reply("What image do you want to create ?");
-		      
-const apiUrl = `https://api.dreaded.site/api/imagine?text=${encodeURIComponent(text)}`;
-m.reply('*Please wait i am generating your image...*');		      
-try {
-        const data = await fetchJson(apiUrl);
-        if (!data.status || !data.result) {
-            return m.reply("Something is wrong,  Api might be down!");
-        }
+ // Case for AI Image Analysis using Gemini Vision (via different APIs)
 
-        const { creator, result } = data;
-        const caption = `There you go 💠`;
-
-        await client.sendMessage(
-            m.chat,
-            {
-                image: { url: result },
-                caption: caption
-            },
-            { quoted: m }
-        );
-    } catch (error) {
-        console.error(error);
-        m.reply("An error occurred while generating the image.");
-    }
-};
-break;
-		      
-//========================================================================================================================//		      
-		      case "ai": {
-			      const {
-    GoogleGenerativeAI: _0x817910
-  } = require("@google/generative-ai");
+// --- AI Command (using bk9.fun/ai/geminiimg) ---
+case "ai": {
+  // Import necessary modules (assuming they are available in the environment).
+  const { GoogleGenerativeAI: _0x817910 } = require("@google/generative-ai");
   const _0xc0423b = require("axios");
-		      
+
   try {
+    // --- Input Validation ---
+    // Check if a message is quoted (expected to be an image).
     if (!m.quoted) {
-      return m.reply("𝗤𝘂𝗼𝘁𝗲 𝗮𝗻 𝗶𝗺𝗮𝗴𝗲 𝘄𝗶𝘁𝗵 𝘁𝗵𝗲 𝗶𝗻𝘀𝘁𝗿𝘂𝗰𝘁𝗶𝗼𝗻𝘀 𝗲𝗵!");
+      return m.reply("👑 Darling, please quote an image and provide instructions! I'm RAVEN AI, using Gemini-Pro-Vision to analyze images. 🖼️");
     }
+    // Check if text instructions are provided.
     if (!text) {
-      return m.reply("𝗣𝗿𝗼𝘃𝗶𝗱𝗲 𝘀𝗼𝗺𝗲 𝗶𝗻𝘀𝘁𝗿𝘂𝗰𝘁𝗶𝗼𝗻𝘀 𝗲𝗵! 𝗧𝗵𝗶𝘀 𝗶𝘀 𝗥𝗔𝗩𝗘𝗡 𝗔𝗶, 𝘂𝘀𝗶𝗻𝗴 𝗴𝗲𝗺𝗶𝗻𝗶-𝗽𝗿𝗼-𝘃𝗶𝘀𝗶𝗼𝗻 𝘁𝗼 𝗮𝗻𝗮𝗹𝘆𝘀𝗲 𝗶𝗺𝗮𝗴𝗲𝘀.");
+      return m.reply("👑 Please provide some instructions, sweetie! This is RAVEN AI, using Gemini-Pro-Vision to analyze images. 🧐");
     }
+    // Check if the quoted message is an image or PDF. (Assuming 'mime' is available)
     if (!/image|pdf/.test(mime)) {
-      return m.reply("𝗛𝘂𝗵 𝘁𝗵𝗶𝘀 𝗶𝘀 𝗻𝗼𝘁 𝗮𝗻 𝗶𝗺𝗮𝗴𝗲! 𝗣𝗹𝗲𝗮𝘀𝗲 𝗧𝗮𝗴 𝗮𝗻 𝗶𝗺𝗮𝗴𝗲 𝘄𝗶𝘁𝗵 𝘁𝗵𝗲 𝗶𝗻𝘀𝘁𝗿𝘂𝗰𝘁𝗶𝗼𝗻𝘀 𝗲𝗵 !");
+      return m.reply("🤨 Huh? That's not an image! Please tag an image with your instructions, darling! 🖼️");
     }
-    let _0x3439a2 = await client.downloadAndSaveMediaMessage(m.quoted);
-    let _0x3dfb7c = await uploadToCatbox(_0x3439a2);
-    m.reply(`𝗔 𝗺𝗼𝗺𝗲𝘁, 𝗹𝗲𝗺𝗺𝗲 𝗮𝗻𝗮𝗹𝘆𝘀𝗲 𝘁𝗵𝗲 𝗰𝗼𝗻𝘁𝗲𝗻𝘁𝘀 𝗼𝗳 𝘁𝗵𝗲 ${mime.includes("pdf") ? "𝗣𝗗𝗙" : "𝗜𝗺𝗮𝗴𝗲"} ...`);
-    const _0x4e9e6a = new _0x817910("AIzaSyDJUtskTG-MvQdlT4tNE319zBqLMFei8nQ");
-    async function _0x309a3c(_0x1400ed, _0x1a081e) {
-      const _0x53e4b2 = {
-        responseType: "arraybuffer"
-      };
-      const _0x1175d9 = await _0xc0423b.get(_0x1400ed, _0x53e4b2);
-      const _0x2a4862 = Buffer.from(_0x1175d9.data).toString("base64");
-      const _0x2f6e31 = {
-        data: _0x2a4862,
-        mimeType: _0x1a081e
-      };
-      const _0x14b65d = {
-        inlineData: _0x2f6e31
-      };
-      return _0x14b65d;
+
+    // --- Media Handling ---
+    // Download and save the quoted media.
+    let localMediaPath = await client.downloadAndSaveMediaMessage(m.quoted);
+    // Upload the media to Catbox for accessibility. (Assuming 'uploadToCatbox' is available)
+    let uploadedUrl = await uploadToCatbox(localMediaPath);
+
+    // Inform the user about the analysis process with a sassy tone.
+    m.reply(`⏳ A moment, darling! Let me analyze the contents of the ${mime.includes("pdf") ? "PDF" : "image"}... 🧐`);
+
+    // --- Gemini API Interaction ---
+    // Initialize Google Generative AI with an API key. (Consider secure key management)
+    const genAI = new _0x817910("AIzaSyDJUtskTG-MvQdlT4tNE319zBqLMFei8nQ"); // Replace with actual key management if needed.
+
+    // Helper function to prepare image data for Gemini API.
+    async function prepareImageForGemini(imageUrl, mimeType) {
+      const options = { responseType: "arraybuffer" };
+      const imageResponse = await _0xc0423b.get(imageUrl, options);
+      const base64Image = Buffer.from(imageResponse.data).toString("base64");
+      const imageData = { data: base64Image, mimeType: mimeType };
+      const imagePart = { inlineData: imageData };
+      return imagePart;
     }
-    const _0x22a6bb = {
-      model: "gemini-1.5-flash"
-    };
-    const _0x42849d = _0x4e9e6a.getGenerativeModel(_0x22a6bb);
-    const _0x2c743f = [await _0x309a3c(_0x3dfb7c, "image/jpeg")];
-    const _0xcf53e3 = await _0x42849d.generateContent([text, ..._0x2c743f]);
-    const _0x195f9c = await _0xcf53e3.response;
-    const _0x3db5a3 = _0x195f9c.text();
-    await m.reply(_0x3db5a3);
+
+    // Configure the Gemini model.
+    const modelConfig = { model: "gemini-1.5-flash" };
+    const generativeModel = genAI.getGenerativeModel(modelConfig);
+
+    // Prepare the image part for the content.
+    const imagePart = await prepareImageForGemini(uploadedUrl, "image/jpeg"); // Assuming JPEG for simplicity.
+
+    // Generate content using the text instructions and the image.
+    const result = await generativeModel.generateContent([text, imagePart]);
+    const response = await result.response;
+    const analyzedText = response.text();
+
+    // --- Sending the Analysis Result ---
+    await m.reply(analyzedText);
+
   } catch (_0x4b3921) {
-    m.reply("I am unable to analyze images at the moment\n" + _0x4b3921);
+    // --- Error Handling ---
+    m.reply(`👑 My apologies, darling! I am unable to analyze images at the moment. 😥\n${_0x4b3921}`);
   }
 }
- break;
+break;
 
-//========================================================================================================================//		      
-	      case "ai2": {
-const axios = require("axios");
+//========================================================================================================================//
 
-try {
-if (!m.quoted) return m.reply("Send the image then tag it with the instruction.");
+// --- AI2 Command (using api.dreaded.site/api/gemini-vision) ---
+case "ai2": {
+  const axios = require("axios");
 
-if (!text) return m.reply("𝗣𝗿𝗼𝘃𝗶𝗱𝗲 𝘀𝗼𝗺𝗲 𝗶𝗻𝘀𝘁𝗿𝘂𝗰𝘁𝗶𝗼𝗻𝘀 𝗲𝗵! 𝗧𝗵𝗶𝘀 Raven AI 𝗨𝘀𝗲 𝗚𝗲𝗺𝗶𝗻𝗶-𝗽𝗿𝗼-𝘃𝗶𝘀𝗶𝗼𝗻 𝘁𝗼 𝗮𝗻𝗮𝗹𝘆𝘀𝗲 𝗶𝗺𝗮𝗴𝗲𝘀.");
-if (!/image|pdf/.test(mime)) return m.reply("That is not an image, try again while quoting an actual image.");             
+  try {
+    // --- Input Validation ---
+    // Check if a message is quoted. (Assuming 'm.quoted' is available)
+    if (!m.quoted) return m.reply("👑 Darling, send the image first, then tag it with instructions! 💬");
+    // Check if text instructions are provided.
+    if (!text) return m.reply("👑 Please provide some instructions, sweetie! This Raven AI uses Gemini-Pro-Vision to analyze images. 🧐");
+    // Check if the quoted message is an image or PDF. (Assuming 'mime' is available)
+    if (!/image|pdf/.test(mime)) return m.reply("🤨 Huh? That's not an image! Try again while quoting an actual image, darling! 🖼️");
 
-                    let fdr = await client.downloadAndSaveMediaMessage(m.quoted)
-                    let fta = await uploadToCatbox(fdr)
-                    m.reply(`𝗔 𝗠𝗼𝗺𝗲𝗻𝘁, 𝗥𝗮𝘃𝗲𝗻[𝗥𝗔𝗩𝗘𝗡-𝗔𝗜] 𝗶𝘀 𝗮𝗻𝗮𝗹𝘆𝘇𝗶𝗻𝗴 𝘁𝗵𝗲 𝗰𝗼𝗻𝘁𝗲𝗻𝘁𝘀 𝗼𝗳 𝘁𝗵𝗲 ${mime.includes("pdf") ? "𝗣𝗗𝗙" : "𝗜𝗺𝗮𝗴𝗲"} . . .`);
+    // --- Media Handling ---
+    // Download and save the quoted media.
+    let fdr = await client.downloadAndSaveMediaMessage(m.quoted);
+    // Upload the media to Catbox. (Assuming 'uploadToCatbox' is available)
+    let fta = await uploadToCatbox(fdr);
 
-const data = await fetchJson(`https://api.dreaded.site/api/gemini-vision?url=${fta}&instruction=${text}`);
-let res = data.result
-await m.reply(res); 
+    // Inform the user about the analysis process with a sassy tone.
+    m.reply(`⏳ A moment, darling! RAVEN[RAVEN-AI] is analyzing the contents of the ${mime.includes("pdf") ? "PDF" : "image"}... 🧐`);
 
-} catch (e) {
+    // --- API Interaction ---
+    // Fetch analysis results from the dreaded.site API.
+    const data = await fetchJson(`https://api.dreaded.site/api/gemini-vision?url=${fta}&instruction=${text}`);
+    let res = data.result;
 
-m.reply("I am unable to analyze images at the moment\n" + e)
+    // --- Sending the Analysis Result ---
+    await m.reply(res);
 
-}
-	      }
-		break;
-
-//========================================================================================================================//		      
-	      case "vision": {
-		      if (!msgR || !text) {
-    m.reply("𝗤𝘂𝗼𝘁𝗲 𝗮𝗻 𝗶𝗺𝗮𝗴𝗲 𝗮𝗻𝗱 𝗴𝗶𝘃𝗲 𝘀𝗼𝗺𝗲 𝗶𝗻𝘀𝘁𝗿𝘂𝗰𝘁𝗶𝗼𝗻𝘀 𝗲𝗵. 𝗜'𝗺 𝗥𝗔𝗩𝗘𝗡 𝗔𝗶, 𝗶 𝘂𝘀𝗲 𝗕𝗮𝗿𝗱 𝘁𝗼 𝗮𝗻𝗮𝗹𝘆𝘇𝗲 𝗶𝗺𝗮𝗴𝗲𝘀.");
-    return;
+  } catch (e) {
+    // --- Error Handling ---
+    m.reply(`👑 My apologies, darling! I am unable to analyze images at the moment. 😥\n${e}`);
   }
-  ;
-  let _0x44b3e0;
+}
+break;
+
+//========================================================================================================================//
+
+// --- Vision Command (using bk9.fun/ai/geminiimg) ---
+case "vision": {
+  // Check if message is quoted and text instructions are provided.
+  // Assuming 'msgR' is the quoted message object and 'text' is the instruction.
+  if (!msgR || !text) {
+    return m.reply("👑 Darling, quote an image and give some instructions! I'm RAVEN AI, I use Bard to analyze images. 🖼️");
+  }
+  
+  let imageMessageData; // Variable to hold image message data.
   if (msgR.imageMessage) {
-    _0x44b3e0 = msgR.imageMessage;
+    imageMessageData = msgR.imageMessage;
   } else {
-    m.reply("𝗛𝘂𝗵, 𝗧𝗵𝗮𝘁'𝘀 𝗻𝗼𝘁 𝗮𝗻 𝗶𝗺𝗮𝗴𝗲, 𝗦𝗲𝗻𝗱 𝗮𝗻 𝗶𝗺𝗮𝗴𝗲 𝘁𝗵𝗲𝗻 𝘁𝗮𝗴 𝗶𝘁 𝘄𝗶𝘁𝗵 𝘁𝗵𝗲 𝗶𝗻𝘀𝘁𝗿𝘂𝗰𝘁𝗶𝗼𝗻𝘀 !");
+    // Sassy reply if the quoted message is not an image.
+    m.reply("🤨 Huh? That's not an image! Send an image then tag it with the instructions, darling! 🖼️");
     return;
   };
+
   try {
-    let _0x11f50e = await client.downloadAndSaveMediaMessage(_0x44b3e0);
-    let _0x45392d = await uploadToCatbox(_0x11f50e);
-    m.reply("𝗔 𝗺𝗼𝗺𝗲𝗻𝘁, 𝗟𝗲𝗺𝗺𝗲 𝗮𝗻𝗮𝗹𝘆𝘇𝗲 𝘁𝗵𝗲 𝗰𝗼𝗻𝘁𝗲𝗻𝘁𝘀 𝗼𝗳 𝘁𝗵𝗲 𝗶𝗺𝗮𝗴𝗲. . .");
-    let _0x4f137e = await (await fetch("https://bk9.fun/ai/geminiimg?url=" + _0x45392d + "&q=" + text)).json();
-    const _0x4bfd63 = {
-      text: _0x4f137e.BK9
+    // --- Media Handling ---
+    // Download and save the image.
+    let localMediaPath = await client.downloadAndSaveMediaMessage(imageMessageData);
+    // Upload to Catbox. (Assuming 'uploadToCatbox' is available)
+    let uploadedUrl = await uploadToCatbox(localMediaPath);
+
+    // Inform the user about the analysis process with a sassy tone.
+    m.reply("⏳ A moment, darling! Let me analyze the contents of the image... 🧐");
+
+    // --- API Interaction ---
+    // Fetch analysis results from the bk9.fun API.
+    let analysisResult = await (await fetch("https://bk9.fun/ai/geminiimg?url=" + uploadedUrl + "&q=" + text)).json();
+    const responseData = { // Prepare the response object.
+      text: analysisResult.BK9 // Assuming BK9 contains the analysis result.
     };
-    await client.sendMessage(m.chat, _0x4bfd63, {
+
+    // --- Sending the Analysis Result ---
+    await client.sendMessage(m.chat, responseData, {
       quoted: m
     });
   } catch (_0x1be711) {
-    m.reply("An error occured\n" + _0x1be711);
+    // --- Error Handling ---
+    m.reply(`👑 My apologies, darling! An error occurred. 😥\n${_0x1be711}`);
   }
 }
-	 break;
+break;
 
 //========================================================================================================================//		      
-		      case 'remini': {
-			if (!quoted) return reply(`𝗪𝗵𝗲𝗿𝗲 𝗶𝘀 𝘁𝗵𝗲 𝗶𝗺𝗮𝗴𝗲 ?`)
-			if (!/image/.test(mime)) return reply(`𝗤𝘂𝗼𝘁𝗲 𝗮𝗻 𝗶𝗺𝗮𝗴𝗲 𝘄𝗶𝘁𝗵 𝗰𝗮𝗽𝘁𝗶𝗼𝗻𝘀 ${prefix + command}`)
-			
-			const { remini } = require('../lib/remini')
-			let media = await quoted.download()
-			let proses = await remini(media, "enhance")
-			client.sendMessage(m.chat, { image: proses, caption: '𝗚𝗲𝗻𝗲𝗿𝗮𝘁𝗲𝗱 𝗯𝘆 𝗥𝗮𝘃𝗲𝗻-𝗕𝗼𝘁'}, { quoted: m })
-			}
-			break;
+// Case for enhancing images using Remini AI
+case 'remini': {
+  // --- Input Validation ---
+  // Check if a message is quoted. (Assuming 'quoted' is the quoted message object)
+  if (!quoted) return reply(`👑 Darling, where is the image you want me to enhance? 🖼️`);
+  // Check if the quoted message is an image. (Assuming 'mime' is available)
+  if (!/image/.test(mime)) return reply(`🤨 Huh? That's not an image! Please quote an image with captions, sweetie. ${prefix + command}`);
 
-//========================================================================================================================//		      	    
+  try {
+    // Import the remini function from the local library.
+    // Assuming the path '../lib/remini' is correct and exports a 'remini' function.
+    const { remini } = require('../lib/remini');
+
+    // Download the quoted image media.
+    let media = await quoted.download();
+    // Process the image using the remini function for enhancement.
+    let proses = await remini(media, "enhance"); // Assuming "enhance" is a valid operation.
+
+    // --- Sending the Enhanced Image ---
+    // Send the enhanced image back to the chat with a stylish caption.
+    // Assuming 'client' is the WhatsApp client instance.
+    client.sendMessage(m.chat, { image: proses, caption: '✨ Your image, enhanced to perfection by Raven-Bot! ✨'}, { quoted: m });
+
+  } catch (e) {
+    // --- Error Handling ---
+    // Sassy error message if enhancement fails.
+    reply(`👑 Oh no! I couldn't enhance that image for you. 😥 Error: ${e}`);
+  }
+}
+break;
+
+//========================================================================================================================//	    
+// Case for removing all participants from the current group (Owner only)
 case "kill": case "kickall": {
-	  if (!m.isGroup) throw group;
-          if (!isBotAdmin) throw botAdmin;
-          if (!Owner) throw NotOwner;
+  // --- Access Control ---
+  // Ensure the command is used by the owner.
+  if (!Owner) throw NotOwner;
+  // Ensure the command is used in a group.
+  if (!m.isGroup) throw group;
+  // Ensure the bot is an admin.
+  if (!isBotAdmin) throw botAdmin;
 
-          let raveni = participants.filter(_0x5202af => _0x5202af.id != client.decodeJid(client.user.id)).map(_0x3c0c18 => _0x3c0c18.id);
+  // Get all participant IDs except the bot's own ID.
+  let participantsToKick = participants.filter(_0x5202af => _0x5202af.id != client.decodeJid(client.user.id)).map(_0x3c0c18 => _0x3c0c18.id);
 		      
-          m.reply("Initializing Kill command💀...");
-      await client.groupSettingUpdate(m.chat, "announcement");
-      await client.removeProfilePicture(m.chat);
-      await client.groupUpdateSubject(m.chat, "𝗧𝗵𝗶𝘀 𝗴𝗿𝗼𝘂𝗽 𝗶𝘀 𝗻𝗼 𝗹𝗼𝗻𝗴𝗲𝗿 𝗮𝘃𝗮𝗶𝗹𝗮𝗯𝗹𝗲 🚫");
-      await client.groupUpdateDescription(m.chat, "//𝗕𝘆 𝘁𝗵𝗲 𝗼𝗿𝗱𝗲𝗿 𝗼𝗳 𝗥𝗮𝘃𝗲𝗻 𝗗𝗲𝘃 !");
-      await client.groupRevokeInvite(m.chat);
+  // --- Initialization and Preparation ---
+  m.reply("💀 Initializing Kill command... Prepare for impact, darling! 💥");
+  await client.groupSettingUpdate(m.chat, "announcement"); // Set group to announcement mode.
+  await client.removeProfilePicture(m.chat); // Remove the group's profile picture.
+  await client.groupUpdateSubject(m.chat, "𝗧𝗵𝗶𝘀 𝗴𝗿𝗼𝘂𝗽 𝗶𝘀 𝗻𝗼 𝗹𝗼𝗻𝗴𝗲𝗿 𝗮𝘃𝗮𝗶𝗹𝗮𝗯𝗹𝗲 🚫"); // Change group subject.
+  await client.groupUpdateDescription(m.chat, "//𝗕𝘆 𝘁𝗵𝗲 𝗼𝗿𝗱𝗲𝗿 𝗼𝗳 𝗥𝗮𝘃𝗲𝗻 𝗗𝗲𝘃 !"); // Update group description.
+  await client.groupRevokeInvite(m.chat); // Revoke the group's invite link.
 	
-          setTimeout(() => {
-            client.sendMessage(m.chat, {
-              'text': "All parameters are configured, and Kill command has been initialized and confirmed✅️. Now, all " + raveni.length + " group participants will be removed in the next second.\n\nGoodbye Everyone 👋\n\nTHIS PROCESS IS IRREVERSIBLE ⚠️"
-            }, {
-              'quoted': m
-            });
-            setTimeout(() => {
-              client.groupParticipantsUpdate(m.chat, raveni, "remove");
-              setTimeout(() => {
-                m.reply("Succesfully removed All group participants✅️.\n\nGoodbye group owner 👋, its too cold in here 🥶.");
-client.groupLeave(m.chat);	      
-              }, 1000);
-            }, 1000);
-          }, 1000);
-        };	      
-          break;
+  // --- Execution Sequence ---
+  setTimeout(() => {
+    // Send a confirmation message before kicking participants.
+    client.sendMessage(m.chat, {
+      'text': `✅ All parameters configured! Kill command initialized and confirmed. Removing all ${participantsToKick.length} participants in the next second.\n\nGoodbye Everyone! 👋\n\n⚠️ THIS PROCESS IS IRREVERSIBLE ⚠️`
+    }, {
+      'quoted': m
+    });
+    // Delay before actually removing participants.
+    setTimeout(() => {
+      client.groupParticipantsUpdate(m.chat, participantsToKick, "remove"); // Remove all participants.
+      // Delay before sending the final message and leaving.
+      setTimeout(() => {
+        m.reply("💖 Successfully removed all group participants, my dear! Goodbye! 🥶");
+        client.groupLeave(m.chat); // Bot leaves the group.
+      }, 1000);
+    }, 1000);
+  }, 1000);
+};	      
+break;
 		      
 //========================================================================================================================//		      
-	      case "kill2": case "kickall2": {
+// Case for removing all participants from a specified group via link (Owner only)
+case "kill2": case "kickall2": {
+    // --- Access Control ---
+    // Ensure the command is used by the owner.
     if (!Owner) throw NotOwner;
+    // Check if a group link is provided.
     if (!text) {
-      return m.reply("Provide a valid group link. Ensure the bot is in that group with admin privileges !");
+      return m.reply("👑 Darling, please provide a valid group link. Ensure I'm in that group and have admin privileges! 🔗");
     }
 
     let groupId;
     let groupName;
     try {
+      // Extract invite code from the link.
       let inviteCode = args[0].split("https://chat.whatsapp.com/")[1];
+      // Get group information using the invite code.
       const groupInfo = await client.groupGetInviteInfo(inviteCode);
-      ({ id: groupId, subject: groupName } = groupInfo);
+      ({ id: groupId, subject: groupName } = groupInfo); // Destructure group ID and subject.
     } catch (error) {
-      m.reply("Why are you giving me an invalid group link?");
+      // Sassy error if the provided link is invalid.
+      m.reply("🤨 Huh? That seems like an invalid group link, sweetie! Please try again. 🔗");
       return;
     }
 
     try {
+      // Fetch metadata for the target group.
       const groupMetadata = await client.groupMetadata(groupId);
       const participants = await groupMetadata.participants;
+      // Get participant IDs, excluding the bot.
       let participantIds = participants
         .filter(participant => participant.id !== client.decodeJid(client.user.id))
         .map(participant => participant.id);
 
-      await m.reply("☠️Initializing and Preparing to kill☠️ " + groupName);
-      await client.groupSettingUpdate(groupId, "announcement");
-      await client.removeProfilePicture(groupId);
-      await client.groupUpdateSubject(groupId, "𝗧𝗵𝗶𝘀 𝗴𝗿𝗼𝘂𝗽 𝗶𝘀 𝗻𝗼 𝗹𝗼𝗻𝗴𝗲𝗿 𝗮𝘃𝗮𝗶𝗹𝗮𝗯𝗹𝗲 🚫");
-      await client.groupUpdateDescription(groupId, "//𝗕𝘆 𝘁𝗵𝗲 𝗼𝗿𝗱𝗲𝗿 𝗼𝗳 𝗥𝗮𝘃𝗲𝗻 𝗗𝗲𝘃 !");
-      await client.groupRevokeInvite(groupId);
+      // --- Initialization and Preparation ---
+      await m.reply(`💀 Initializing and preparing to kill "${groupName}"... Prepare for impact, darling! 💥`);
+      await client.groupSettingUpdate(groupId, "announcement"); // Set group to announcement mode.
+      await client.removeProfilePicture(groupId); // Remove the group's profile picture.
+      await client.groupUpdateSubject(groupId, "𝗧𝗵𝗶𝘀 𝗴𝗿𝗼𝘂𝗽 𝗶𝘀 𝗻𝗼 𝗹𝗼𝗻𝗴𝗲𝗿 𝗮𝘃𝗮𝗶𝗹𝗮𝗯𝗹𝗲 🚫"); // Change group subject.
+      await client.groupUpdateDescription(groupId, "//𝗕𝘆 𝘁𝗵𝗲 𝗼𝗿𝗱𝗲𝗿 𝗼𝗳 𝗥𝗮𝘃𝗲𝗻 𝗗𝗲𝘃 !"); // Update group description.
+      await client.groupRevokeInvite(groupId); // Revoke the group's invite link.
 
+      // --- Execution Sequence ---
+      // Send a message to the target group about the impending action.
       await client.sendMessage(
         groupId,
         {
-          text: `At this time, My owner has initiated kill command remotely.\nThis has triggered me to remove all ${participantIds.length} group participants in the next second.\n\nGoodbye Everyone! 👋\n\n⚠️THIS PROCESS CANNOT BE TERMINATED⚠️`,
-          mentions: participants.map(participant => participant.id)
+          text: `✅ My owner has initiated the kill command remotely! Removing all ${participantIds.length} participants from "${groupName}" in the next second.\n\nGoodbye Everyone! 👋\n\n⚠️ THIS PROCESS CANNOT BE TERMINATED ⚠️`,
+          mentions: participants.map(participant => participant.id) // Mention all participants.
         });
 
+      // Remove all participants from the target group.
       await client.groupParticipantsUpdate(groupId, participantIds, "remove");
 
+      // Send a final goodbye message to the target group.
       const goodbyeMessage = {
-        text: "Goodbye Group owner👋\nIt's too cold in Here🥶"
+        text: "💖 Goodbye Group owner! It's too cold in here now. 🥶"
       };
       await client.sendMessage(groupId, goodbyeMessage);
 
+      // Bot leaves the target group.
       await client.groupLeave(groupId);
-      await m.reply("```Successfully Killed💀```");
+      // Reply to the original sender confirming success.
+      await m.reply("```💖 Successfully executed the kill command! 💀```");
     } catch (error) {
-      m.reply("```Kill command failed, bot is either not in that group, or not an admin```.");
+      // Sassy error message if the command fails (e.g., bot not in group or not admin).
+      m.reply("```👑 Kill command failed. Ensure I'm in the group and have admin rights, darling.```");
     }
   }
-		      break;
+break;
 		      
 //========================================================================================================================//		      
+// Carbon Command (`carbon`)
+// Description: Converts code snippets into image cards using the Carbonara API.
 		      case 'carbon': {
-		      const fetch = require('node-fetch');
+		      const fetch = require('node-fetch'); // Import node-fetch for API requests.
 
-  let cap = `𝗖𝗢𝗡𝗩𝗘𝗥𝗧𝗘𝗗 𝗕𝗬 ${botname}`;
+  let caption = `✨ Converted by ${botname}, darling! ✨`; // Stylish caption for the generated image.
 
+  // --- Input Validation ---
+  // Check if a message is quoted and contains text (the code snippet).
   if (m.quoted && m.quoted.text) {
-    const forq = m.quoted.text;
+    const codeSnippet = m.quoted.text; // Get the quoted code.
 
     try {
+      // --- API Interaction ---
+      // Send a POST request to the Carbonara API to convert code to an image.
       let response = await fetch('https://carbonara.solopov.dev/api/cook', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json', // Specify content type as JSON.
         },
-        body: JSON.stringify({
-          code: forq,
-          backgroundColor: '#1F816D',
+        body: JSON.stringify({ // Stringify the request body.
+          code: codeSnippet, // The code snippet to convert.
+          backgroundColor: '#1F816D', // A stylish background color.
         }),
       });
 
-      if (!response.ok) return m.reply('API failed to fetch a valid response.')
+      // --- Response Handling ---
+      // Check if the API response was successful (status code 2xx).
+      if (!response.ok) return m.reply('👑 Oh no! The API failed to fetch a valid response. It might be having a moment, sweetie!');
 
-      let per = await response.buffer();
+      // Get the image buffer from the response.
+      let imageBuffer = await response.buffer();
 
-      await client.sendMessage(m.chat, { image: per, caption: cap }, { quoted: m });
+      // --- Sending the Image ---
+      // Send the generated image with the caption.
+      await client.sendMessage(m.chat, { image: imageBuffer, caption: caption }, { quoted: m });
     } catch (error) {
-      m.reply("An error occured\n" + error)
+      // --- Error Handling ---
+      // Sassy error message if any error occurs during the process.
+      m.reply(`👑 My apologies, darling! An error occurred. 😥\n${error}`);
     }
   } else {
-    m.reply('Quote a code message');
+    // Sassy reply if no code message is quoted.
+    m.reply('👑 Darling, please quote the code message you want me to convert! 💬');
   }
 }
 	 break;
 
 //========================================================================================================================//		      
+// Define Command (`define`)
+// Description: Fetches definitions for words from an online dictionary API.
 		case 'define': {
 		      try {
+        // --- Input Validation ---
+        // Check if a word is provided in the command text.
         if (!text) {
-            return m.reply('Please provide a word.');
+            return m.reply('👑 Darling, please provide the word you want me to define! 🧐');
         }
 
+        // Encode the word for safe URL inclusion.
         const word = encodeURIComponent(text);
 
+        // --- API Interaction ---
+        // Fetch definitions from the dictionary API.
         const response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word}`);
 
+        // --- Response Handling ---
+        // Check if the API response was successful.
         if (!response.ok) {
-            return m.reply('Failed to fetch data. Please try again later.');
+            return m.reply('👑 Oh no! I failed to fetch the definition. The dictionary might be offline, sweetie. Please try again later. 😥');
         }
 
+        // Parse the JSON response.
         const data = await response.json();
 
+        // Check if definitions were found.
         if (!data || !data[0] || !data[0].meanings || data[0].meanings.length === 0) {
-            return m.reply('No definitions found for the provided word.');
+            return m.reply(`😔 I couldn't find any definitions for "${text}", darling. Perhaps try a different word?`);
         }
 
+        // Extract the first definition.
         const definitionData = data[0];
         const definition = definitionData.meanings[0].definitions[0].definition;
         
+        // Prepare the message with the definition.
         const message = `${definition}`;
 
-        await client.sendMessage(m.chat, { text: message }, { quoted: m });
+        // --- Sending the Definition ---
+        // Send the definition back to the chat with a stylish message.
+        await client.sendMessage(m.chat, { text: `✨ Here is the definition you requested, darling: ✨\n\n${message}` }, { quoted: m });
 
     } catch (error) {
+        // --- Error Handling ---
+        // Log the error and provide a sassy reply.
         console.error("Error occurred:", error);
-        m.reply('An error occurred while fetching the data. Please try again later.\n' + error);
+        m.reply(`👑 My apologies, darling! An error occurred while fetching the data. Please try again later. 😥\n${error}`);
     }
 }
 	break;
 
 //========================================================================================================================//		      
+// Tweet Command (`tweet`)
+// Description: Creates a tweet-like image from user input.
 	         case "tweet": {
-		      if (!text) return m.reply("provide some text for the tweet");
+		      // --- Input Validation ---
+		      // Check if text for the tweet is provided.
+		      if (!text) return m.reply("👑 Darling, what message shall I put on this tweet? Please provide the text! 🐦");
 
-const displayname = pushname;
-const username = m.sender.split('@')[0];
-const avatar = await client.profilePictureUrl(m.sender, 'image').catch(_ => 'https://i.imgur.com/vuxJCTB.jpeg');
-const replies = "246";
-const retweets = "125";
-const theme = "dark";
+		      // --- Data Preparation ---
+		      // Get user's display name, username, and profile picture URL.
+		      const displayName = pushname; // User's display name.
+		      const username = m.sender.split('@')[0]; // User's username (from sender ID).
+		      // Get profile picture URL, with a fallback if it fails.
+		      const avatar = await client.profilePictureUrl(m.sender, 'image').catch(_ => 'https://i.imgur.com/vuxJCTB.jpeg');
+		      // Define tweet-like parameters.
+		      const replies = "246"; // Example replies count.
+		      const retweets = "125"; // Example retweets count.
+		      const theme = "dark"; // Example theme.
 
-const imageurl = `https://some-random-api.com/canvas/misc/tweet?displayname=${encodeURIComponent(displayname)}&username=${encodeURIComponent(username)}&avatar=${encodeURIComponent(avatar)}&comment=${encodeURIComponent(text)}&replies=${encodeURIComponent(replies)}&retweets=${encodeURIComponent(retweets)}&theme=${encodeURIComponent(theme)}`;
+		      // Construct the API URL for generating the tweet image.
+		      const imageUrl = `https://some-random-api.com/canvas/misc/tweet?displayname=${encodeURIComponent(displayName)}&username=${encodeURIComponent(username)}&avatar=${encodeURIComponent(avatar)}&comment=${encodeURIComponent(text)}&replies=${encodeURIComponent(replies)}&retweets=${encodeURIComponent(retweets)}&theme=${encodeURIComponent(theme)}`;
 
-
-
-await client.sendMessage(m.chat, { image: { url: imageurl}, caption: `𝗖𝗼𝗻𝘃𝗲𝗿𝘁𝗲𝗱 𝗯𝘆 𝗥𝗔𝗩𝗘𝗡-𝗕𝗢𝗧`}, { quoted: m}) 
-
+		      // --- Sending the Tweet Image ---
+		      // Send the generated tweet image with a stylish caption.
+		      await client.sendMessage(m.chat, { image: { url: imageUrl}, caption: `✨ Here's your tweet, crafted with style by Raven-Bot! ✨`}, { quoted: m});
 	}
 	 break;
 
 //========================================================================================================================//		      
+// Pickup Line Command (`pickupline`)
+// Description: Fetches a random pickup line from an API.
 		      case "pickupline": {
-		      const API_URL = 'https://api.popcat.xyz/pickuplines';
+		      const API_URL = 'https://api.popcat.xyz/pickuplines'; // API endpoint for pickup lines.
 
-    try {
-        const response = await fetch(API_URL);
-        if (!response.ok) throw new Error('Failed to fetch data');
+		    try {
+		        // --- API Interaction ---
+		        // Fetch data from the pickup line API.
+		        const response = await fetch(API_URL);
+		        // Check if the response was successful.
+		        if (!response.ok) throw new Error('Failed to fetch data');
 
-        const { pickupline } = await response.json();
-        const lineMessage = `${pickupline}`;
+		        // Parse the JSON response.
+		        const { pickupline } = await response.json();
+		        // Format the pickup line message.
+		        const lineMessage = `${pickupline}`;
 
-        await client.sendMessage(m.chat, { text: lineMessage }, { quoted: m });
-    } catch (error) {
-        console.error('Error fetching data:', error);
-        await client.sendMessage(m.chat, { text: 'An error occurred while fetching the fact.' }, { quoted: m });
-    }
-}
+		        // --- Sending the Pickup Line ---
+		        // Send the pickup line to the chat with a sassy message.
+		        await client.sendMessage(m.chat, { text: lineMessage }, { quoted: m });
+		    } catch (error) {
+		        // --- Error Handling ---
+		        // Sassy error message if fetching fails.
+		        console.error('Error fetching data:', error);
+		        await client.sendMessage(m.chat, { text: '👑 Oh no! I couldn\'t fetch a pickup line for you. The pickup line API might be resting. Try again later, sweetie! 😉' }, { quoted: m });
+		    }
+		}
 	break;
 
 //========================================================================================================================//		      
+// Quotes Command (`quotes`)
+// Description: Fetches a random quote of the day from an API.
 		      case "quotes": {
-		      const API_URL = 'https://favqs.com/api/qotd';
+		      const API_URL = 'https://favqs.com/api/qotd'; // API endpoint for quote of the day.
 
-    try {
-        const response = await fetch(API_URL);
-        if (!response.ok) throw new Error('Failed to fetch data');
+		    try {
+		        // --- API Interaction ---
+		        // Fetch data from the quote API.
+		        const response = await fetch(API_URL);
+		        // Check if the response was successful.
+		        if (!response.ok) throw new Error('Failed to fetch data');
 
-        const { quote } = await response.json();
-        const quoteMessage = `${quote.body} \n\n𝗤𝘂𝗼𝘁𝗲 𝗕𝘆 ${quote.author}`;
+		        // Parse the JSON response.
+		        const { quote } = await response.json();
+		        // Format the quote message with author.
+		        const quoteMessage = `${quote.body} \n\n✨ Quoted by ${quote.author}, darling! ✨`;
 
-        await client.sendMessage(m.chat, { text: quoteMessage }, { quoted: m });
-    } catch (error) {
-        console.error('Error fetching data:', error);
-        await client.sendMessage(m.chat, { text: 'An error occurred while fetching the fact.' }, { quoted: m });
-    }
-}
+		        // --- Sending the Quote ---
+		        // Send the quote to the chat with a stylish message.
+		        await client.sendMessage(m.chat, { text: quoteMessage }, { quoted: m });
+		    } catch (error) {
+		        // --- Error Handling ---
+		        // Sassy error message if fetching fails.
+		        console.error('Error fetching data:', error);
+		        await client.sendMessage(m.chat, { text: '👑 Oh no! I couldn\'t fetch a quote for you. The quote API might be taking a break. Try again later, darling! ✨' }, { quoted: m });
+		    }
+		}
 	break;
 
 //========================================================================================================================//		      
+// Google Search Command (`google`)
+// Description: Performs a Google search and returns results.
 		      case "google": {
-		      const axios = require("axios");
-        if (!text) {
-            m.reply('Provide a search term!\nEg: .Google What is treason')
-            return;
-        }
-        let {
-            data
-        } = await axios.get(`https://www.googleapis.com/customsearch/v1?q=${text}&key=AIzaSyDMbI3nvmQUrfjoCJYLS69Lej1hSXQjnWI&cx=baf9bdb0c631236e5`)
-        if (data.items.length == 0) {
-            m.reply("❌ Unable to find a result")
-            return;
-        }
-        let tex = `SEARCH FROM GOOGLE\n🔍 Term:- ${text}\n\n`;
-        for (let i = 0; i < data.items.length; i++) {
-            tex += `🪧 Title:- ${data.items[i].title}\n🖥 Description:- ${data.items[i].snippet}\n🌐 Link:- ${data.items[i].link}\n\n`
-        }
-        m.reply(tex)
-       
-
-    }
-      break;
+		      const axios = require("axios"); // Import axios for API requests.
+		      // --- Input Validation ---
+		      // Check if a search term is provided.
+		        if (!text) {
+		            m.reply('👑 Darling, please provide a search term! 🧐\nEg: `.Google What is treason`');
+		            return;
+		        }
+		        // --- API Interaction ---
+		        // Fetch search results from Google Custom Search API.
+		        let { data } = await axios.get(`https://www.googleapis.com/customsearch/v1?q=${text}&key=AIzaSyDMbI3nvmQUrfjoCJYLS69Lej1hSXQjnWI&cx=baf9bdb0c631236e5`); // Replace with your actual API key and CX.
+		        // --- Response Handling ---
+		        // Check if any search results were found.
+		        if (data.items.length == 0) {
+		            m.reply("😔 I couldn't find any results for that search, darling. Perhaps try a different term? 🔍");
+		            return;
+		        }
+		        // --- Formatting Results ---
+		        // Prepare a formatted string for the search results.
+		        let tex = `✨ Here are the Google search results for "${text}", darling: ✨\n\n`;
+		        for (let i = 0; i < data.items.length; i++) {
+		            tex += `🪧 Title:- ${data.items[i].title}\n🖥 Description:- ${data.items[i].snippet}\n🌐 Link:- ${data.items[i].link}\n\n`;
+		        }
+		        // --- Sending Results ---
+		        m.reply(tex);
+		    }
+		      break;
 
 //========================================================================================================================//		      
+// Hack Command (`hack`)
+// Description: Simulates a hacking process with a series of messages.
 		      case "hack": {
-		if(!Owner) throw NotOwner; 
+		      // --- Access Control ---
+		      // Ensure the command is run by the owner.
+		if(!Owner) return m.reply("👑 Darling, only the owner can initiate the 'hack' command! 💅"); 
 		      try {
+			      // Define the steps of the simulated hacking process.
+			    const steps = [
+			      '⚠️ *Initiating Hacking Tools...*',
+			      '🐛 Injecting Malware...\n⚠️ Loading Device Gallery Files...',
+			      '```██ 10%``` ⏳',
+			      '```████ 20%``` ⏳',
+			      '```██████ 30%``` ⏳',
+			      '```████████ 40%``` ⏳',
+			      '```██████████ 50%``` ⏳',
+			      '```████████████ 60%``` ⏳',
+			      '```██████████████ 70%``` ⏳',
+			      '```████████████████ 80%``` ⏳',
+			      '```██████████████████ 90%``` ⏳',
+			      '```████████████████████ 100%``` ✅',
+			      "```System Hijacking in process...\nConnecting to the Server to Find Error 404```",
+			      "```Successfully Connected to Device...\nReceiving Data/Secret Passwords...```",
+			      "```Data Transferred from device 100% Completed\nErasing all Evidence, Killing all Malwares🐛...```",
+			      "```SENDING LOG DOCUMENTS...```",
+			      "```Successfully Sent Data And Connection Successfully Disconnected```",
+			      "```All Backlogs Cleared Successfully💣\nYour System Will Be Down In The Next Minute⚠️```"
+			    ];
 			      
-    const steps = [
-      '⚠️𝗜𝗻𝗶𝘁𝗶𝗹𝗶𝗮𝘇𝗶𝗻𝗴 𝗛𝗮𝗰𝗸𝗶𝗻𝗴 𝗧𝗼𝗼𝗹𝘀⚠️',
-      '𝗜𝗻𝗷𝗲𝗰𝘁𝗶𝗻𝗴 𝗠𝗮𝗹𝘄𝗮𝗿𝗲🐛..\n𝗟𝗼𝗮𝗱𝗶𝗻𝗴 𝗗𝗲𝘃𝗶𝗰𝗲 𝗚𝗮𝗹𝗹𝗲𝗿𝘆 𝗙𝗶𝗹𝗲𝘀⚠️',
-      '```██ 10%``` ⏳',
-      '```████ 20%``` ⏳',
-      '```██████ 30%``` ⏳',
-      '```████████ 40%``` ⏳',
-      '```██████████ 50%``` ⏳',
-      '```████████████ 60%``` ⏳',
-      '```██████████████ 70%``` ⏳',
-      '```████████████████ 80%``` ⏳',
-      '```██████████████████ 90%``` ⏳',
-      '```████████████████████ 100%``` ✅',
-      "```𝗦𝘆𝘀𝘁𝗲𝗺 𝗛𝘆𝗷𝗮𝗰𝗸𝗶𝗻𝗴 𝗼𝗻 𝗽𝗿𝗼𝗰𝗲𝘀𝘀...```\n```𝗖𝗼𝗻𝗻𝗲𝗰𝘁𝗶𝗻𝗴 𝘁𝗼 𝘁𝗵𝗲 𝗦𝗲𝗿𝘃𝗲𝗿 𝘁𝗼 𝗙𝗶𝗻𝗱 𝗘𝗿𝗿𝗼𝗿 404```",
-    "```𝗦𝘂𝗰𝗰𝗲𝘀𝗳𝘂𝗹𝗹𝘆 𝗖𝗼𝗻𝗻𝗲𝗰𝘁𝗲𝗱 𝘁𝗼 𝗗𝗲𝘃𝗶𝗰𝗲...\n𝗥𝗲𝗰𝗲𝗶𝘃𝗶𝗻𝗴 𝗗𝗮𝘁𝗮/𝗦𝗲𝗰𝗿𝗲𝘁 𝗣𝗮𝘀𝘀𝘄𝗼𝗿𝗱𝘀...```",
-    "```𝗗𝗮𝘁𝗮 𝗧𝗿𝗮𝗻𝘀𝗳𝗲𝗿𝗲𝗱 𝗙𝗿𝗼𝗺 𝗱𝗲𝘃𝗶𝗰𝗲 100% 𝗖𝗼𝗺𝗽𝗹𝗲𝘁𝗲𝗱\n𝗘𝗿𝗮𝘀𝗶𝗻𝗴 𝗮𝗹𝗹 𝗘𝘃𝗶𝗱𝗲𝗻𝗰𝗲, 𝗞𝗶𝗹𝗹𝗶𝗻𝗴 𝗮𝗹𝗹 𝗠𝗮𝗹𝘄𝗮𝗿𝗲𝘀🐛...```",
-    "```𝗦𝗘𝗡𝗗𝗜𝗡𝗗 𝗟𝗢𝗚 𝗗𝗢𝗖𝗨𝗠𝗘𝗡𝗧𝗦...```",
-    "```𝗦𝘂𝗰𝗰𝗲𝘀𝗳𝘂𝗹𝗹𝘆 𝗦𝗲𝗻𝘁 𝗗𝗮𝘁𝗮 𝗔𝗻𝗱 𝗖𝗼𝗻𝗻𝗲𝗰𝘁𝗶𝗼𝗻 𝗦𝘂𝗰𝗰𝗲𝘀𝗳𝘂𝗹𝗹𝘆 𝗗𝗶𝘀𝗰𝗼𝗻𝗻𝗲𝗰𝘁𝗲𝗱```",
-    "```𝗔𝗹𝗹 𝗕𝗮𝗰𝗸𝗹𝗼𝗴𝘀 𝗖𝗹𝗲𝗮𝗿𝗲𝗱 𝗦𝘂𝗰𝗰𝗲𝘀𝗳𝘂𝗹𝗹𝘆💣\n𝗬𝗼𝘂𝗿 𝗦𝘆𝘀𝘁𝗲𝗺 𝗪𝗶𝗹𝗹 𝗕𝗲 𝗗𝗼𝘄𝗻 𝗜𝗻 𝗧𝗵𝗲 𝗡𝗲𝘅𝘁 𝗠𝗶𝗻𝘂𝘁𝗲⚠️```"
-    ];
-			      
-    for (const line of steps) {
-      await client.sendMessage(m.chat, { text: line }, { quoted: m });
-      await new Promise(resolve => setTimeout(resolve, 1000));
-    }
+			    // Send each step of the simulation with a delay.
+			    for (const line of steps) {
+			      await client.sendMessage(m.chat, { text: line }, { quoted: m });
+			      await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second between messages.
+			    }
 
-  } catch (error) {
-    console.error('Error during prank:', error);
-
-    client.sendMessage(m.chat, {
-      text: `❌ *Error!* Something went wrong. Reason: ${error.message}. Please try again later.`
-    });
-  }
-} 
-  break;
+		  } catch (error) {
+		    // --- Error Handling ---
+		    // Sassy error message if the simulation fails.
+		    console.error('Error during prank:', error);
+		    client.sendMessage(m.chat, {
+		      text: `👑 My apologies, darling! An error occurred during the 'hack' simulation. Reason: ${error.message}. Please try again later. 😥`
+		    });
+		  }
+		} 
+		break;
 
 //========================================================================================================================//		      
 case "compile-py":
@@ -3934,142 +4783,218 @@ if (imageUrl) {
 break;
 		      
 //========================================================================================================================//
-	      case "epl": case "epl-table": {
-		      
-try {
-        const data = await fetchJson('https://api.dreaded.site/api/standings/PL');
-        const standings = data.data;
+// Premier League Standings (`epl`, `epl-table`)
+// Description: Fetches and displays the current English Premier League table.
+case "epl": case "epl-table": {
+  try {
+    // --- API Interaction ---
+    // Fetch Premier League standings from the API.
+    const response = await fetch('https://api.dreaded.site/api/standings/PL');
+    const data = await response.json();
+    const standings = data.data; // Extract the standings data.
 
-        const message = ` 𝗖𝘂𝗿𝗿𝗲𝗻𝘁 𝗘𝗽𝗹 𝗧𝗮𝗯𝗹𝗲 𝗦𝘁𝗮𝗻𝗱𝗶𝗻𝗴𝘀:-\n\n${standings}`;
+    // --- Sassy Message Formatting ---
+    // Construct a stylish message with the league standings.
+    const message = `✨ Here are the current EPL Table Standings, darling! ✨\n\n${standings}`;
 
-        await m.reply(message);
-    } catch (error) {
-        m.reply('Something went wrong. Unable to fetch 𝗘𝗽𝗹 standings.');
-    }
-
- }
-	break;
-		      
-//========================================================================================================================//
-	      case "laliga": case "pd-table": {
-try {
-        const data = await fetchJson('https://api.dreaded.site/api/standings/PD');
-        const standings = data.data;
-
-        const message = `𝗖𝘂𝗿𝗿𝗲𝗻𝘁 𝗟𝗮𝗹𝗶𝗴𝗮 𝗧𝗮𝗯𝗹𝗲 𝗦𝘁𝗮𝗻𝗱𝗶𝗻𝗴𝘀:-\n\n${standings}`;
-        await m.reply(message);
-
-    } catch (error) {
-        m.reply('Something went wrong. Unable to fetch 𝗟𝗮𝗹𝗶𝗴𝗮 standings.');
+    // --- Sending the Standings ---
+    await m.reply(message);
+  } catch (error) {
+    // --- Error Handling ---
+    // Sassy error message if fetching fails.
+    m.reply('👑 Oh dear, something went wrong! I couldn\'t fetch the EPL standings. The API might be resting, sweetie. 😥');
   }
+}
+break;
+
+//========================================================================================================================//
+// La Liga Standings (`laliga`, `pd-table`)
+// Description: Fetches and displays the current La Liga table.
+case "laliga": case "pd-table": {
+try {
+    // --- API Interaction ---
+    // Fetch La Liga standings from the API.
+    const response = await fetch('https://api.dreaded.site/api/standings/PD');
+    const data = await response.json();
+    const standings = data.data; // Extract the standings data.
+
+    // --- Sassy Message Formatting ---
+    // Construct a stylish message with the league standings.
+    const message = `✨ Here are the current La Liga Table Standings, darling! ✨\n\n${standings}`;
+    await m.reply(message);
+
+} catch (error) {
+    // --- Error Handling ---
+    // Sassy error message if fetching fails.
+    m.reply('👑 Oh dear, something went wrong! I couldn\'t fetch the La Liga standings. The API might be resting, sweetie. 😥');
+}
 }   
 break;
-		      
+
 //========================================================================================================================//
-	      case "bundesliga": case "bl-table": {
+// Bundesliga Standings (`bundesliga`, `bl-table`)
+// Description: Fetches and displays the current Bundesliga table.
+case "bundesliga": case "bl-table": {
 try {
-        const data = await fetchJson('https://api.dreaded.site/api/standings/BL1');
-        const standings = data.data;
+    // --- API Interaction ---
+    // Fetch Bundesliga standings from the API.
+    const response = await fetch('https://api.dreaded.site/api/standings/BL1');
+    const data = await response.json();
+    const standings = data.data; // Extract the standings data.
 
-        const message = `𝗖𝘂𝗿𝗿𝗲𝗻𝘁 𝗕𝘂𝗻𝗱𝗲𝘀𝗹𝗶𝗴𝗮 𝗧𝗮𝗯𝗹𝗲 𝗦𝘁𝗮𝗻𝗱𝗶𝗻𝗴𝘀\n\n${standings}`;
-        await m.reply(message);
+    // --- Sassy Message Formatting ---
+    // Construct a stylish message with the league standings.
+    const message = `✨ Here are the current Bundesliga Table Standings, darling! ✨\n\n${standings}`;
+    await m.reply(message);
 
-    } catch (error) {
-        m.reply('Something went wrong. Unable to fetch 𝗕𝘂𝗻𝗱𝗲𝘀𝗹𝗶𝗴𝗮 standings.');
-    }
+} catch (error) {
+    // --- Error Handling ---
+    // Sassy error message if fetching fails.
+    m.reply('👑 Oh dear, something went wrong! I couldn\'t fetch the Bundesliga standings. The API might be resting, sweetie. 😥');
+}
 }
 break;
-		      
+
 //========================================================================================================================//
-	      case "ligue-1": case "lg-1": {
+// Ligue 1 Standings (`ligue-1`, `lg-1`)
+// Description: Fetches and displays the current Ligue 1 table.
+case "ligue-1": case "lg-1": {
   try {
-        const data = await fetchJson('https://api.dreaded.site/api/standings/FL1');
-        const standings = data.data;
+    // --- API Interaction ---
+    // Fetch Ligue 1 standings from the API.
+    const response = await fetch('https://api.dreaded.site/api/standings/FL1');
+    const data = await response.json();
+    const standings = data.data; // Extract the standings data.
 
-        const message = `𝗖𝘂𝗿𝗿𝗲𝗻𝘁 𝗟𝗶𝗴𝘂𝗲-1 𝗧𝗮𝗯𝗹𝗲 𝗦𝘁𝗮𝗻𝗱𝗶𝗻𝗴𝘀\n\n${standings}`;
-        await m.reply(message);
+    // --- Sassy Message Formatting ---
+    // Construct a stylish message with the league standings.
+    const message = `✨ Here are the current Ligue 1 Table Standings, darling! ✨\n\n${standings}`;
+    await m.reply(message);
 
-    } catch (error) {
-        m.reply('Something went wrong. Unable to fetch 𝗹𝗶𝗴𝘂𝗲-1 standings.');
-    }
+} catch (error) {
+    // --- Error Handling ---
+    // Sassy error message if fetching fails.
+    m.reply('👑 Oh dear, something went wrong! I couldn\'t fetch the Ligue 1 standings. The API might be resting, sweetie. 😥');
+}
 }
 break;
-		      
+
 //========================================================================================================================//
-	      case "serie-a": case "sa-table":{
-try {
-        const data = await fetchJson('https://api.dreaded.site/api/standings/SA');
-        const standings = data.data;
+// Serie A Standings Command (`serie-a`, `sa-table`)
+// Description: Fetches and displays the current Serie A table.
+case "serie-a": case "sa-table": {
+  try {
+    // --- API Interaction ---
+    // Fetch Serie A standings from the API.
+    const response = await fetch('https://api.dreaded.site/api/standings/SA');
+    const data = await response.json();
+    const standings = data.data; // Extract the standings data.
 
-        const message = `𝗖𝘂𝗿𝗿𝗲𝗻𝘁 𝗦𝗲𝗿𝗶𝗲-𝗮 𝗧𝗮𝗯𝗹𝗲 𝗦𝘁𝗮𝗻𝗱𝗶𝗻𝗴𝘀\n\n${standings}`;
-        await m.reply(message);
+    // --- Sassy Message Formatting ---
+    // Construct a stylish message with the league standings.
+    const message = `✨ Here are the current Serie A Table Standings, darling! ✨\n\n${standings}`;
 
-    } catch (error) {
-        m.reply('Something went wrong. Unable to fetch 𝗦𝗲𝗿𝗶𝗲-𝗮 standings.');
-    }
+    // --- Sending the Standings ---
+    await m.reply(message);
+  } catch (error) {
+    // --- Error Handling ---
+    // Sassy error message if fetching fails.
+    m.reply('👑 Oh dear, something went wrong! I couldn\'t fetch the Serie A standings. The API might be resting, sweetie. 😥');
+  }
 }
 break;
-		      
+
 //========================================================================================================================//
-     case "fixtures": case "matches": {
+// Football Fixtures Command (`fixtures`, `matches`)
+// Description: Fetches and displays today's football matches from various leagues.
+case "fixtures": case "matches": {
  try {
-        let pl, laliga, bundesliga, serieA, ligue1;
+        let plMatches, laligaMatches, bundesligaMatches, serieAMatches, ligue1Matches;
 
+        // Fetch match data for each league.
         const plData = await fetchJson('https://api.dreaded.site/api/matches/PL');
-        pl = plData.data;
+        plMatches = plData.data;
 
         const laligaData = await fetchJson('https://api.dreaded.site/api/matches/PD');
-        laliga = laligaData.data;
+        laligaMatches = laligaData.data;
 
         const bundesligaData = await fetchJson('https://api.dreaded.site/api/matches/BL1');
-        bundesliga = bundesligaData.data;
+        bundesligaMatches = bundesligaData.data;
 
         const serieAData = await fetchJson('https://api.dreaded.site/api/matches/SA');
-        serieA = serieAData.data;
+        serieAMatches = serieAData.data;
 
         const ligue1Data = await fetchJson('https://api.dreaded.site/api/matches/FR');
-        ligue1 = ligue1Data.data;
+        ligue1Matches = ligue1Data.data;
 
-        let message = `𝗧𝗼𝗱𝗮𝘆𝘀 𝗙𝗼𝗼𝘁𝗯𝗮𝗹𝗹 𝗙𝗶𝘅𝘁𝘂𝗿𝗲𝘀 ⚽\n\n`;
+        // --- Sassy Message Formatting ---
+        // Start building the message with a stylish header.
+        let message = `⚽ *Today's Football Fixtures, darling!* ⚽\n\n`;
 
-        message += typeof pl === 'string' ? `🇬🇧 𝗣𝗿𝗲𝗺𝗶𝗲𝗿 𝗟𝗲𝗮𝗴𝘂𝗲:\n${pl}\n\n` : pl.length > 0 ? `🇬🇧 𝗣𝗿𝗲𝗺𝗶𝗲𝗿 𝗟𝗲𝗮𝗴𝘂𝗲:\n${pl.map(match => {
-            const { game, date, time } = match;
-            return `${game}\nDate: ${date}\nTime: ${time} (EAT)\n`;
-        }).join('\n')}\n\n` : "🇬🇧 𝗣𝗿𝗲𝗺𝗶𝗲𝗿 𝗟𝗲𝗮𝗴𝘂𝗲: No matches scheduled\n\n";
+        // Process Premier League matches.
+        message += typeof plMatches === 'string' 
+            ? `🇬🇧 Premier League:\n${plMatches}\n\n` 
+            : plMatches.length > 0 
+                ? `🇬🇧 Premier League:\n${plMatches.map(match => {
+                    const { game, date, time } = match;
+                    return `${game}\nDate: ${date}\nTime: ${time} (EAT)\n`;
+                }).join('\n')}\n\n` 
+                : "🇬🇧 Premier League: No matches scheduled today, sweetie! 😉\n\n";
 
-        if (typeof laliga === 'string') {
-            message += `🇪🇸 𝗟𝗮 𝗟𝗶𝗴𝗮:\n${laliga}\n\n`;
+        // Process La Liga matches.
+        if (typeof laligaMatches === 'string') {
+            message += `🇪🇸 La Liga:\n${laligaMatches}\n\n`;
         } else {
-            message += laliga.length > 0 ? `🇪🇸 𝗟𝗮 𝗟𝗶𝗴𝗮:\n${laliga.map(match => {
-                const { game, date, time } = match;
-                return `${game}\nDate: ${date}\nTime: ${time} (EAT)\n`;
-            }).join('\n')}\n\n` : "🇪🇸 𝗟𝗮 𝗟𝗶𝗴𝗮: No matches scheduled\n\n";
+            message += laligaMatches.length > 0 
+                ? `🇪🇸 La Liga:\n${laligaMatches.map(match => {
+                    const { game, date, time } = match;
+                    return `${game}\nDate: ${date}\nTime: ${time} (EAT)\n`;
+                }).join('\n')}\n\n` 
+                : "🇪🇸 La Liga: No matches scheduled today, sweetie! 😉\n\n";
         }
 
-        message += typeof bundesliga === 'string' ? `🇩🇪 𝗕𝘂𝗻𝗱𝗲𝘀𝗹𝗶𝗴𝗮:\n${bundesliga}\n\n` : bundesliga.length > 0 ? `🇩🇪 𝗕𝘂𝗻𝗱𝗲𝘀𝗹𝗶𝗴𝗮:\n${bundesliga.map(match => {
-            const { game, date, time } = match;
-            return `${game}\nDate: ${date}\nTime: ${time} (EAT)\n`;
-        }).join('\n')}\n\n` : "🇩🇪 𝗕𝘂𝗻𝗱𝗲𝘀𝗹𝗶𝗴𝗮: No matches scheduled\n\n";
+        // Process Bundesliga matches.
+        message += typeof bundesligaMatches === 'string' 
+            ? `🇩🇪 Bundesliga:\n${bundesligaMatches}\n\n` 
+            : bundesligaMatches.length > 0 
+                ? `🇩🇪 Bundesliga:\n${bundesligaMatches.map(match => {
+                    const { game, date, time } = match;
+                    return `${game}\nDate: ${date}\nTime: ${time} (EAT)\n`;
+                }).join('\n')}\n\n` 
+                : "🇩🇪 Bundesliga: No matches scheduled today, sweetie! 😉\n\n";
 
-        message += typeof serieA === 'string' ? `🇮🇹 𝗦𝗲𝗿𝗶𝗲 𝗔:\n${serieA}\n\n` : serieA.length > 0 ? `🇮🇹 𝗦𝗲𝗿𝗶𝗲 𝗔:\n${serieA.map(match => {
-            const { game, date, time } = match;
-            return `${game}\nDate: ${date}\nTime: ${time} (EAT)\n`;
-        }).join('\n')}\n\n` : "🇮🇹 𝗦𝗲𝗿𝗶𝗲 𝗔: No matches scheduled\n\n";
+        // Process Serie A matches.
+        message += typeof serieAMatches === 'string' 
+            ? `🇮🇹 Serie A:\n${serieAMatches}\n\n` 
+            : serieAMatches.length > 0 
+                ? `🇮🇹 Serie A:\n${serieAMatches.map(match => {
+                    const { game, date, time } = match;
+                    return `${game}\nDate: ${date}\nTime: ${time} (EAT)\n`;
+                }).join('\n')}\n\n` 
+                : "🇮🇹 Serie A: No matches scheduled today, sweetie! 😉\n\n";
 
-        message += typeof ligue1 === 'string' ? `🇫🇷 𝗟𝗶𝗴𝘂𝗲 1:\n${ligue1}\n\n` : ligue1.length > 0 ? `🇫🇷 𝗟𝗶𝗴𝘂𝗲 1:\n${ligue1.map(match => {
-            const { game, date, time } = match;
-            return `${game}\nDate: ${date}\nTime: ${time} (EAT)\n`;
-        }).join('\n')}\n\n` : "🇫🇷 𝗟𝗶𝗴𝘂𝗲- 1: No matches scheduled\n\n";
+        // Process Ligue 1 matches.
+        message += typeof ligue1Matches === 'string' 
+            ? `🇫🇷 Ligue 1:\n${ligue1Matches}\n\n` 
+            : ligue1Matches.length > 0 
+                ? `🇫🇷 Ligue 1:\n${ligue1Matches.map(match => {
+                    const { game, date, time } = match;
+                    return `${game}\nDate: ${date}\nTime: ${time} (EAT)\n`;
+                }).join('\n')}\n\n` 
+                : "🇫🇷 Ligue 1: No matches scheduled today, sweetie! 😉\n\n";
 
-        message += "𝗧𝗶𝗺𝗲 𝗮𝗻𝗱 𝗗𝗮𝘁𝗲 𝗮𝗿𝗲 𝗶𝗻 𝗘𝗮𝘀𝘁 𝗔𝗳𝗿𝗶𝗰𝗮 𝗧𝗶𝗺𝗲𝘇𝗼𝗻𝗲 (𝗘𝗔𝗧).";
+        message += "⏰ *Note: All times are in East Africa Time (EAT), darling!*";
 
+        // --- Sending the Fixtures ---
         await m.reply(message);
     } catch (error) {
-        m.reply('Something went wrong. Unable to fetch matches.' + error);
+        // --- Error Handling ---
+        // Sassy error message if fetching fails.
+        m.reply('👑 Oh dear, something went wrong! I couldn\'t fetch the match schedules. The football gods might be napping, sweetie! 😴' + error);
     }
 };
-break;		      
-		      
+break;
+
 //========================================================================================================================//		      
  case 'sc': case 'script': case 'repo':
 
