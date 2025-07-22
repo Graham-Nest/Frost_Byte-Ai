@@ -637,196 +637,196 @@ let cap = `╭───────────────⭓
 > 📥 *𝗗𝗢𝗪𝗡𝗟𝗢𝗔𝗗 𝗠𝗘𝗡𝗨* 📥
 ════════════════════
 ╭───────────────⭓
-│ ⬡ 🎬 ${prefix}video     
-│ ⬡ 🎬 ${prefix}ytmp4
-│ ⬡ 📱 ${prefix}fbdl      
-│ ⬡ 🎬 ${prefix}movie
-│ ⬡ 🎵 ${prefix}ytmp3    
-│ ⬡ 🎥 ${prefix}tiktok
-│ ⬡ 🎵 ${prefix}song    
-│ ⬡ 🎧 ${prefix}play
-│ ⬡ 🎵 ${prefix}shazam
-│ ⬡ 🎵 ${prefix}whatsong
-│ ⬡ 📹 ${prefix}yts      
-│ ⬡ 🐦 ${prefix}twitter
-│ ⬡ 📌 ${prefix}pinterest 
-│ ⬡ 🎶 ${prefix}song2
-│ ⬡ 🎤 ${prefix}play2      
-│ ⬡ 🎼 ${prefix}lyrics
-│ ⬡ 📸 ${prefix}insta
+│ ⬡ 🎬 video     
+│ ⬡ 🎬 ytmp4
+│ ⬡ 📱 fbdl      
+│ ⬡ 🎬 movie
+│ ⬡ 🎵 ytmp3    
+│ ⬡ 🎥 tiktok
+│ ⬡ 🎵 song    
+│ ⬡ 🎧 play
+│ ⬡ 🎵 shazam
+│ ⬡ 🎵 whatsong
+│ ⬡ 📹 yts      
+│ ⬡ 🐦 twitter
+│ ⬡ 📌 pinterest 
+│ ⬡ 🎶 song2
+│ ⬡ 🎤 play2      
+│ ⬡ 🎼 lyrics
+│ ⬡ 📸 insta
 ╰───────────────⭓
 ════════════════════
 > 📦 *𝗖𝗢𝗡𝗩𝗘𝗥𝗧𝗘𝗥 𝗣𝗔𝗚𝗘* 📦
 ════════════════════
 ╭───────────────⭓
-│ ⬡ 🖼 ${prefix}sticker     
-│ ⬡ 📷 ${prefix}photo
-│ ⬡ 🔄 ${prefix}retrieve    
-│ ⬡ 🎬 ${prefix}vv2
-│ ⬡ 🎚 ${prefix}mix         
-│ ⬡ 🐦 ${prefix}tweet
-│ ⬡ 🎭 ${prefix}smeme       
-│ ⬡ 🎥 ${prefix}mp4
-│ ⬡ 🎬 ${prefix}vv          
-│ ⬡ 📸 ${prefix}screenshot
-│ ⬡ ✂ ${prefix}take         
-│ ⬡ ✍ ${prefix}quotely
+│ ⬡ 🖼 sticker     
+│ ⬡ 📷 photo
+│ ⬡ 🔄 retrieve    
+│ ⬡ 🎬 vv2
+│ ⬡ 🎚 mix         
+│ ⬡ 🐦 tweet
+│ ⬡ 🎭 smeme       
+│ ⬡ 🎥 mp4
+│ ⬡ 🎬 vv          
+│ ⬡ 📸 screenshot
+│ ⬡ ✂ take         
+│ ⬡ ✍ quotely
 ╰───────────────⭓
 ════════════════════
 > 👤 *𝗚𝗥𝗢𝗨𝗣 𝗠𝗘𝗡𝗨* 👤
 ════════════════════
 ╭───────────────⭓
-│ ⬡ ✅ ${prefix}approve     
-│ ⬡ 🟢 ${prefix}promote
-│ ⬡ 🗑 ${prefix}delete      
-│ ⬡ 🤡 ${prefix}faker
-│ ⬡ 🔒 ${prefix}close       
-│ ⬡ ⏰ ${prefix}closetime
-│ ⬡ 🔕 ${prefix}disp-off    
-│ ⬡ 🔔 ${prefix}disp-7
-│ ⬡ 🖼 ${prefix}icon        
-│ ⬡ ✏ ${prefix}subject
-│ ⬡ 🚪 ${prefix}leave       
-│ ⬡  @ ${prefix}tagall
-│ ⬡ 🔄 ${prefix}revoke      
-│ ⬡ 🔊 ${prefix}unmute
-│ ⬡ ❌ ${prefix}reject      
-│ ⬡ 🌐 ${prefix}demote
-│ ⬡ 🚪 ${prefix}remove      
-│ ⬡ 🌍 ${prefix}foreigners
-│ ⬡ 🔓 ${prefix}open        
-│ ⬡ ⏳ ${prefix}opentime
-│ ⬡ 🔔 ${prefix}disp-1      
-│ ⬡ 🔔 ${prefix}disp-90
-│ ⬡ 📋 ${prefix}gcprofile   
-│ ⬡ 📝 ${prefix}desc
-│ ⬡ ➕ ${prefix}add         
-│ ⬡ 👻 ${prefix}hidetag
-│ ⬡ 🔇 ${prefix}mute
+│ ⬡ ✅ approve     
+│ ⬡ 🟢 promote
+│ ⬡ 🗑 delete      
+│ ⬡ 🤡 faker
+│ ⬡ 🔒 close       
+│ ⬡ ⏰ closetime
+│ ⬡ 🔕 disp-off    
+│ ⬡ 🔔 disp-7
+│ ⬡ 🖼 icon        
+│ ⬡ ✏ subject
+│ ⬡ 🚪 leave       
+│ ⬡  @ tagall
+│ ⬡ 🔄 revoke      
+│ ⬡ 🔊 unmute
+│ ⬡ ❌ reject      
+│ ⬡ 🌐 demote
+│ ⬡ 🚪 remove      
+│ ⬡ 🌍 foreigners
+│ ⬡ 🔓 open        
+│ ⬡ ⏳ opentime
+│ ⬡ 🔔 disp-1      
+│ ⬡ 🔔 disp-90
+│ ⬡ 📋 gcprofile   
+│ ⬡ 📝 desc
+│ ⬡ ➕ add         
+│ ⬡ 👻 hidetag
+│ ⬡ 🔇 mute
 ╰───────────────⭓
 ════════════════════
 > 🤖 *𝗚𝗣𝗧 𝗠𝗘𝗡𝗨* 🤖
 ════════════════════
 ╭───────────────⭓
-│ ⬡ 🤖 ${prefix}ai         
-│ ⬡ 👁 ${prefix}vision
-│ ⬡ 💎 ${prefix}gemini    
-│ ⬡ 🗣 ${prefix}gpt
-│ ⬡ 🗣 ${prefix}gpt3       
-│ ⬡ 🧠 ${prefix}ai2
-│ ⬡ 📖 ${prefix}define     
-│ ⬡ 🔍 ${prefix}google
-│ ⬡ 🗣 ${prefix}gpt2       
-│ ⬡ 🗣 ${prefix}gpt4
+│ ⬡ 🤖 ai         
+│ ⬡ 👁 vision
+│ ⬡ 💎 gemini    
+│ ⬡ 🗣 gpt
+│ ⬡ 🗣 gpt3       
+│ ⬡ 🧠 ai2
+│ ⬡ 📖 define     
+│ ⬡ 🔍 google
+│ ⬡ 🗣 gpt2       
+│ ⬡ 🗣 gpt4
 ╰───────────────⭓
 ════════════════════
 > 👑 *𝗢𝗪𝗡𝗘𝗥 𝗣𝗔𝗚𝗘* 👑
 ════════════════════
 ╭───────────────⭓
-│ ⬡ 🔄 ${prefix}restart     
-│ ⬡ 📢 ${prefix}cast
-│ ⬡ 🗑️ ${prefix}antidelete
-│ ⬡ 🚮 ${prefix}antilink 
-│ ⬡ 🏷️ ${prefix}antitag  
-│ ⬡ 🙌 ${prefix}antilinkall
-│ ⬡ 🧩 ${prefix}gpt_inbox
-│ ⬡ ❌ ${prefix}antibadword
-│ ⬡ ➕ ${prefix}join        
-│ ⬡ ♻ ${prefix}redeploy
-│ ⬡ ⚙ ${prefix}setvar      
-│ ⬡ 🖼 ${prefix}fullpp
-│ ⬡ ✅ ${prefix}unblock     
-│ ⬡ ☠ ${prefix}kill2
-│ ⬡ 👑 ${prefix}admin       
-│ ⬡ 📢 ${prefix}broadcast
-│ ⬡ 📊 ${prefix}getvar      
-│ ⬡ 🔄 ${prefix}update
-│ ⬡ 🤖 ${prefix}botpp       
-│ ⬡ ⛔ ${prefix}block
-│ ⬡ ☠ ${prefix}kill         
-│ ⬡ 💾 ${prefix}save
+│ ⬡ 🔄 restart     
+│ ⬡ 📢 cast
+│ ⬡ 🗑️ antidelete
+│ ⬡ 🚮 antilink 
+│ ⬡ 🏷️ antitag  
+│ ⬡ 🙌 antilinkall
+│ ⬡ 🧩 gpt_inbox
+│ ⬡ ❌ antibadword
+│ ⬡ ➕ join        
+│ ⬡ ♻ redeploy
+│ ⬡ ⚙ setvar      
+│ ⬡ 🖼 fullpp
+│ ⬡ ✅ unblock     
+│ ⬡ ☠ kill2
+│ ⬡ 👑 admin       
+│ ⬡ 📢 broadcast
+│ ⬡ 📊 getvar      
+│ ⬡ 🔄 update
+│ ⬡ 🤖 botpp       
+│ ⬡ ⛔ block
+│ ⬡ ☠ kill         
+│ ⬡ 💾 save
 ╰───────────────⭓
 ════════════════════
 > 🏟 *𝗙𝗢𝗢𝗧𝗕𝗔𝗟𝗟 𝗣𝗔𝗚𝗘* 🏟
 ════════════════════
 ╭───────────────⭓
-│ ⬡ ⚽ ${prefix}epl         
-│ ⬡ 🇮🇹 ${prefix}serie-a
-│ ⬡ 🇫🇷 ${prefix}ligue-1    
-│ ⬡ 🇪🇸 ${prefix}laliga
-│ ⬡ 🇩🇪 ${prefix}bundesliga 
-│ ⬡ 📅 ${prefix}fixtures
+│ ⬡ ⚽ epl         
+│ ⬡ 🇮🇹 serie-a
+│ ⬡ 🇫🇷 ligue-1    
+│ ⬡ 🇪🇸 laliga
+│ ⬡ 🇩🇪 bundesliga 
+│ ⬡ 📅 fixtures
 ╰───────────────⭓
 ════════════════════
 >🛠  *𝗨𝗧𝗜𝗟𝗦 & 𝗧𝗢𝗢𝗟* 🛠
 ════════════════════
 ╭───────────────⭓
-│ ⬡ 💻 ${prefix}carbon      
-│ ⬡ 🖥 ${prefix}compile-c
-│ ⬡ 🖥 ${prefix}c++         
-│ ⬡ 🖥 ${prefix}python
-│ ⬡ 🔒 ${prefix}encrypt     
-│ ⬡ 🌦 ${prefix}weather
-│ ⬡ 📥 ${prefix}gitclone    
-│ ⬡ 🖼 ${prefix}removebg
-│ ⬡ 🔊 ${prefix}tts         
-│ ⬡ 📆 ${prefix}fact
-│ ⬡ 💬 ${prefix}quotes      
-│ ⬡ 🖥 ${prefix}js
-│ ⬡ 🔍 ${prefix}inspect     
-│ ⬡ 📜 ${prefix}eval
-│ ⬡ 📊 ${prefix}github      
-│ ⬡ 💡 ${prefix}advice
-│ ⬡ 🎨 ${prefix}remini     
-│ ⬡ 🌐 ${prefix}trt
-│ ⬡ 😺 ${prefix}catfact    
-│ ⬡ 💘 ${prefix}pickupline
+│ ⬡ 💻 carbon      
+│ ⬡ 🖥 compile-c
+│ ⬡ 🖥 c++         
+│ ⬡ 🖥 python
+│ ⬡ 🔒 encrypt     
+│ ⬡ 🌦 weather
+│ ⬡ 📥 gitclone    
+│ ⬡ 🖼 removebg
+│ ⬡ 🔊 tts         
+│ ⬡ 📆 fact
+│ ⬡ 💬 quotes      
+│ ⬡ 🖥 js
+│ ⬡ 🔍 inspect     
+│ ⬡ 📜 eval
+│ ⬡ 📊 github      
+│ ⬡ 💡 advice
+│ ⬡ 🎨 remini     
+│ ⬡ 🌐 trt
+│ ⬡ 😺 catfact    
+│ ⬡ 💘 pickupline
 ╰───────────────⭓
 ════════════════════
 > 🧩 *𝗟𝗢𝗚𝗢 𝗚𝗘𝗡𝗘𝗥𝗔𝗧𝗢𝗥* 🧩
 ════════════════════
 ╭───────────────⭓
-│ ⬡ 💻 ${prefix}hacker      
-│ ⬡ 🖥 ${prefix}hacker2
-│ ⬡ 🎨 ${prefix}graffiti    
-│ ⬡ 😺 ${prefix}cat
-│ ⬡ 🏖 ${prefix}sand        
-│ ⬡ 🏆 ${prefix}gold
-│ ⬡ ⚔ ${prefix}arena        
-│ ⬡ 🐉 ${prefix}dragonball
-│ ⬡ 🍥 ${prefix}naruto      
-│ ⬡ 👶 ${prefix}child
-│ ⬡ 🍃 ${prefix}leaves      
-│ ⬡ 🎖 ${prefix}1917
-│ ⬡ ✒ ${prefix}typography   
-│ ⬡ 🟣 ${prefix}purple
-│ ⬡ 🌈 ${prefix}neon        
-│ ⬡ 🎄 ${prefix}noel
-│ ⬡ 🔩 ${prefix}metallic    
-│ ⬡ 😈 ${prefix}devil
-│ ⬡ ✨ ${prefix}impressive  
-│ ⬡ ❄ ${prefix}snow
-│ ⬡ 💧 ${prefix}water       
-│ ⬡ ⚡ ${prefix}thunder
-│ ⬡ 🧊 ${prefix}ice         
-│ ⬡ 📟 ${prefix}matrix
-│ ⬡ ⚪ ${prefix}silver       
-│ ⬡ 💡 ${prefix}light
+│ ⬡ 💻 hacker      
+│ ⬡ 🖥 hacker2
+│ ⬡ 🎨 graffiti    
+│ ⬡ 😺 cat
+│ ⬡ 🏖 sand        
+│ ⬡ 🏆 gold
+│ ⬡ ⚔ arena        
+│ ⬡ 🐉 dragonball
+│ ⬡ 🍥 naruto      
+│ ⬡ 👶 child
+│ ⬡ 🍃 leaves      
+│ ⬡ 🎖 1917
+│ ⬡ ✒ typography   
+│ ⬡ 🟣 purple
+│ ⬡ 🌈 neon        
+│ ⬡ 🎄 noel
+│ ⬡ 🔩 metallic    
+│ ⬡ 😈 devil
+│ ⬡ ✨ impressive  
+│ ⬡ ❄ snow
+│ ⬡ 💧 water       
+│ ⬡ ⚡ thunder
+│ ⬡ 🧊 ice         
+│ ⬡ 📟 matrix
+│ ⬡ ⚪ silver       
+│ ⬡ 💡 light
 ╰───────────────⭓
 ════════════════════
 > 📁 *𝗢𝗧𝗛𝗘𝗥 𝗠𝗘𝗡𝗨* 📁
 ════════════════════
 ╭───────────────⭓
-│ ⬡ 📜 ${prefix}bible       
-│ ⬡ 📖 ${prefix}quran
-│ ⬡ 👫 ${prefix}pair        
-│ ⬡ 💳 ${prefix}credits
-│ ⬡ 📤 ${prefix}upload      
-│ ⬡ 📎 ${prefix}attp
-│ ⬡ 🔗 ${prefix}url         
-│ ⬡ 🖼 ${prefix}image
-│ ⬡ 💻 ${prefix}system      
-│ ⬡ 🤖 ${prefix}blacks
+│ ⬡ 📜 bible       
+│ ⬡ 📖 quran
+│ ⬡ 👫 pair        
+│ ⬡ 💳 credits
+│ ⬡ 📤 upload      
+│ ⬡ 📎 attp
+│ ⬡ 🔗 url         
+│ ⬡ 🖼 image
+│ ⬡ 💻 system      
+│ ⬡ 🤖 blacks
 ╰───────────────⭓
 ════════════════════
 🔧 *Wᴇʟᴄᴏᴍᴇ ᴛᴏ ᴛʜᴇ ᴍᴇɴᴜ!*
@@ -856,7 +856,7 @@ client.sendMessage(m.chat, {
                                 showAdAttribution: true,
                                 title: `ʄʀօֆᴛ-ɮʏᴛɛ-𐌀i`,
                                 body: `${runtime(process.uptime())}`,
-                                thumbnail: fs.readFileSync('./Media/Raven.jpg'),
+                                thumbnail: fs.readFileSync('./Media/frost.jpg'),
                                 sourceUrl: 'https://wa.me/254114660061?text=Hello+Raven+dev+I+need+a+bot',
                                 mediaType: 1,
                                 renderLargerThumbnail: true
