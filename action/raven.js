@@ -461,55 +461,52 @@ const totalcmds = () => {
     return numUpper;
 }	  
 //========================================================================================================================// 
-if (gptdm === 'on' && m.chat.endsWith("@s.whatsapp.net")) {
-    if (itsMe) return;
-
-    try {
-        const currentTime = Date.now();
-        if (currentTime - lastTextTime < messageDelay) {
+    if (gptdm === 'on' && m.chat.endsWith("@s.whatsapp.net")) {
+if (itsMe) return;
+	    
+try {
+	const currentTime = Date.now();
+          if (currentTime - lastTextTime < messageDelay) {
             console.log('Message skipped: Too many messages in a short time.');
             return;
-        }
+	  }
+	
+  const { default: Gemini } = await import('gemini-ai');
+  const gemini = new Gemini("AIzaSyDJUtskTG-MvQdlT4tNE319zBqLMFei8nQ");
+  const chat = gemini.createChat();
 
-        const { default: Gemini } = await import('gemini-ai');
-        const gemini = new Gemini("AIzaSyDJUtskTG-MvQdlT4tNE319zBqLMFei8nQ"); // Remember to manage your API key securely!
-        const chat = gemini.createChat();
+      const res = await chat.ask(text);
 
-        const res = await chat.ask(text);
+        await m.reply(res);
 
-        await m.reply(res); // Original reply for successful AI response
-
-        lastTextTime = currentTime;
-
+lastTextTime = currentTime;
+	
     } catch (e) {
-        // Modified error reply to be sassy and classy
-        m.reply(`🤖 My apologies, darling! I'm experiencing a momentary lapse in my AI capabilities. Please try again later. ✨ ${e}`);
+        m.reply("I am unable to generate text\n\n" + e);
     }
 }
 //========================================================================================================================//
 if (antitag === 'on' && !Owner && isBotAdmin && !isAdmin && m.mentionedJid && m.mentionedJid.length > 10) {
-    if (itsMe) return;
+        if (itsMe) return;
 
-    const cate = m.sender;
+        const cate = m.sender;
 
-    // Modified message to be stylish and sassy
-    await client.sendMessage(m.chat, {
-        text: `@${cate.split("@")[0]}, darling, the Anti-Tag protocol is actively engaged! 🛡️✨`,
-        contextInfo: { mentionedJid: [cate] }
-    }, { quoted: m });
+        await client.sendMessage(m.chat, {
+            text: `@${cate.split("@")[0]}, Antitag is Active🔨`,
+            contextInfo: { mentionedJid: [cate] }
+        }, { quoted: m });
 
-    await client.sendMessage(m.chat, {
-        delete: {
-            remoteJid: m.chat,
-            fromMe: false,
-            id: m.key.id,
-            participant: cate
-        }
-    });
-    await client.groupParticipantsUpdate(m.chat, [cate], "remove");
-}
+        await client.sendMessage(m.chat, {
+            delete: {
+                remoteJid: m.chat,
+                fromMe: false,
+                id: m.key.id,
+                participant: cate            }
+        });
+        await client.groupParticipantsUpdate(m.chat, [cate], "remove");
+    }
 //========================================================================================================================//
-//========================================================================================================================//	 
+//========================================================================================================================//	  
 async function loading(client, from) {
     // An array of strings representing the animation frames
     const frames = [
@@ -877,7 +874,7 @@ client.sendMessage(m.chat, {
                                 title: `ʄʀօֆᴛ-ɮʏᴛɛ-𐌀i`,
                                 body: `${runtime(process.uptime())}`,
                                 thumbnail: fs.readFileSync('./Media/frost.jpg'),
-                                sourceUrl: 'https://wa.me/254756360306?text=Hello+Frist+dev+I+need+a+bot',
+                                sourceUrl: 'https://wa.me/254114660061?text=Hello+Raven+dev+I+need+a+bot',
                                 mediaType: 1,
                                 renderLargerThumbnail: true
                             }
@@ -1229,102 +1226,131 @@ return reply(`Case *${text}* Not found`)
 		      
 //========================================================================================================================//		      
  case "bible":
-		      {
-	if (!text) {
-            return reply(`Please provide a Bible reference.\n\nExample: bible John 3:16`);
-        }
-        const reference = text;
+{
+    if (!text) {
+        return reply(`💁‍♀️ *Oh darling, you forgot to give me a reference!* \n\n*Example:* bible John 3:16`);
+    }
+    const reference = text;
 
-try {
+    try {
         const apiUrl = `https://bible-api.com/${encodeURIComponent(reference)}`;
         const response = await axios.get(apiUrl);
 
         if (response.status === 200 && response.data.text) {
             const { reference: ref, text, translation_name } = response.data;
-		
+
             reply(
-                `*Hello there, below is what you requested*\n\n` +
+                `✨ *Well, look what we have here!* ✨\n\n` +
                 `📖 *Reference:* ${ref}\n` +
-                ` ${text}\n\n` +
-		`_Requested by ${pushname}_`    
+                `📝 ${text}\n\n` +
+                `🤩 _Requested by ${pushname}_`    
             );
         } else {
-            reply("*Verse not found.* Please check the reference and try again.");
+            reply(`🚫 *Oopsie daisy!* That verse seems to be lost in the clouds. Check the reference and try again!`);
         }
     } catch (error) {
         console.error(error);
-        reply("*An error occurred while fetching the Bible verse.* Please try again.");
+        reply(`🛑 *Yikes!* Something went wrong while fetching that divine wisdom. Give it another shot!`);
     }
-};	      
+}
 break;
+
 		      
 //========================================================================================================================//
 case 'quran': {
+  // --- Input Validation with Sassy Flair ---
   if (!text) {
-    return reply(`Please provide Surah and Ayah\n*Example:* quran 2:255`);
+    // Sassy reply when no text (Surah:Ayah) is provided
+    return reply(`Darling, you've requested the divine word but forgotten the chapter and verse! Do tell, which sacred passage are you seeking? ✨📖 ${getRandomEmoji(['😉', '💖', '💫'])}`);
   }
 
   const input = text.split(":");
   if (input.length !== 2) {
-    return reply("Incorrect format. Use: Surah:Ayah (e.g. 2:255)");
+    // Sassy reply for incorrect input format
+    return reply(`Oh, honey, that format is as confusing as a riddle wrapped in an enigma! 🧐 Please, present it like a queen: Surah:Ayah (e.g., 2:255) 👑✨ ${getRandomEmoji(['💅', '💁‍♀️'])}`);
   }
 
   const [surah, ayah] = input;
+
+  // --- Fetching Quran Verse ---
   try {
+    // Fetching the Quran verse from the API using axios
     const res = await axios.get(`https://api.alquran.cloud/v1/ayah/${surah}:${ayah}/editions/quran-uthmani,en.asad`);
+    
+    // Extracting the necessary data from the API response
     const arabic = res.data.data[0].text;
     const english = res.data.data[1].text;
     const surahInfo = res.data.data[0].surah;
 
-    const msg = `*Holy Qur'an Verse*\n\n` +
-      `*Surah:* ${surahInfo.englishName} (${surahInfo.name})\n` +
-      `*Ayah:* ${ayah}\n\n` +
-      `*Arabic:* ${arabic}\n\n` +
-      `*English:* ${english}\n\n` +
-      `_Requested by ${pushname}_`;
+    // --- Constructing the Sassy and Emoji-Filled Message ---
+    const msg = `*🌟 A Divine Revelation Just For You, Darling! 🌟*\n\n` +
+      `*${getRandomEmoji(['📜', '📖'])} Surah:* ${surahInfo.englishName} (${surahInfo.name}) ${getRandomEmoji(['🕌', '✨', '🤲'])}\n` +
+      `*${getRandomEmoji(['🔢', '📌'])} Ayah:* ${ayah} ${getRandomEmoji(['💫', '💖', '✨'])}\n\n` +
+      `*${getRandomEmoji(['🕌', '🕋'])} Arabic:* \n${arabic} ${getRandomEmoji(['🌙', '✨', '🙏'])}\n\n` +
+      `*${getRandomEmoji(['🌍', '📖'])} English Translation:* \n${english} ${getRandomEmoji(['📚', '✨', '📖'])}\n\n` +
+      `_A special request from your dearest, ${pushname}! ${getRandomEmoji(['😘', '💖', '💋', '😇'])}_`;
 
+    // --- Sending the Message ---
+    // Sending the crafted message back to the chat
     client.sendMessage(m.chat, { text: msg }, { quoted: m });
+
   } catch (e) {
-    console.log(e);
-    reply("Could not find the verse. Please check the Surah and Ayah.");
+    // --- Error Handling with Sassy Tone ---
+    console.error("Quran API error:", e.response ? e.response.data : e.message); // Log detailed error for debugging
+    
+    // Sassy reply when the verse cannot be found
+    reply(`My apologies, my dear, but it seems that particular verse has taken a little vacation. ✈️ Perhaps try another, or double-check your divine coordinates? 🗺️🙏 ${getRandomEmoji(['🙄', '😔', '✨'])}`);
   }
- }
-  break;
+}
+break;
 		      
 //========================================================================================================================//	
-case "pair": case "rent": {
-if (!q) return await reply("Please provide valid Whatsapp number  Example- pair 2541146XXX");
+case "pair":
+case "rent": {
+    // Initial prompt for a valid WhatsApp number
+    if (!q) {
+        return await m.reply("👑 Darling, you seem to have misplaced the WhatsApp number! 💅 Where could it be? 🤔 Please grace me with a valid one, like `pair 254759000XXX`. 💖");
+    }
 
-	try {	
-const numbers = q.split(',') .map((v) => v.replace(/[^0-9]/g, '')) 
-            .filter((v) => v.length > 5 && v.length < 20); 
+    try {
+        // Process and validate the input numbers
+        const numbers = q.split(',')
+            .map((v) => v.replace(/[^0-9]/g, '')) // Remove non-numeric characters
+            .filter((v) => v.length > 5 && v.length < 20); // Filter for valid number lengths
 
-   if (numbers.length === 0) {
-            return m.reply("Invalid number❌️ Please use the  correct format!");
+        // Handle cases where no valid numbers are provided
+        if (numbers.length === 0) {
+            return m.reply("🎀 My dear, that number format is a *tad* off. 🌟 Let's try this again, shall we? Ensure it's a proper WhatsApp number, or I can't work my magic! 🪄💖");
         }
 
-for (const number of numbers) {
+        // Iterate through each valid number
+        for (const number of numbers) {
             const whatsappID = number + '@s.whatsapp.net';
-    const result = await client.onWhatsApp(whatsappID); 
+            const result = await client.onWhatsApp(whatsappID); // Check if the number is on WhatsApp
 
+            // Handle cases where the number is not registered on WhatsApp
             if (!result[0]?.exists) {
-                return m.reply(`That number is not registered on WhatsApp❗️`);
-	    }
-	
-m.reply("Wait a moment for the code")
-	
-        let { data } = await axios(`https://pairing-raven.onrender.com/code?number=${number}`);
-        let code = data.code;
-		
-const Code = `${code}`
-await sleep(messageDelay);
-	
-            await m.reply(Code);
-	
-     }
+                return m.reply("💔 Oh, darling! 🥺 That number isn't even registered on WhatsApp. Such a shame! 😔 Perhaps try a different one? 🌟💖");
+            }
+
+            // Inform the user that the code is being fetched
+            await m.reply("✨ Patience, my dear! 💫 I'm conjuring up that special code for you right now... ⏳💖");
+
+            // Fetch the pairing code from the API
+            let { data } = await axios(`https://pairing-raven.onrender.com/code?number=${number}`);
+            let code = data.code;
+
+            const Code = `${code}`; // Format the code
+            await sleep(messageDelay); // Wait for a specified delay before sending the code
+
+            // Send the retrieved pairing code to the user
+            await m.reply(`🔑 Voilà! Your secret code, as requested: \n\n${Code} 🤫✨`);
+        }
     } catch (error) {
+        // Log the error for debugging
         console.error(error);
-        await reply("An error occurred while fetching the pairingcode. API might be down.");
+        // Inform the user about the error with a sassy tone
+        await m.reply("💥 Fiddlesticks! ⚡️ It appears our magical connection is a bit shaky. The API might be having a moment. 😭 Try again shortly, won't you, sweetie? 😘💖");
     }
 };
 break;
@@ -1586,7 +1612,7 @@ case "credits":
 		  let [poll, opt] = text.split("|")
 
 if (text.split("|") < 2)
-                return m.reply(`✨ Honey, that's not quite the poll-tastic format we're looking for! 💅 Let's get this right, shall we? 🤔 Try this: \`poll [Your Question]|[Option 1],[Option 2],...\` 🌟`);
+                return m.reply(`Wrong format::\nExample:- poll who is the best president|Putin, Ruto`);
 
 let options = []
             for (let i of opt.split(',')) {
@@ -3008,218 +3034,143 @@ case "foreigners": {
 break;
 
 //========================================================================================================================//
-case 'dalle':
-case 'createimage': {
-    // --- Input Validation ---
-    if (!text) {
-        return m.reply("Darling, my artistic muse needs a prompt! What fabulous image shall I conjure for you? 🎨✨");
-    }
-
-    // --- API URL Construction ---
-    const apiUrl = `https://api.dreaded.site/api/imagine?text=${encodeURIComponent(text)}`;
-
-    // --- User Feedback: Waiting ---
-    m.reply("Hold on to your halo, darling! I'm weaving some digital magic to create your masterpiece... 💫🪄");
-
-    try {
-        // --- Image Generation ---
+ case 'dalle': case 'createimage': {
+		      
+  if (!text) return m.reply("What image do you want to create ?");
+		      
+const apiUrl = `https://api.dreaded.site/api/imagine?text=${encodeURIComponent(text)}`;
+m.reply('*Please wait i am generating your image...*');		      
+try {
         const data = await fetchJson(apiUrl);
-
-        // --- Response Validation ---
         if (!data.status || !data.result) {
-          // Stylish Reoly
-            return m.reply("Oh, darling! It seems the creative well has run dry, or perhaps the API is having a moment. 💔 Let's try again later, shall we? 🔌");
+            return m.reply("Something is wrong,  Api might be down!");
         }
 
-        // Destructure the response data.
-        const { creator, result } = data; // 'creator' might be unused here, but kept for structure.
-        // Craft a stylish caption for the generated image.
-        const caption = `Voila! Your vision, brought to life by yours truly. ✨`;
+        const { creator, result } = data;
+        const caption = `There you go 💠`;
 
-        // --- Sending the Generated Image ---
         await client.sendMessage(
             m.chat,
             {
-                image: { url: result }, // The URL of the generated image.
+                image: { url: result },
                 caption: caption
             },
-            { quoted: m } // Ensure the bot's reply is quoted to the original message.
+            { quoted: m }
         );
     } catch (error) {
-        // --- Error Handling ---
-        console.error("Error during image generation:", error);
-        // Sassy reply for any other errors during the process.
-        m.reply("Oopsie! My creative circuits got a bit tangled. Please try again, and I promise to be more graceful next time! 🙏💖");
+        console.error(error);
+        m.reply("An error occurred while generating the image.");
     }
-}
+};
 break;
+		      
+//========================================================================================================================//		      
+		      case "ai": {
+			      const {
+    GoogleGenerativeAI: _0x817910
+  } = require("@google/generative-ai");
+  const _0xc0423b = require("axios");
+		      
+  try {
+    if (!m.quoted) {
+      return m.reply("𝗤𝘂𝗼𝘁𝗲 𝗮𝗻 𝗶𝗺𝗮𝗴𝗲 𝘄𝗶𝘁𝗵 𝘁𝗵𝗲 𝗶𝗻𝘀𝘁𝗿𝘂𝗰𝘁𝗶𝗼𝗻𝘀 𝗲𝗵!");
+    }
+    if (!text) {
+      return m.reply("𝗣𝗿𝗼𝘃𝗶𝗱𝗲 𝘀𝗼𝗺𝗲 𝗶𝗻𝘀𝘁𝗿𝘂𝗰𝘁𝗶𝗼𝗻𝘀 𝗲𝗵! 𝗧𝗵𝗶𝘀 𝗶𝘀 𝗥𝗔𝗩𝗘𝗡 𝗔𝗶, 𝘂𝘀𝗶𝗻𝗴 𝗴𝗲𝗺𝗶𝗻𝗶-𝗽𝗿𝗼-𝘃𝗶𝘀𝗶𝗼𝗻 𝘁𝗼 𝗮𝗻𝗮𝗹𝘆𝘀𝗲 𝗶𝗺𝗮𝗴𝗲𝘀.");
+    }
+    if (!/image|pdf/.test(mime)) {
+      return m.reply("𝗛𝘂𝗵 𝘁𝗵𝗶𝘀 𝗶𝘀 𝗻𝗼𝘁 𝗮𝗻 𝗶𝗺𝗮𝗴𝗲! 𝗣𝗹𝗲𝗮𝘀𝗲 𝗧𝗮𝗴 𝗮𝗻 𝗶𝗺𝗮𝗴𝗲 𝘄𝗶𝘁𝗵 𝘁𝗵𝗲 𝗶𝗻𝘀𝘁𝗿𝘂𝗰𝘁𝗶𝗼𝗻𝘀 𝗲𝗵 !");
+    }
+    let _0x3439a2 = await client.downloadAndSaveMediaMessage(m.quoted);
+    let _0x3dfb7c = await uploadToCatbox(_0x3439a2);
+    m.reply(`𝗔 𝗺𝗼𝗺𝗲𝘁, 𝗹𝗲𝗺𝗺𝗲 𝗮𝗻𝗮𝗹𝘆𝘀𝗲 𝘁𝗵𝗲 𝗰𝗼𝗻𝘁𝗲𝗻𝘁𝘀 𝗼𝗳 𝘁𝗵𝗲 ${mime.includes("pdf") ? "𝗣𝗗𝗙" : "𝗜𝗺𝗮𝗴𝗲"} ...`);
+    const _0x4e9e6a = new _0x817910("AIzaSyDJUtskTG-MvQdlT4tNE319zBqLMFei8nQ");
+    async function _0x309a3c(_0x1400ed, _0x1a081e) {
+      const _0x53e4b2 = {
+        responseType: "arraybuffer"
+      };
+      const _0x1175d9 = await _0xc0423b.get(_0x1400ed, _0x53e4b2);
+      const _0x2a4862 = Buffer.from(_0x1175d9.data).toString("base64");
+      const _0x2f6e31 = {
+        data: _0x2a4862,
+        mimeType: _0x1a081e
+      };
+      const _0x14b65d = {
+        inlineData: _0x2f6e31
+      };
+      return _0x14b65d;
+    }
+    const _0x22a6bb = {
+      model: "gemini-1.5-flash"
+    };
+    const _0x42849d = _0x4e9e6a.getGenerativeModel(_0x22a6bb);
+    const _0x2c743f = [await _0x309a3c(_0x3dfb7c, "image/jpeg")];
+    const _0xcf53e3 = await _0x42849d.generateContent([text, ..._0x2c743f]);
+    const _0x195f9c = await _0xcf53e3.response;
+    const _0x3db5a3 = _0x195f9c.text();
+    await m.reply(_0x3db5a3);
+  } catch (_0x4b3921) {
+    m.reply("I am unable to analyze images at the moment\n" + _0x4b3921);
+  }
+}
+ break;
 
 //========================================================================================================================//		      
-case "ai": {
-    try {
-        // --- Input Validation ---
-        if (!m.quoted) {
-            return m.reply("Darling, you need to *quote* an image or PDF first! My analytical skills require something to analyze, you know. 🧐");
-        }
-        // Sassy reply if no instructions were provided.
-        if (!text) {
-            return m.reply("Oh, honey, just showing me a picture isn't enough! Tell me what you want me to *do* with it. I'm *FROST-AI*, powered by Gemini Pro Vision, ready to analyze! 🧠✨");
-        }
-        // Check if the quoted message is an image or PDF.
-        if (!/image|pdf/.test(mime)) {
-            // Dismissive reply for unsupported file types.
-            return m.reply(`Seriously? 🤨 That's not an image or a PDF! Please tag a valid file so I can work my magic. 🙄`);
-        }
+	      case "ai2": {
+const axios = require("axios");
 
-        // --- File Handling ---
-        const downloadedMediaPath = await client.downloadAndSaveMediaMessage(m.quoted);
-        // Upload the downloaded file to Catbox for easier access.
-        const uploadedFileUrl = await uploadToCatbox(downloadedMediaPath);
+try {
+if (!m.quoted) return m.reply("Send the image then tag it with the instruction.");
 
-        // Inform the user that analysis is underway with a sophisticated tone.
-        m.reply(`Analyzing the ${mime.includes("pdf") ? "PDF document" : "image"}... Give me a moment to process this visual feast! ⏳✨`);
+if (!text) return m.reply("𝗣𝗿𝗼𝘃𝗶𝗱𝗲 𝘀𝗼𝗺𝗲 𝗶𝗻𝘀𝘁𝗿𝘂𝗰𝘁𝗶𝗼𝗻𝘀 𝗲𝗵! 𝗧𝗵𝗶𝘀 Raven AI 𝗨𝘀𝗲 𝗚𝗲𝗺𝗶𝗻𝗶-𝗽𝗿𝗼-𝘃𝗶𝘀𝗶𝗼𝗻 𝘁𝗼 𝗮𝗻𝗮𝗹𝘆𝘀𝗲 𝗶𝗺𝗮𝗴𝗲𝘀.");
+if (!/image|pdf/.test(mime)) return m.reply("That is not an image, try again while quoting an actual image.");             
 
-        // --- Gemini API Integration ---
-        const genAI = new GoogleGenerativeAI("AIzaSyDJUtskTG-MvQdlT4tNE319zBqLMFei8nQ"); // Replace with your actual API key management
+                    let fdr = await client.downloadAndSaveMediaMessage(m.quoted)
+                    let fta = await uploadToCatbox(fdr)
+                    m.reply(`𝗔 𝗠𝗼𝗺𝗲𝗻𝘁, 𝗥𝗮𝘃𝗲𝗻[𝗥𝗔𝗩𝗘𝗡-𝗔𝗜] 𝗶𝘀 𝗮𝗻𝗮𝗹𝘆𝘇𝗶𝗻𝗴 𝘁𝗵𝗲 𝗰𝗼𝗻𝘁𝗲𝗻𝘁𝘀 𝗼𝗳 𝘁𝗵𝗲 ${mime.includes("pdf") ? "𝗣𝗗𝗙" : "𝗜𝗺𝗮𝗴𝗲"} . . .`);
 
-        // Helper function to convert file URL to Base64 format required by Gemini Vision.
-        async function fileToBase64(fileUrl, mimeType) {
-            const axiosConfig = { responseType: "arraybuffer" };
-            const axiosResponse = await axios.get(fileUrl, axiosConfig);
-            const fileContentBase64 = Buffer.from(axiosResponse.data).toString("base64");
-            const fileData = {
-                data: fileContentBase64,
-                mimeType: mimeType
-            };
-            const geminiVisionFile = { inlineData: fileData };
-            return geminiVisionFile;
-        }
+const data = await fetchJson(`https://api.dreaded.site/api/gemini-vision?url=${fta}&instruction=${text}`);
+let res = data.result
+await m.reply(res); 
 
-        // Configure the model.
-        const modelConfig = {
-            model: "gemini-1.5-flash" // Using the flash model for speed
-        };
-        const geminiModel = genAI.getGenerativeModel(modelConfig);
+} catch (e) {
 
-        // Prepare the content parts for the Gemini API: instructions + file.
-        const geminiContentParts = [
-            text, // User's instructions
-            await fileToBase64(uploadedFileUrl, mime.includes("pdf") ? "application/pdf" : "image/jpeg") // File data
-        ];
+m.reply("I am unable to analyze images at the moment\n" + e)
 
-        // Generate content using the Gemini model.
-        const generationResult = await geminiModel.generateContent(geminiContentParts);
-        const response = await generationResult.response;
-        const analysisResultText = response.text();
-
-        // --- Sending the Analysis Result ---
-        await m.reply(`Here's what I've gathered from your request: ✨\n\n${analysisResultText}`);
-
-    } catch (error) {
-        // --- Error Handling ---
-        console.error("AI Image Analysis Error:", error); // Log the error for debugging.
-        m.reply(`Oh, darling! My visual analysis circuits seem to be on strike. 💥 I'm unable to process that right now. Please try again later, or perhaps with a different file? 💔 Error: \`${error.message}\``);
-    }
 }
-break;
+	      }
+		break;
 
 //========================================================================================================================//		      
-case "ai2": {
-    // Requiring axios as per the original snippet.
-    const axios = require("axios");
-
-    try {
-        // --- Input Validation: Quoted Message ---
-        if (!m.quoted) {
-            return m.reply("Darling, I need something to work with! Please quote the image or PDF you wish for me to analyze, and then provide your instructions. Let's create some magic! ✨");
-        }
-
-        // --- Input Validation: Text Instructions ---
-        // Ensure there are instructions provided for the AI. If not, prompt the user sassily.
-        if (!text) {
-            return m.reply("Oh, sweetie, my sophisticated Frost AI needs a bit of guidance! Please provide clear instructions on what you'd like me to analyze in the image/PDF. Think of me as your personal digital oracle! 🔮");
-        }
-
-        // --- Input Validation: Media Type ---
-        if (!/image|pdf/.test(m.quoted.mimetype)) {
-            return m.reply("My dear, it seems you've sent something that isn't quite an image or a PDF. My AI is rather discerning – it thrives on visual or document files. Please quote a proper image or PDF, darling! 🖼️📄");
-        }
-
-        // --- Media Processing ---
-        let mediaPath = await client.downloadAndSaveMediaMessage(m.quoted);
-        let mediaUrl = await uploadToCatbox(mediaPath); // Assumed function to upload and return URL
-
-        // --- AI Analysis Notification ---
-        m.reply(`Just a moment, my love! Frost AI is now meticulously analyzing the depths of your ${m.quoted.mimetype.includes("pdf") ? "PDF document" : "image"}... It's quite the intellectual endeavor! 🧠`);
-
-        // --- API Call for AI Analysis ---
-        const data = await fetchJson(`https://api.dreaded.site/api/gemini-vision?url=${encodeURIComponent(mediaUrl)}&instruction=${encodeURIComponent(text)}`);
-        let aiResult = data.result; // Extract the actual result from the API response
-
-        // --- Sending the AI's Result ---
-        await m.reply(`Here's what Frost AI has divined from your ${m.quoted.mimetype.includes("pdf") ? "document" : "image"}, darling: ✨\n\n${aiResult}`);
-
-    } catch (e) {
-        // --- Error Handling ---
-        // If any error occurs during the process, provide a sassy error message.
-        m.reply(`My apologies, darling! It appears my analytical circuits are experiencing a temporary hiccup, and I can't process images or PDFs right now. 💔 Please try again later, or perhaps the universe is keeping its secrets for another time! Error details: \`${e}\``);
-    }
+	      case "vision": {
+		      if (!msgR || !text) {
+    m.reply("𝗤𝘂𝗼𝘁𝗲 𝗮𝗻 𝗶𝗺𝗮𝗴𝗲 𝗮𝗻𝗱 𝗴𝗶𝘃𝗲 𝘀𝗼𝗺𝗲 𝗶𝗻𝘀𝘁𝗿𝘂𝗰𝘁𝗶𝗼𝗻𝘀 𝗲𝗵. 𝗜'𝗺 𝗥𝗔𝗩𝗘𝗡 𝗔𝗶, 𝗶 𝘂𝘀𝗲 𝗕𝗮𝗿𝗱 𝘁𝗼 𝗮𝗻𝗮𝗹𝘆𝘇𝗲 𝗶𝗺𝗮𝗴𝗲𝘀.");
+    return;
+  }
+  ;
+  let _0x44b3e0;
+  if (msgR.imageMessage) {
+    _0x44b3e0 = msgR.imageMessage;
+  } else {
+    m.reply("𝗛𝘂𝗵, 𝗧𝗵𝗮𝘁'𝘀 𝗻𝗼𝘁 𝗮𝗻 𝗶𝗺𝗮𝗴𝗲, 𝗦𝗲𝗻𝗱 𝗮𝗻 𝗶𝗺𝗮𝗴𝗲 𝘁𝗵𝗲𝗻 𝘁𝗮𝗴 𝗶𝘁 𝘄𝗶𝘁𝗵 𝘁𝗵𝗲 𝗶𝗻𝘀𝘁𝗿𝘂𝗰𝘁𝗶𝗼𝗻𝘀 !");
+    return;
+  };
+  try {
+    let _0x11f50e = await client.downloadAndSaveMediaMessage(_0x44b3e0);
+    let _0x45392d = await uploadToCatbox(_0x11f50e);
+    m.reply("𝗔 𝗺𝗼𝗺𝗲𝗻𝘁, 𝗟𝗲𝗺𝗺𝗲 𝗮𝗻𝗮𝗹𝘆𝘇𝗲 𝘁𝗵𝗲 𝗰𝗼𝗻𝘁𝗲𝗻𝘁𝘀 𝗼𝗳 𝘁𝗵𝗲 𝗶𝗺𝗮𝗴𝗲. . .");
+    let _0x4f137e = await (await fetch("https://bk9.fun/ai/geminiimg?url=" + _0x45392d + "&q=" + text)).json();
+    const _0x4bfd63 = {
+      text: _0x4f137e.BK9
+    };
+    await client.sendMessage(m.chat, _0x4bfd63, {
+      quoted: m
+    });
+  } catch (_0x1be711) {
+    m.reply("An error occured\n" + _0x1be711);
+  }
 }
-break;
-
-//========================================================================================================================//		      
-case "vision": {
-    // --- Input Validation: Quoted Message and Instruction ---
-    if (!m.quoted || !text) {
-        // Sassy reply if either the quote or instruction is missing.
-        return m.reply("Darling, my vision capabilities require a subject! Please quote an image and grace me with your instructions. I am FROST AI, ready to decode the visual world for you. 🧐✨");
-    }
-
-    // --- Media Type Check ---
-    let mediaMessageObject = m.quoted.message?.imageMessage; // Safely access imageMessage from the message content
-    if (!mediaMessageObject) {
-        // Sassy reply if the quoted message is not an image.
-        return m.reply("Oh, honey, that's not quite what I'm looking for. My AI is a connoisseur of images, not... whatever that was. Please quote a proper image and provide your instructions! 🖼️🚫");
-    }
-
-    try {
-        // --- Media Processing ---
-        let mediaPath = await client.downloadAndSaveMediaMessage(mediaMessageObject);
-
-        // Upload the downloaded image to Catbox to get a shareable URL.
-        let mediaUrl = await uploadToCatbox(mediaPath);
-
-        // --- AI Analysis Notification ---
-        m.reply("Just a moment, my dear! Raven AI is diving deep into the visual data... It's quite the intellectual pursuit! 🧠💫");
-
-        // --- API Call for AI Analysis ---
-        const apiUrl = `https://bk9.fun/ai/geminiimg?url=${encodeURIComponent(mediaUrl)}&q=${encodeURIComponent(text)}`;
-
-        // Fetch the JSON response from the API.
-        const response = await fetch(apiUrl);
-        if (!response.ok) {
-            // Throw an error if the API call fails, including status information.
-            throw new Error(`API returned status ${response.status}: ${response.statusText}`);
-        }
-        const apiResponse = await response.json();
-
-        // --- Extracting and Sending the AI's Result ---
-        let aiResult = apiResponse.BK9;
-
-        // Prepare the response payload for sending.
-        const responsePayload = {
-            text: aiResult
-        };
-
-        // Send the AI's findings back to the chat with a sassy intro.
-        await client.sendMessage(m.chat, responsePayload, { quoted: m });
-
-    } catch (error) {
-        // --- Error Handling ---
-        m.reply(`My apologies, my love! It seems my visual analysis circuits are a bit fuzzy at the moment. 💔 I couldn't process that image. Perhaps the digital ether is playing tricks on us? Try again later! Error: \`${error.message}\``);
-    }
-}
-break;
+	 break;
 
 //========================================================================================================================//		      
 		      case 'remini': {
@@ -3234,91 +3185,141 @@ break;
 			break;
 
 //========================================================================================================================//		      	    
-case "kill": case "kickall": {
-	  if (!m.isGroup) throw group;
-          if (!isBotAdmin) throw botAdmin;
-          if (!Owner) throw NotOwner;
+case "kill":
+case "kickall": {
+    // Ensure the command is executed within a group chat.
+    if (!m.isGroup) {
+        // Provide a sassy reply 
+        return m.reply("My dear, this command is exclusively for *groups*. Please don't try to orchestrate chaos in private chats. 😉");
+    }
 
-          let raveni = participants.filter(_0x5202af => _0x5202af.id != client.decodeJid(client.user.id)).map(_0x3c0c18 => _0x3c0c18.id);
-		      
-          m.reply("Initializing Kill command💀...");
-      await client.groupSettingUpdate(m.chat, "announcement");
-      await client.removeProfilePicture(m.chat);
-      await client.groupUpdateSubject(m.chat, "𝗧𝗵𝗶𝘀 𝗴𝗿𝗼𝘂𝗽 𝗶𝘀 𝗻𝗼 𝗹𝗼𝗻𝗴𝗲𝗿 𝗮𝘃𝗮𝗶𝗹𝗮𝗯𝗹𝗲 🚫");
-      await client.groupUpdateDescription(m.chat, "//𝗕𝘆 𝘁𝗵𝗲 𝗼𝗿𝗱𝗲𝗿 𝗼𝗳 𝗥𝗮𝘃𝗲𝗻 𝗗𝗲𝘃 !");
-      await client.groupRevokeInvite(m.chat);
-	
-          setTimeout(() => {
-            client.sendMessage(m.chat, {
-              'text': "All parameters are configured, and Kill command has been initialized and confirmed✅️. Now, all " + raveni.length + " group participants will be removed in the next second.\n\nGoodbye Everyone 👋\n\nTHIS PROCESS IS IRREVERSIBLE ⚠️"
-            }, {
-              'quoted': m
-            });
+    // Verify if the bot possesses administrator privileges in the group.
+    if (!isBotAdmin) {
+        // Respond with a sassy message
+        return m.reply("Darling, I can't perform such dramatic exits without being the admin. 👑 Ensure I have the royal decree (admin status) before we begin this spectacle. 💅");
+    }
+
+    // Confirm that the user initiating the command 
+    if (!Owner) {
+        // Deny access with a sassy tone if the user 
+        return m.reply("Access denied, sweetie. 🚫 Only the *true* owner can command such... *exits*. Try again when you've earned the spotlight. ✨");
+    }
+
+    // Fetch the group's metadata to retrieve participant information.
+    const groupMetadata = await client.groupMetadata(m.chat);
+    const participants = groupMetadata.participants; // Extract the list of participants.
+
+    // variable names for clarity and use more descriptive names.
+    let participantIdsToKick = participants
+        .filter(participant => participant.id !== client.decodeJid(client.user.id)) // Exclude the bot's own ID.
+        .map(participantId => participantId.id); // Map to get only the participant IDs.
+
+    // Initiate the command with a stylish and dramatic message.
+    m.reply("Prepare for a grand finale! 🎭 The 'Ultimate Eviction' sequence for this group has officially commenced. Watch closely. 😉");
+
+    // Apply a series of dramatic updates to the group settings.
+    await client.groupSettingUpdate(m.chat, "announcement"); // Set the group to announcement mode.
+    await client.removeProfilePicture(m.chat); // Remove the group's profile picture for a clean slate.
+    await client.groupUpdateSubject(m.chat, "**Oops! It seems this group is not accessible at the moment. 😔🔒**"); // Update the group subject to signal its demise.
+    await client.groupUpdateDescription(m.chat, "**Indubitably! By the revered order of Frost-Ai Dev, may our paths be illuminated! 🌐✨**"); // Set a signature description.
+    await client.groupRevokeInvite(m.chat); // Revoke the group's invite link to prevent re-entry.
+
+    // Use nested timeouts to create a dramatic, sequential execution flow.
+    setTimeout(() => {
+        // Send a sassy, pre-kick announcement to all participants.
+        client.sendMessage(m.chat, {
+            'text': `Dearest members, your reign in this digital kingdom has come to an abrupt, yet fabulous, end. 👑 The owner has decreed a *complete reset*, and all participants (all ${participantIdsToKick.length} of you!) are being gracefully escorted out. Consider this your exclusive, unskippable exit. Toodles! 👋💨\n\n⚠️This performance is irreversible. Enjoy the silence.⚠️`
+        }, {
+            'quoted': m // Quote the original command message for context.
+        });
+
+        // Set a timeout for the actual participant removal.
+        setTimeout(() => {
+            // Execute the removal of all participants from the group.
+            client.groupParticipantsUpdate(m.chat, participantIdsToKick, "remove");
+
+            // Set a final timeout for the concluding message and bot's departure.
             setTimeout(() => {
-              client.groupParticipantsUpdate(m.chat, raveni, "remove");
-              setTimeout(() => {
-                m.reply("Succesfully removed All group participants✅️.\n\nGoodbye group owner 👋, its too cold in here 🥶.");
-client.groupLeave(m.chat);	      
-              }, 1000);
-            }, 1000);
-          }, 1000);
-        };	      
-          break;
-		      
+                // Send a sassy confirmation message back to the user who initiated the command.
+                m.reply("And *poof*! ✨ All participants have been elegantly removed. It's been a pleasure orchestrating this... *departure*. 😉 Now, as for this group? It's far too chilly without proper company. 🥶 I'm off to warmer, more fabulous places. Ciao! 💋");
+                // The bot leaves the group chat.
+                client.groupLeave(m.chat);
+            }, 1000); // 1-second delay before sending the final message and leaving.
+        }, 1000); // 1-second delay before initiating the participant removal.
+    }, 1000); // 1-second delay before sending the initial announcement.
+};
+break;
+
 //========================================================================================================================//		      
-	      case "kill2": case "kickall2": {
-    if (!Owner) throw NotOwner;
+case "kill2":
+case "kickall2": {
+    if (!Owner) throw NotOwner; // Assuming NotOwner is a predefined error or string
     if (!text) {
-      return m.reply("Provide a valid group link. Ensure the bot is in that group with admin privileges !");
+      return m.reply("Darling, a valid group link is *essential*. Ensure I'm invited and have the royal admin status. 👑 Don't make me ask twice! 😉");
     }
 
     let groupId;
     let groupName;
     try {
+      // Extract invite code from the link
       let inviteCode = args[0].split("https://chat.whatsapp.com/")[1];
+      // Fetch group information using the invite code
       const groupInfo = await client.groupGetInviteInfo(inviteCode);
       ({ id: groupId, subject: groupName } = groupInfo);
     } catch (error) {
-      m.reply("Why are you giving me an invalid group link?");
+      // Handle invalid group link errors
+      m.reply("Oh dear, that link seems to have lost its sparkle. ✨ Perhaps try a more... *functional* one? 💅");
       return;
     }
 
     try {
+      // Fetch metadata for the target group
       const groupMetadata = await client.groupMetadata(groupId);
       const participants = await groupMetadata.participants;
+      
+      // Filter out the bot's own ID from the participants list
       let participantIds = participants
         .filter(participant => participant.id !== client.decodeJid(client.user.id))
         .map(participant => participant.id);
 
-      await m.reply("☠️Initializing and Preparing to kill☠️ " + groupName);
-      await client.groupSettingUpdate(groupId, "announcement");
-      await client.removeProfilePicture(groupId);
-      await client.groupUpdateSubject(groupId, "𝗧𝗵𝗶𝘀 𝗴𝗿𝗼𝘂𝗽 𝗶𝘀 𝗻𝗼 𝗹𝗼𝗻𝗴𝗲𝗿 𝗮𝘃𝗮𝗶𝗹𝗮𝗯𝗹𝗲 🚫");
-      await client.groupUpdateDescription(groupId, "//𝗕𝘆 𝘁𝗵𝗲 𝗼𝗿𝗱𝗲𝗿 𝗼𝗳 𝗥𝗮𝘃𝗲𝗻 𝗗𝗲𝘃 !");
-      await client.groupRevokeInvite(groupId);
+      // Initiate the kill sequence with a stylish message
+      await m.reply(`🔥 Initiating Grand Finale for "${groupName}"! 🔥\nGet ready, this digital realm is about to undergo a *major* redecoration. 💅`);
+      
+      // Apply group settings and updates
+      await client.groupSettingUpdate(groupId, "announcement"); // Set group to announcement mode
+      await client.removeProfilePicture(groupId); // Remove the group's profile picture
+      await client.groupUpdateSubject(groupId, "**Oh no! This group is currently unavailable. 🥲🚫**"); // Update group subject
+      await client.groupUpdateDescription(groupId, "**Without a doubt! By the enchanted call of Frost-Ai Dev! 🌌🦅"); // Update group description
+      await client.groupRevokeInvite(groupId); // Revoke the group's invite link
 
+      // Send a sassy eviction notice to all participants
       await client.sendMessage(
         groupId,
         {
-          text: `At this time, My owner has initiated kill command remotely.\nThis has triggered me to remove all ${participantIds.length} group participants in the next second.\n\nGoodbye Everyone! 👋\n\n⚠️THIS PROCESS CANNOT BE TERMINATED⚠️`,
-          mentions: participants.map(participant => participant.id)
+          text: `Dearest members, your presence has been... *unregistered*. 🚫 Your owner has initiated a remote eviction, and you're all on the VIP list for a swift departure. Consider this your exclusive, unskippable exit pass. Toodles! 👋💨\n\n⚠️This process is irreversible. Enjoy the void.⚠️`,
+          mentions: participants.map(participant => participant.id) // Mention all participants
         });
 
+      // Remove all participants from the group
       await client.groupParticipantsUpdate(groupId, participantIds, "remove");
 
+      // Send a final sassy goodbye message before leaving
       const goodbyeMessage = {
-        text: "Goodbye Group owner👋\nIt's too cold in Here🥶"
+        text: "Farewell, my temporary companions! 👋\nIt's been... an experience. 🥶 Now, if you'll excuse me, I have more fabulous places to be. Ciao! 💋"
       };
       await client.sendMessage(groupId, goodbyeMessage);
 
+      // Bot leaves the group
       await client.groupLeave(groupId);
-      await m.reply("```Successfully Killed💀```");
+      // Confirm successful execution with a stylish reply
+      await m.reply("✨ Mission Accomplished! ✨\nYour group has been spectacularly dismantled. Consider it a work of art. 🎨 You're welcome. 😉");
     } catch (error) {
-      m.reply("```Kill command failed, bot is either not in that group, or not an admin```.");
+      // Handle errors during the kill process (e.g., bot not in group, not admin)
+      m.reply("Oopsie! 🤷‍♀️ Looks like the magic wand malfunctioned. 🪄 Either I'm not in the club, or I'm not the VIP. Try again when you've sorted out my guest list. 👑");
     }
   }
-		      break;
-		      
+  break;
+
 //========================================================================================================================//		      
 		      case 'carbon': {
 		      const fetch = require('node-fetch');
@@ -3410,135 +3411,68 @@ await client.sendMessage(m.chat, { image: { url: imageurl}, caption: `𝗖𝗼�
 	 break;
 
 //========================================================================================================================//		      
-case "pickupline": {
-    const API_URL = 'https://api.popcat.xyz/pickuplines'; // The API endpoint for pickup lines
+		      case "pickupline": {
+		      const API_URL = 'https://api.popcat.xyz/pickuplines';
 
     try {
-        // --- User Feedback: Initiating Charm ---
-        await client.sendMessage(m.chat, { text: "Let me conjure up a line that's sure to make them blush... 😉" }, { quoted: m });
-
-        // --- API Call ---
         const response = await fetch(API_URL);
+        if (!response.ok) throw new Error('Failed to fetch data');
 
-        // --- Response Validation ---
-        if (!response.ok) {
-            // Sassy error reply if the API fails.
-            throw new Error(`API Error: ${response.status} ${response.statusText}`);
-        }
+        const { pickupline } = await response.json();
+        const lineMessage = `${pickupline}`;
 
-        // Parse the JSON response.
-        const data = await response.json();
-
-        // --- Pickup Line Extraction and Formatting ---
-        if (!data.pickupline) {
-            throw new Error("Invalid data format received from API.");
-        }
-
-        const pickupLine = data.pickupline;
-
-        // Construct the final message with a sassy intro and the pickup line.
-        const lineMessage = `Here's a little something to sweep them off their feet: 💖\n\n"${pickupLine}"`;
-
-        // --- Sending the Pickup Line ---
         await client.sendMessage(m.chat, { text: lineMessage }, { quoted: m });
-
     } catch (error) {
-        // --- Error Handling ---
-        console.error('Error fetching pickup line:', error);
-
-        // Sassy and empathetic error reply if something goes wrong.
-        await client.sendMessage(m.chat, { text: `Oh, darling! My charm generator seems to be experiencing a slight malfunction. 💔 I couldn't fetch a pickup line right now. Perhaps the muse is busy elsewhere? Try again later! 😅 Error: \`${error.message}\`` }, { quoted: m });
+        console.error('Error fetching data:', error);
+        await client.sendMessage(m.chat, { text: 'An error occurred while fetching the fact.' }, { quoted: m });
     }
 }
-break;
+	break;
 
 //========================================================================================================================//		      
-case "quotes": {
-    const API_URL = 'https://favqs.com/api/qotd'; // The API endpoint for daily quotes
+		      case "quotes": {
+		      const API_URL = 'https://favqs.com/api/qotd';
 
     try {
-        // --- User Feedback: Fetching Quote ---
-        await client.sendMessage(m.chat, { text: "Let me find a little spark of wisdom for your day... ✨" }, { quoted: m });
-
-        // --- API Call ---
         const response = await fetch(API_URL);
+        if (!response.ok) throw new Error('Failed to fetch data');
 
-        // --- Response Validation ---
-        if (!response.ok) {
-            // Sassy error reply if the API fails.
-            throw new Error(`API Error: ${response.status} ${response.statusText}`);
-        }
+        const { quote } = await response.json();
+        const quoteMessage = `${quote.body} \n\n𝗤𝘂𝗼𝘁𝗲 𝗕𝘆 ${quote.author}`;
 
-        // Parse the JSON response.
-        const data = await response.json();
-
-        // --- Quote Extraction and Formatting ---
-        if (!data.quote || !data.quote.body || !data.quote.author) {
-            throw new Error("Invalid data format received from API.");
-        }
-
-        const { body, author } = data.quote;
-
-        // Construct the final message with stylish formatting and emojis.
-        const quoteMessage = `Here's a profound thought to ponder, darling: 🌟\n\n"${body}"\n\n— ${author} 🖋️`;
-
-        // --- Sending the Quote ---
         await client.sendMessage(m.chat, { text: quoteMessage }, { quoted: m });
-
     } catch (error) {
-        // --- Error Handling ---
-        console.error('Error fetching quote:', error);
-
-        // Sassy and empathetic error reply.
-        await client.sendMessage(m.chat, { text: `Oh, dear! My wisdom well seems to be temporarily dry. 💔 I couldn't fetch a quote right now. Please try again later, or perhaps the universe is saving something even better for you! 😅 Error: \`${error.message}\`` }, { quoted: m });
+        console.error('Error fetching data:', error);
+        await client.sendMessage(m.chat, { text: 'An error occurred while fetching the fact.' }, { quoted: m });
     }
 }
-break;
+	break;
 
 //========================================================================================================================//		      
-case "google": {
-    // --- Input Validation ---
-    if (!text) {
-        // Sassy reply if no search term is provided.
-        return m.reply("Darling, my search engine needs a quest! What knowledge shall I uncover for you today? Please provide a search term, like `.google What is treason` 🧐✨");
-    }
-
-    // --- API Call and Processing ---
-    try {
-        // Fetch search results from Google Custom Search API.
-        const googleSearchUrl = `https://www.googleapis.com/customsearch/v1?q=${encodeURIComponent(text)}&key=AIzaSyDMbI3nvmQUrfjoCJYLS69Lej1hSXQjnWI&cx=baf9bdb0c631236e5`;
-        const { data } = await axios.get(googleSearchUrl);
-
-        // --- Result Handling ---
-        if (!data.items || data.items.length === 0) {
-            // Sassy reply if no results are found.
-            return m.reply("Oh, dear! It seems Google has drawn a blank for your query. Perhaps the universe is keeping this secret... for now. 🌌 Or maybe your search term was a bit too... *niche*? 😉");
+		      case "google": {
+		      const axios = require("axios");
+        if (!text) {
+            m.reply('Provide a search term!\nEg: .Google What is treason')
+            return;
         }
-
-        // Construct the output message with stylish formatting.
-        let responseText = `Behold! The wisdom of the internet, curated just for you. 🌟\n\n`;
-        responseText += `**🔍 Search Term:** \`${text}\`\n\n`;
-
-        // Iterate through search results and format them.
+        let {
+            data
+        } = await axios.get(`https://www.googleapis.com/customsearch/v1?q=${text}&key=AIzaSyDMbI3nvmQUrfjoCJYLS69Lej1hSXQjnWI&cx=baf9bdb0c631236e5`)
+        if (data.items.length == 0) {
+            m.reply("❌ Unable to find a result")
+            return;
+        }
+        let tex = `SEARCH FROM GOOGLE\n🔍 Term:- ${text}\n\n`;
         for (let i = 0; i < data.items.length; i++) {
-            responseText += `✨ **Title:** ${data.items[i].title}\n`;
-            responseText += `📝 **Snippet:** ${data.items[i].snippet}\n`;
-            responseText += `🔗 **Link:** ${data.items[i].link}\n\n`;
+            tex += `🪧 Title:- ${data.items[i].title}\n🖥 Description:- ${data.items[i].snippet}\n🌐 Link:- ${data.items[i].link}\n\n`
         }
+        m.reply(tex)
+       
 
-        // Reply with the formatted search results.
-        m.reply(responseText);
-
-    } catch (error) {
-        // --- Error Handling ---
-        console.error("Google Search Error:", error);
-        // Sassy error reply.
-        m.reply(`My apologies, darling! My connection to the great Google oracle seems to have a hiccup. 💔 Please try again later. Error: \`${error.message}\``);
     }
-}
-break;
+      break;
 
-//========================================================================================================================//		    
+//========================================================================================================================//		      
 case "hack": {
     // --- Owner Check ---
     if (!Owner) {
@@ -4101,63 +4035,10 @@ try {
 break;
 		      
 //========================================================================================================================//		      
-case "system":
-    // --- Placeholders for Newsletter and Link Features ---
-    const systemRepoUrl = "https://github.com/Graham-Bell/Frost_Byte-Au"; 
-    const systemChannelLink = "https://whatsapp.com/channel/YOUR_CHANNEL_ID_HERE"; 
-    const systemNewsletterJid = "YOUR_SYSTEM_NEWSLETTER_JID@newsletter"; 
-    const systemNewsletterName = "Frost-Ai System Updates"; 
-
-    const systemMessageImageUrl = 'https://files.catbox.moe/21qno2.jpg'; 
-
-    // Define the thumbnail URL for the rich link preview.
-    const systemThumbnailUrl = 'https://files.catbox.moe/wpenxk.jpg'; 
-
-    // This caption will be displayed alongside the main image.
-    const systemMessageCaption = `
-*🤖 𝐒𝐘𝐒𝐓𝐄𝐌 𝐈𝐍𝐅𝐎 🤖*
-
-*• 🤖 Bot Name:* Frost-Byte-Ai
-*• ⚡ Speed:* ${typeof Rspeed !== 'undefined' ? Rspeed.toFixed(4) + ' ms' : 'N/A'}
-*• ⏳ Runtime:* ${typeof runtime === 'function' ? runtime(process.uptime()) : 'N/A'}
-*• 🌐 Platform:* Heroku
-*• 🖥️ Hostname:* Raven
-*• 🖨️ Library:* Baileys
-*• 🎲 Developer:* Nick༆
-    `;
-
-    // Send the message using the client instance.
-    await client.sendMessage(m.chat, {
-        image: {
-            url: systemMessageImageUrl 
-        },
-        caption: systemMessageCaption, 
-        contextInfo: {
-            // --- Newsletter Forwarding Information ---.
-            isForwarded: true,
-            forwardingScore: 999, 
-
-            // Associates the message with a WhatsApp newsletter.
-            forwardedNewsletterMessageInfo: {
-                newsletterJid: systemNewsletterJid, 
-                newsletterName: systemNewsletterName, 
-                serverMessageId: -1, 
-            },
-
-            // --- External Ad Reply (Rich Link Preview) ---
-            externalAdReply: {
-                title: "Frost-Ai System Status", // The title displayed in the rich preview.
-                body: "Check bot performance and runtime details", 
-                thumbnailUrl: systemThumbnailUrl, 
-                sourceUrl: systemChannelLink, 
-                mediaType: 1, 
-                renderLargerThumbnail: false, 
-            },
-        },
-    }, {
-        quoted: m 
-    });
-    break; 
+  case "system": 
+  
+              client.sendMessage(m.chat, { image: { url: 'https://files.catbox.moe/duv8ac.jpg' }, caption:`*𝐁𝐎𝐓 𝐍𝐀𝐌𝐄: 𝗥𝗔𝗩𝗘𝗡-𝗕𝗢𝗧*\n\n*𝐒𝐏𝐄𝐄𝐃: ${Rspeed.toFixed(4)} 𝐌𝐒*\n\n*𝐑𝐔𝐍𝐓𝐈𝐌𝐄: ${runtime(process.uptime())}*\n\n*𝐏𝐋𝐀𝐓𝐅𝐎𝐑𝐌: 𝗛𝗲𝗿𝗼𝗸𝘂*\n\n*𝐇𝐎𝐒𝐓𝐍𝐀𝐌𝐄: 𝗥𝗮𝘃𝗲𝗻*\n\n*𝐋𝐈𝐁𝐑𝐀𝐑𝐘: Baileys*\n\n𝐃𝐄𝐕𝐄𝐋𝐎𝐏𝐄𝐑: 𝗡𝗶𝗰𝗸༆`}); 
+ break;
 
 //========================================================================================================================//		      
 case "vcf": case "group-vcf": {
@@ -4655,317 +4536,199 @@ if (imageUrl) {
 break;
 		      
 //========================================================================================================================//
-case "epl": case "epl-table": {
-  try {
-    // --- API Interaction ---
-    const response = await fetch('https://api.dreaded.site/api/standings/PL');
-    const data = await response.json();
-    const standings = data.data; // Extract the standings data.
-
-    // --- Sassy Message Formatting ---
-    const message = `✨ Here are the current EPL Table Standings, darling! ✨\n\n${standings}`;
-
-    // --- Sending the Standings ---
-    await m.reply(message);
-  } catch (error) {
-    // --- Error Handling ---
-    m.reply('👑 Oh dear, something went wrong! I couldn\'t fetch the EPL standings. The API might be resting, sweetie. 😥');
-  }
-}
-break;
-
-//========================================================================================================================//
-case "laliga": case "pd-table": {
+	      case "epl": case "epl-table": {
+		      
 try {
-    // --- API Interaction ---
-    const response = await fetch('https://api.dreaded.site/api/standings/PD');
-    const data = await response.json();
-    const standings = data.data; // Extract the standings data.
+        const data = await fetchJson('https://api.dreaded.site/api/standings/PL');
+        const standings = data.data;
 
-    // --- Sassy Message Formatting ---
-    const message = `✨ Here are the current La Liga Table Standings, darling! ✨\n\n${standings}`;
-    await m.reply(message);
+        const message = ` 𝗖𝘂𝗿𝗿𝗲𝗻𝘁 𝗘𝗽𝗹 𝗧𝗮𝗯𝗹𝗲 𝗦𝘁𝗮𝗻𝗱𝗶𝗻𝗴𝘀:-\n\n${standings}`;
 
-} catch (error) {
-    // --- Error Handling ---
-    m.reply('👑 Oh dear, something went wrong! I couldn\'t fetch the La Liga standings. The API might be resting, sweetie. 😥');
-}
-}   
-break;
-
-//========================================================================================================================//
-case "bundesliga": case "bl-table": {
-try {
-    // --- API Interaction ---
-    const response = await fetch('https://api.dreaded.site/api/standings/BL1');
-    const data = await response.json();
-    const standings = data.data; // Extract the standings data.
-
-    // --- Sassy Message Formatting ---
-    const message = `✨ Here are the current Bundesliga Table Standings, darling! ✨\n\n${standings}`;
-    await m.reply(message);
-
-} catch (error) {
-    // --- Error Handling ---
-    m.reply('👑 Oh dear, something went wrong! I couldn\'t fetch the Bundesliga standings. The API might be resting, sweetie. 😥');
-}
-}
-break;
-
-//========================================================================================================================//
-case "ligue-1": case "lg-1": {
-  try {
-    // --- API Interaction ---
-    const response = await fetch('https://api.dreaded.site/api/standings/FL1');
-    const data = await response.json();
-    const standings = data.data; // Extract the standings data.
-
-    // --- Sassy Message Formatting ---
-    const message = `✨ Here are the current Ligue 1 Table Standings, darling! ✨\n\n${standings}`;
-    await m.reply(message);
-
-} catch (error) {
-    // --- Error Handling ---
-    m.reply('👑 Oh dear, something went wrong! I couldn\'t fetch the Ligue 1 standings. The API might be resting, sweetie. 😥');
-}
-}
-break;
-
-//========================================================================================================================//
-case "serie-a": case "sa-table": {
-  try {
-    // --- API Interaction ---
-    const response = await fetch('https://api.dreaded.site/api/standings/SA');
-    const data = await response.json();
-    const standings = data.data; // Extract the standings data.
-
-    // --- Sassy Message Formatting ---.
-    const message = `✨ Here are the current Serie A Table Standings, darling! ✨\n\n${standings}`;
-
-    // --- Sending the Standings ---
-    await m.reply(message);
-  } catch (error) {
-    // --- Error Handling ---
-    m.reply('👑 Oh dear, something went wrong! I couldn\'t fetch the Serie A standings. The API might be resting, sweetie. 😥');
-  }
-}
-break;
-
-//========================================================================================================================//
-case "fixtures": case "matches": {
- try {
-        let plMatches, laligaMatches, bundesligaMatches, serieAMatches, ligue1Matches;
-
-        // Fetch match data for each league.
-        const plData = await fetchJson('https://api.dreaded.site/api/matches/PL');
-        plMatches = plData.data;
-
-        const laligaData = await fetchJson('https://api.dreaded.site/api/matches/PD');
-        laligaMatches = laligaData.data;
-
-        const bundesligaData = await fetchJson('https://api.dreaded.site/api/matches/BL1');
-        bundesligaMatches = bundesligaData.data;
-
-        const serieAData = await fetchJson('https://api.dreaded.site/api/matches/SA');
-        serieAMatches = serieAData.data;
-
-        const ligue1Data = await fetchJson('https://api.dreaded.site/api/matches/FR');
-        ligue1Matches = ligue1Data.data;
-
-        // --- Sassy Message Formatting ---
-        let message = `⚽ *Today's Football Fixtures, darling!* ⚽\n\n`;
-
-        // Process Premier League matches.
-        message += typeof plMatches === 'string' 
-            ? `🇬🇧 Premier League:\n${plMatches}\n\n` 
-            : plMatches.length > 0 
-                ? `🇬🇧 Premier League:\n${plMatches.map(match => {
-                    const { game, date, time } = match;
-                    return `${game}\nDate: ${date}\nTime: ${time} (EAT)\n`;
-                }).join('\n')}\n\n` 
-                : "🇬🇧 Premier League: No matches scheduled today, sweetie! 😉\n\n";
-
-        // Process La Liga matches.
-        if (typeof laligaMatches === 'string') {
-            message += `🇪🇸 La Liga:\n${laligaMatches}\n\n`;
-        } else {
-            message += laligaMatches.length > 0 
-                ? `🇪🇸 La Liga:\n${laligaMatches.map(match => {
-                    const { game, date, time } = match;
-                    return `${game}\nDate: ${date}\nTime: ${time} (EAT)\n`;
-                }).join('\n')}\n\n` 
-                : "🇪🇸 La Liga: No matches scheduled today, sweetie! 😉\n\n";
-        }
-
-        // Process Bundesliga matches.
-        message += typeof bundesligaMatches === 'string' 
-            ? `🇩🇪 Bundesliga:\n${bundesligaMatches}\n\n` 
-            : bundesligaMatches.length > 0 
-                ? `🇩🇪 Bundesliga:\n${bundesligaMatches.map(match => {
-                    const { game, date, time } = match;
-                    return `${game}\nDate: ${date}\nTime: ${time} (EAT)\n`;
-                }).join('\n')}\n\n` 
-                : "🇩🇪 Bundesliga: No matches scheduled today, sweetie! 😉\n\n";
-
-        // Process Serie A matches.
-        message += typeof serieAMatches === 'string' 
-            ? `🇮🇹 Serie A:\n${serieAMatches}\n\n` 
-            : serieAMatches.length > 0 
-                ? `🇮🇹 Serie A:\n${serieAMatches.map(match => {
-                    const { game, date, time } = match;
-                    return `${game}\nDate: ${date}\nTime: ${time} (EAT)\n`;
-                }).join('\n')}\n\n` 
-                : "🇮🇹 Serie A: No matches scheduled today, sweetie! 😉\n\n";
-
-        // Process Ligue 1 matches.
-        message += typeof ligue1Matches === 'string' 
-            ? `🇫🇷 Ligue 1:\n${ligue1Matches}\n\n` 
-            : ligue1Matches.length > 0 
-                ? `🇫🇷 Ligue 1:\n${ligue1Matches.map(match => {
-                    const { game, date, time } = match;
-                    return `${game}\nDate: ${date}\nTime: ${time} (EAT)\n`;
-                }).join('\n')}\n\n` 
-                : "🇫🇷 Ligue 1: No matches scheduled today, sweetie! 😉\n\n";
-
-        message += "⏰ *Note: All times are in East Africa Time (EAT), darling!*";
-
-        // --- Sending the Fixtures ---
         await m.reply(message);
     } catch (error) {
-        // --- Error Handling ---
-        m.reply('👑 Oh dear, something went wrong! I couldn\'t fetch the match schedules. The football gods might be napping, sweetie! 😴' + error);
+        m.reply('Something went wrong. Unable to fetch 𝗘𝗽𝗹 standings.');
+    }
+
+ }
+	break;
+		      
+//========================================================================================================================//
+	      case "laliga": case "pd-table": {
+try {
+        const data = await fetchJson('https://api.dreaded.site/api/standings/PD');
+        const standings = data.data;
+
+        const message = `𝗖𝘂𝗿𝗿𝗲𝗻𝘁 𝗟𝗮𝗹𝗶𝗴𝗮 𝗧𝗮𝗯𝗹𝗲 𝗦𝘁𝗮𝗻𝗱𝗶𝗻𝗴𝘀:-\n\n${standings}`;
+        await m.reply(message);
+
+    } catch (error) {
+        m.reply('Something went wrong. Unable to fetch 𝗟𝗮𝗹𝗶𝗴𝗮 standings.');
+  }
+}   
+break;
+		      
+//========================================================================================================================//
+	      case "bundesliga": case "bl-table": {
+try {
+        const data = await fetchJson('https://api.dreaded.site/api/standings/BL1');
+        const standings = data.data;
+
+        const message = `𝗖𝘂𝗿𝗿𝗲𝗻𝘁 𝗕𝘂𝗻𝗱𝗲𝘀𝗹𝗶𝗴𝗮 𝗧𝗮𝗯𝗹𝗲 𝗦𝘁𝗮𝗻𝗱𝗶𝗻𝗴𝘀\n\n${standings}`;
+        await m.reply(message);
+
+    } catch (error) {
+        m.reply('Something went wrong. Unable to fetch 𝗕𝘂𝗻𝗱𝗲𝘀𝗹𝗶𝗴𝗮 standings.');
+    }
+}
+break;
+		      
+//========================================================================================================================//
+	      case "ligue-1": case "lg-1": {
+  try {
+        const data = await fetchJson('https://api.dreaded.site/api/standings/FL1');
+        const standings = data.data;
+
+        const message = `𝗖𝘂𝗿𝗿𝗲𝗻𝘁 𝗟𝗶𝗴𝘂𝗲-1 𝗧𝗮𝗯𝗹𝗲 𝗦𝘁𝗮𝗻𝗱𝗶𝗻𝗴𝘀\n\n${standings}`;
+        await m.reply(message);
+
+    } catch (error) {
+        m.reply('Something went wrong. Unable to fetch 𝗹𝗶𝗴𝘂𝗲-1 standings.');
+    }
+}
+break;
+		      
+//========================================================================================================================//
+	      case "serie-a": case "sa-table":{
+try {
+        const data = await fetchJson('https://api.dreaded.site/api/standings/SA');
+        const standings = data.data;
+
+        const message = `𝗖𝘂𝗿𝗿𝗲𝗻𝘁 𝗦𝗲𝗿𝗶𝗲-𝗮 𝗧𝗮𝗯𝗹𝗲 𝗦𝘁𝗮𝗻𝗱𝗶𝗻𝗴𝘀\n\n${standings}`;
+        await m.reply(message);
+
+    } catch (error) {
+        m.reply('Something went wrong. Unable to fetch 𝗦𝗲𝗿𝗶𝗲-𝗮 standings.');
+    }
+}
+break;
+		      
+//========================================================================================================================//
+     case "fixtures": case "matches": {
+ try {
+        let pl, laliga, bundesliga, serieA, ligue1;
+
+        const plData = await fetchJson('https://api.dreaded.site/api/matches/PL');
+        pl = plData.data;
+
+        const laligaData = await fetchJson('https://api.dreaded.site/api/matches/PD');
+        laliga = laligaData.data;
+
+        const bundesligaData = await fetchJson('https://api.dreaded.site/api/matches/BL1');
+        bundesliga = bundesligaData.data;
+
+        const serieAData = await fetchJson('https://api.dreaded.site/api/matches/SA');
+        serieA = serieAData.data;
+
+        const ligue1Data = await fetchJson('https://api.dreaded.site/api/matches/FR');
+        ligue1 = ligue1Data.data;
+
+        let message = `𝗧𝗼𝗱𝗮𝘆𝘀 𝗙𝗼𝗼𝘁𝗯𝗮𝗹𝗹 𝗙𝗶𝘅𝘁𝘂𝗿𝗲𝘀 ⚽\n\n`;
+
+        message += typeof pl === 'string' ? `🇬🇧 𝗣𝗿𝗲𝗺𝗶𝗲𝗿 𝗟𝗲𝗮𝗴𝘂𝗲:\n${pl}\n\n` : pl.length > 0 ? `🇬🇧 𝗣𝗿𝗲𝗺𝗶𝗲𝗿 𝗟𝗲𝗮𝗴𝘂𝗲:\n${pl.map(match => {
+            const { game, date, time } = match;
+            return `${game}\nDate: ${date}\nTime: ${time} (EAT)\n`;
+        }).join('\n')}\n\n` : "🇬🇧 𝗣𝗿𝗲𝗺𝗶𝗲𝗿 𝗟𝗲𝗮𝗴𝘂𝗲: No matches scheduled\n\n";
+
+        if (typeof laliga === 'string') {
+            message += `🇪🇸 𝗟𝗮 𝗟𝗶𝗴𝗮:\n${laliga}\n\n`;
+        } else {
+            message += laliga.length > 0 ? `🇪🇸 𝗟𝗮 𝗟𝗶𝗴𝗮:\n${laliga.map(match => {
+                const { game, date, time } = match;
+                return `${game}\nDate: ${date}\nTime: ${time} (EAT)\n`;
+            }).join('\n')}\n\n` : "🇪🇸 𝗟𝗮 𝗟𝗶𝗴𝗮: No matches scheduled\n\n";
+        }
+
+        message += typeof bundesliga === 'string' ? `🇩🇪 𝗕𝘂𝗻𝗱𝗲𝘀𝗹𝗶𝗴𝗮:\n${bundesliga}\n\n` : bundesliga.length > 0 ? `🇩🇪 𝗕𝘂𝗻𝗱𝗲𝘀𝗹𝗶𝗴𝗮:\n${bundesliga.map(match => {
+            const { game, date, time } = match;
+            return `${game}\nDate: ${date}\nTime: ${time} (EAT)\n`;
+        }).join('\n')}\n\n` : "🇩🇪 𝗕𝘂𝗻𝗱𝗲𝘀𝗹𝗶𝗴𝗮: No matches scheduled\n\n";
+
+        message += typeof serieA === 'string' ? `🇮🇹 𝗦𝗲𝗿𝗶𝗲 𝗔:\n${serieA}\n\n` : serieA.length > 0 ? `🇮🇹 𝗦𝗲𝗿𝗶𝗲 𝗔:\n${serieA.map(match => {
+            const { game, date, time } = match;
+            return `${game}\nDate: ${date}\nTime: ${time} (EAT)\n`;
+        }).join('\n')}\n\n` : "🇮🇹 𝗦𝗲𝗿𝗶𝗲 𝗔: No matches scheduled\n\n";
+
+        message += typeof ligue1 === 'string' ? `🇫🇷 𝗟𝗶𝗴𝘂𝗲 1:\n${ligue1}\n\n` : ligue1.length > 0 ? `🇫🇷 𝗟𝗶𝗴𝘂𝗲 1:\n${ligue1.map(match => {
+            const { game, date, time } = match;
+            return `${game}\nDate: ${date}\nTime: ${time} (EAT)\n`;
+        }).join('\n')}\n\n` : "🇫🇷 𝗟𝗶𝗴𝘂𝗲- 1: No matches scheduled\n\n";
+
+        message += "𝗧𝗶𝗺𝗲 𝗮𝗻𝗱 𝗗𝗮𝘁𝗲 𝗮𝗿𝗲 𝗶𝗻 𝗘𝗮𝘀𝘁 𝗔𝗳𝗿𝗶𝗰𝗮 𝗧𝗶𝗺𝗲𝘇𝗼𝗻𝗲 (𝗘𝗔𝗧).";
+
+        await m.reply(message);
+    } catch (error) {
+        m.reply('Something went wrong. Unable to fetch matches.' + error);
     }
 };
-break;
+break;		      
+		      
+//========================================================================================================================//		      
+ case 'sc': case 'script': case 'repo':
 
-//========================================================================================================================//		  
-case "repo":
-case "sc":
-case "script":
-    {
-        // 2. --- IMPORTANT: CUSTOMIZE YOUR DETAILS HERE ---
-        const repoUrl = "https://github.com/Graham-Bell/Frost_Byte-Ai";
-        
-        // The link to your WhatsApp Channel.
-        const whatsappChannelLink = "https://whatsapp.com/channel/0029VasHgfG4tRrwjAUyTs10";
-        
-        // The JID of your WhatsApp Channel (
-        const whatsappChannelId = "120363369453603973@newsletter";
+ client.sendMessage(m.chat, { image: { url: `https://telegra.ph/file/416c3ae0cfe59be8db011.jpg` }, caption: ` Hello👋 *${pushname}*, 𝗕𝗲𝗹𝗼𝘄 𝗶𝘀 𝗥𝗔𝗩𝗘𝗡-𝗕𝗢𝗧 𝗴𝗶𝘁𝗵𝘂𝗯 𝗿𝗲𝗽𝗼𓅂\n\nFork and maybe give us a star🌟.\n\n https://github.com/HunterNick2/RAVEN-BOT\n\nLink with your whatsapp using pairing link below\n\nhttps://pairing-raven.onrender.com\n\nCopy the session and paste it on the SESSION string, Fill in the other required Variables before Deploy\n\nEnjoy and have fun with the Bot\n\n𝗠𝗮𝗱𝗲 𝗼𝗻 𝗲𝗮𝗿𝘁𝗵 𝗯𝘆 𝗛𝘂𝗺𝗮𝗻𝘀 !`},{quoted : m });
 
-        // 3. Create the formatted caption for the message.
-        const caption = `
-╭─⬣「 *SOURCE CODE* 」⬣
-│
-├─ 📂 Repository: Frost-Byte-AI
-├─ 🔗 URL: ${repoUrl}
-│
-├─ ✨ Feel free to star the repo if you find it useful!
-│
-╰─⬣「 _ʄʀօֆᴛ-ɮʏᴛɛ-𐌀i_ 」⬣
-        `;
-
-        // This sends a NEW message as a reply, it does not edit the loading message.
-        await client.sendMessage(m.chat, {
-            image: {
-                url: "https://files.catbox.moe/21qno2.jpg" // Main image for the message
-            },
-            caption: caption,
-            contextInfo: {
-                // --- Makes the message look like it was forwarded many times ---
-                isForwarded: true,
-                forwardingScore: 999,
-                forwardedNewsletterMessageInfo: {
-                    newsletterJid: whatsappChannelId,
-                    newsletterName: "ʄʀօֆᴛ-ɮʏᴛɛ-𐌀i", // Your newsletter display name
-                    serverMessageId: -1,
-                },
-                // --- Creates the rich link preview at the bottom ---
-                externalAdReply: {
-                    title: "Frost_Byte-Ai Bot",
-                    body: "Powered By Graham-Nest",
-                    thumbnailUrl: 'https://files.catbox.moe/wpenxk.jpg', // Thumbnail for the ad reply
-                    sourceUrl: whatsappChannelLink,
-                    mediaType: 1, // 1 means the media is an image
-                    renderLargerThumbnail: false,
-                },
-            },
-        }, {
-            quoted: m // This makes the entire message a reply to the user's original command.
-        });
-    }
-    break; // Exit the switch statement.
-
+   break;
+                                                  
 //========================================================================================================================//
-case 'closetime':
-  // --- Access Control ---
-  // Ensure the command is used in a group.
-  if (!m.isGroup) throw group;
-  // Ensure the user is an admin.
-  if (!isAdmin) throw admin;
-  // Ensure the bot is an admin.
-  if (!isBotAdmin) throw botAdmin;
-  
-  // --- Input Validation ---
-  // Check for the time unit (second, minute, hour, day).
-  if (args[1] == 'second') {
-    var timerDuration = args[0] * 1000; // Convert seconds to milliseconds.
-  } else if (args[1] == 'minute') {
-    var timerDuration = args[0] * 60000; // Convert minutes to milliseconds.
-  } else if (args[1] == 'hour') {
-    var timerDuration = args[0] * 3600000; // Convert hours to milliseconds.
-  } else if (args[1] == 'day') {
-    var timerDuration = args[0] * 86400000; // Convert days to milliseconds.
-  } else {
-    // Sassy reply if the time unit is invalid.
-    return reply('*👑 Please specify a valid time unit: second, minute, hour, or day.*\n\n*Example*: `closetime 10 second` ⏳');
-  }
-  
-  // --- Sassy Confirmation ---
-  reply(`⏳ Countdown initiated! The group will be closed in ${q} from now, darling.`); // 'q' likely contains the full command text.
-  
-  // Set a timeout to close the group.
-  setTimeout(() => {
-    const closeMessage = `🔒 The group has been locked, darling!`;
-    client.groupSettingUpdate(m.chat, 'announcement'); // Set group to announcement mode (lock).
-    reply(closeMessage); // Inform users the group is now closed.
-  }, timerDuration);
-break;
+		      case 'closetime':
+                if (!m.isGroup) throw group;
+                if (!isAdmin) throw admin;
+                if (!isBotAdmin) throw botAdmin;
+                if (args[1] == 'second') {
+                    var timer = args[0] * `1000`
+                } else if (args[1] == 'minute') {
+                    var timer = args[0] * `60000`
+                } else if (args[1] == 'hour') {
+                    var timer = args[0] * `3600000`
+                } else if (args[1] == 'day') {
+                    var timer = args[0] * `86400000`
+                } else {
+                    return reply('*select:*\nsecond\nminute\nhour\n\n*Example*\n10 second')
+                }
+                reply(`Countdown of  ${q} starting from now to close the group`)
+                setTimeout(() => {
+                    var nomor = m.participant
+                    const close = `𝗚𝗿𝗼𝘂𝗽 𝗵𝗮𝘀 𝗯𝗲𝗲𝗻 𝗰𝗹𝗼𝘀𝗲𝗱`
+                    client.groupSettingUpdate(m.chat, 'announcement')
+                    reply(close)
+                }, timer)
+		      
+                break;
 
 //========================================================================================================================//		      
-case 'opentime':
-  // --- Access Control ---
-  // Ensure the command is used in a group.
-  if (!m.isGroup) throw group;
-  // Ensure the user is an admin.
-  if (!isAdmin) throw admin;
-  // Ensure the bot is an admin.
-  if (!isBotAdmin) throw botAdmin;
-  
-  // --- Input Validation ---
-  // Check for the time unit (second, minute, hour, day).
-  if (args[1] == 'second') {
-    var timerDuration = args[0] * 1000; // Convert seconds to milliseconds.
-  } else if (args[1] == 'minute') {
-    var timerDuration = args[0] * 60000; // Convert minutes to milliseconds.
-  } else if (args[1] == 'hour') {
-    var timerDuration = args[0] * 3600000; // Convert hours to milliseconds.
-  } else if (args[1] == 'day') {
-    var timerDuration = args[0] * 86400000; // Convert days to milliseconds.
-  } else {
-    // Sassy reply if the time unit is invalid.
-    return reply('*👑 Please specify a valid time unit: second, minute, hour, or day.*\n\n*Example*: `opentime 10 second` ⏳');
-  }
-  
-  // --- Sassy Confirmation ---
-  reply(`⏳ Countdown initiated! The group will be opened in ${q} from now, darling.`); // 'q' likely contains the full command text.
-  
-  // Set a timeout to open the group.
-  setTimeout(() => {
-    const openMessage = `🔓 The group has been opened successfully, darling!`;
-    client.groupSettingUpdate(m.chat, 'not_announcement'); // Set group to not announcement mode (unlock).
-    reply(openMessage); // Inform users the group is now open.
-  }, timerDuration);
-break;
+		      case 'opentime':
+                if (!m.isGroup) throw group;
+                if (!isAdmin) throw admin;
+                if (!isBotAdmin) throw botAdmin;
+                if (args[1] == 'second') {
+                    var timer = args[0] * `1000`
+                } else if (args[1] == 'minute') {
+                    var timer = args[0] * `60000`
+                } else if (args[1] == 'hour') {
+                    var timer = args[0] * `3600000`
+                } else if (args[1] == 'day') {
+                    var timer = args[0] * `86400000`
+                } else {
+                    return reply('*select:*\nsecond\nminute\nhour\n\n*example*\n10 second')
+                }
+                reply(`Countdown of ${q} starting from now to open the group`)
+                setTimeout(() => {
+                    var nomor = m.participant
+                    const open = `𝗚𝗿𝗼𝘂𝗽 𝗼𝗽𝗲𝗻𝗲𝗱 𝘀𝘂𝗰𝗰𝗲𝘀𝗳𝘂𝗹𝗹𝘆`
+                    client.groupSettingUpdate(m.chat, 'not_announcement')
+                    reply(open)
+                }, timer)
+                 break;
 
 //========================================================================================================================//		      
  case "close": case "mute": { 
@@ -4980,209 +4743,193 @@ break;
  break; 
 
 //========================================================================================================================//		      
- case "close": case "mute": { 
-  // --- Access Control ---
-  // Ensure the command is used in a group.
-  if (!m.isGroup) throw group; 
-  // Ensure the bot is an admin.
-  if (!isBotAdmin) throw botAdmin; 
-  // Ensure the user is an admin.
-  if (!isAdmin) throw admin; 
+ case "open": case "unmute": { 
+                 if (!m.isGroup) throw group; 
+                 if (!isBotAdmin) throw botAdmin; 
+                 if (!isAdmin) throw admin; 
   
-  // --- Action ---
-  // Set the group to announcement mode, which locks it for members.
-  await client.groupSettingUpdate(m.chat, 'announcement'); 
+                     await client.groupSettingUpdate(m.chat, 'not_announcement'); 
+ m.reply('Group successfully unlocked!'); 
   
-  // --- Sassy Confirmation ---
-  m.reply('👑 The group has been successfully locked, darling! Only admins can speak now. 🤫'); 
-} 
-break; 
+ }
+        break; 
 
 //========================================================================================================================//		      
- //========================================================================================================================//
-case "open": case "unmute": { 
-    if (!m.isGroup) throw group; 
-    if (!isBotAdmin) throw botAdmin; 
-    if (!isAdmin) throw admin; 
+          case "disp-1": { 
+                 if (!m.isGroup) throw group; 
+                 if (!isBotAdmin) throw botAdmin; 
+                 if (!isAdmin) throw admin; 
   
-    await client.groupSettingUpdate(m.chat, 'not_announcement'); 
-    m.reply('Consider the gates of communication officially *unlocked*, darling! 🔓✨'); 
-  
-} break; 
+                     await client.groupToggleEphemeral(m.chat, 1*24*3600); 
+ m.reply('Dissapearing messages successfully turned on for 24hrs!'); 
+ } 
+ break; 
 
-//========================================================================================================================//		 
-case "disp-1": { 
-    if (!m.isGroup) throw group; 
-    if (!isBotAdmin) throw botAdmin; 
-    if (!isAdmin) throw admin; 
+//========================================================================================================================//		      
+          case "promote" : { 
+                 if (!m.isGroup) throw group; 
+         if (!isBotAdmin) throw botAdmin; 
+         if (!isAdmin) throw admin; 
+ if (!m.quoted) throw `Ttag someone with the command!`; 
+                 let users = m.mentionedJid[0] ? m.mentionedJid : m.quoted ? [m.quoted.sender] : [text.replace(/[^0-9]/g, '')+'@s.whatsapp.net']; 
   
-    await client.groupToggleEphemeral(m.chat, 1*24*3600); 
-    m.reply('Poof! ✨ Messages will now vanish like a fleeting thought after 24 hours. Enjoy the mystery! ⏳'); 
-} break; 
+                 await client.groupParticipantsUpdate(m.chat, users, 'promote'); 
+ m.reply('Successfully promoted! 🦄'); 
+         } 
+ break; 
 
-//========================================================================================================================//		   
-case "promote" : { 
-    if (!m.isGroup) throw group; 
-    if (!isBotAdmin) throw botAdmin; 
-    if (!isAdmin) throw admin; 
-    if (!m.quoted) throw `Tag someone with the command, my dear!`; 
-    let users = m.mentionedJid[0] ? m.mentionedJid : m.quoted ? [m.quoted.sender] : [text.replace(/[^0-9]/g, '')+'@s.whatsapp.net']; 
+//========================================================================================================================//		      
+           case "demote": { 
+                 if (!m.isGroup) throw group; 
+         if (!isBotAdmin) throw botAdmin; 
+         if (!isAdmin) throw admin; 
+ if (!m.quoted) throw `Ttag someone with the command!`; 
+                 let users = m.mentionedJid[0] ? m.mentionedJid : m.quoted ? [m.quoted.sender] : [text.replace(/[^0-9]/g, '')+'@s.whatsapp.net']; 
   
-    await client.groupParticipantsUpdate(m.chat, users, 'promote'); 
-    m.reply('And just like that, they’ve ascended! ✨ Promoted to admin status with a flourish! 👑'); 
-} break; 
+                 await client.groupParticipantsUpdate(m.chat, users, 'demote'); 
+ m.reply('Successfully demoted! 😲'); 
+         } 
+ break;
 
-//========================================================================================================================//		 
-case "demote": { 
-    if (!m.isGroup) throw group; 
-    if (!isBotAdmin) throw botAdmin; 
-    if (!isAdmin) throw admin; 
-    if (!m.quoted) throw `Tag someone with the command, my dear!`; 
-    let users = m.mentionedJid[0] ? m.mentionedJid : m.quoted ? [m.quoted.sender] : [text.replace(/[^0-9]/g, '')+'@s.whatsapp.net']; 
+//========================================================================================================================//		      
+          case "disp-7": { 
+                 if (!m.isGroup) throw group; 
+                 if (!isBotAdmin) throw botAdmin; 
+                 if (!isAdmin) throw admin; 
   
-    await client.groupParticipantsUpdate(m.chat, users, 'demote'); 
-    m.reply('A slight demotion, perhaps? Back to the ranks they go! 📉 They\'ll be back. 😜'); 
-} break;
+                     await client.groupToggleEphemeral(m.chat, 7*24*3600); 
+ m.reply('Dissapearing messages successfully turned on for 7 days!'); 
+  
+ } 
+ break; 
 
-//========================================================================================================================//		 
-case "disp-7": { 
-    if (!m.isGroup) throw group; 
-    if (!isBotAdmin) throw botAdmin; 
-    if (!isAdmin) throw admin; 
+//========================================================================================================================//		      
+         case "disp-90": { 
+                 if (!m.isGroup) throw group; 
+                 if (!isBotAdmin) throw botAdmin; 
+                 if (!isAdmin) throw admin; 
   
-    await client.groupToggleEphemeral(m.chat, 7*24*3600); 
-    m.reply('Seven days of secrets! 🤫 Your messages will now play hide-and-seek for a whole week. How intriguing! 🗓️'); 
-  
-} break; 
+                     await client.groupToggleEphemeral(m.chat, 90*24*3600); 
+ m.reply('Dissapearing messages successfully turned on for 90 days!'); 
+ } 
+ break; 
 
-//========================================================================================================================//		  
-case "disp-90": { 
-    if (!m.isGroup) throw group; 
-    if (!isBotAdmin) throw botAdmin; 
-    if (!isAdmin) throw admin; 
+//========================================================================================================================//		      
+        case "disp-off": { 
+                 if (!m.isGroup) throw group; 
+                 if (!isBotAdmin) throw botAdmin; 
+                 if (!isAdmin) throw admin; 
   
-    await client.groupToggleEphemeral(m.chat, 90*24*3600); 
-    m.reply('A grand gesture of ephemerality! 💫 Messages will now gracefully fade after 90 days. A long goodbye, indeed! ⏳'); 
-} break; 
+                     await client.groupToggleEphemeral(m.chat, 0); 
+ m.reply('Dissapearing messages successfully turned off!'); 
+ }
+   break;
 
-//========================================================================================================================//		 
-case "disp-off": { 
-    if (!m.isGroup) throw group; 
-    if (!isBotAdmin) throw botAdmin; 
-    if (!isAdmin) throw admin; 
-  
-    await client.groupToggleEphemeral(m.chat, 0); 
-    m.reply('The ephemeral magic is over. 🙅‍♀️ Messages will now stay put. No more disappearing acts! 📜'); 
-} break;
-
-//========================================================================================================================//		  
-case "icon": case 'gpp': { 
+//========================================================================================================================//		      
+ case "icon": case 'gpp': { 
     if (!m.isGroup) throw group; 
     if (!isAdmin) throw admin; 
     if (!isBotAdmin) throw botAdmin; 
-    if (!quoted) throw `Send or tag an image with the caption ${prefix + command}, darling!`; 
-    if (!/image/.test(mime)) throw `Send or tag an image with the caption ${prefix + command}, darling!`; 
-    if (/webp/.test(mime)) throw `Send or tag an image with the caption ${prefix + command}, darling!`; 
+    if (!quoted) throw `Send or tag an image with the caption ${prefix + command}`; 
+    if (!/image/.test(mime)) throw `Send or tag an image with the caption ${prefix + command}`; 
+    if (/webp/.test(mime)) throw `Send or tag an image with the caption ${prefix + command}`; 
     let media = await client.downloadAndSaveMediaMessage(quoted); 
     await client.updateProfilePicture(m.chat, { url: media }).catch((err) => fs.unlinkSync(media)); 
-    reply('Behold! The group\'s new look has been unveiled. ✨ Simply *divine*! 💖'); 
-} break;
-
-//========================================================================================================================//		     
-case "revoke": 
-case "newlink": 
-case "reset": { 
-    if (!m.isGroup) throw group; 
-    if (!isAdmin) throw admin; 
-    if (!isBotAdmin) throw botAdmin; 
-    await client.groupRevokeInvite(m.chat); 
-    await client.sendText(m.chat, 'Consider the old link *revoked*! 🚫 Time for a fresh start.', m); 
-    let response = await client.groupInviteCode(m.chat); 
-    client.sendText(m.sender, `Here's the *brand new* golden ticket to our exclusive group, darling! 🎟️✨`, m, { detectLink: true }); 
-    client.sendText(m.chat, `Your new group link has been delivered to your private inbox. Check it out! 💌`, m); 
-} break;
-
-//========================================================================================================================//		      
-case "delete": case "del": { 
-    if (!m.isGroup) throw group; 
-    if (!isBotAdmin) throw botAdmin; 
-    if (!isAdmin) throw admin; 
-    if (!m.quoted) throw `No message quoted for deletion, my dear!`; 
-    let { chat, fromMe, id, isBaileys } = m.quoted; 
-    if (isBaileys) return m.reply(`Darling, I can only delete *your* little secrets, not my own or those of my digital kin. 😉`); 
-    client.sendMessage(m.chat, { delete: { remoteJid: m.chat, fromMe: false, id: m.quoted.id, participant: m.quoted.sender } }); 
-} break;
-
-//========================================================================================================================//	
-case "leave": {
-    // --- Owner Authorization ---
-    if (!Owner) throw NotOwner; // Throws an error if the user is not the owner.
-
-    // --- Group Context Check ---
-    if (!m.isGroup) throw group; // Throws an error if not in a group.
-
-    // --- Graceful Departure Message ---
-    await client.sendMessage(m.chat, {
-        text: "Farewell, my dear companions! It appears my presence is no longer required here. Raven AI is now gracefully exiting this group. May your conversations continue to sparkle! ✨👋",
-        // Mentioning all participants to give a personal touch to the goodbye.
-        mentions: participants.map(p => p.id)
-    }, { quoted: m });
-
-    // --- Executing Group Leave ---
-    await client.groupLeave(m.chat);
-}
-break;
-
-//========================================================================================================================//		      
-case "subject": case "changesubject": { 
-    if (!m.isGroup) throw group; 
-    if (!isBotAdmin) throw botAdmin; 
-    if (!isAdmin) throw admin; 
-    if (!text) throw 'Provide the text for the group subject, darling.'; 
-    await client.groupUpdateSubject(m.chat, text); 
-    m.reply('The group\'s name has been *rebranded* to something far more befitting! ✨'); 
-} break; 
-
-//========================================================================================================================//		      
-// Case: Set Group Description
-case "desc": case "setdesc": { 
-    if (!m.isGroup) throw group; 
-    if (!isBotAdmin) throw botAdmin; 
-    if (!isAdmin) throw admin; 
-    if (!text) throw 'Provide the text for the group description, darling.' 
-    await client.groupUpdateDescription(m.chat, text); 
-    m.reply('The group\'s description has been *elegantly* rewritten. A touch of class! 💅'); 
-} break; 
-
-//========================================================================================================================//		    
-case "hidetag": case "tag": { 
-    if (!m.isGroup) throw group;
-    client.sendMessage(
-        m.chat,
-        { 
-            text: text ? text : '@Everyone, pay attention! Something *truly* important is happening... ✨', 
-            mentions: participants 
-        },
-        { quoted: m }
-    );
-} break; 
-
-//========================================================================================================================//		  
-case "tagall": { 
-    if (!m.isGroup) throw group; 
-    if (!isBotAdmin) throw botAdmin; 
-    if (!isAdmin) throw admin; 
-    let txt = `Hear ye, hear ye! 📣 Your esteemed host, ${m.pushName}, has a message for *all* of you fabulous people!\n\nMessage:- ${text ? text : 'No Message! Prepare yourselves... ✨'}\n\n`; 
-          
-    for (let mem of participants) { 
-        txt += `📧 @${mem.split('@')[0]}\n`; 
+    reply('Group icon updated Successfully✅️'); 
     } 
+    break;
+
+//========================================================================================================================//		      
+ case "revoke": 
+ case "newlink": 
+ case "reset": { 
+   if (!m.isGroup) throw group; // add "new Error" to create a new Error object 
+   if (!isAdmin) throw admin; // add "new Error" to create a new Error object 
+   if (!isBotAdmin) throw botAdmin; // add "new Error" to create a new Error object 
+   await client.groupRevokeInvite(m.chat); 
+   await client.sendText(m.chat, 'Group link revoked!', m); // use "client.sendText" instead of "m.reply" to ensure message is sent 
+   let response = await client.groupInviteCode(m.chat); 
+ client.sendText(m.sender, `https://chat.whatsapp.com/${response}\n\nHere is the new group link for ${groupMetadata.subject}`, m, { detectLink: true }); 
+ client.sendText(m.chat, `Sent you the new group link in your inbox!`, m); 
+   // use "client.sendTextWithMentions" instead of "client.sendText" to include group name in message 
+ }          
+  break;
+
+//========================================================================================================================//		      
+          case "delete": case "del": { 
+if (!m.isGroup) throw group; 
+  if (!isBotAdmin) throw botAdmin; 
+  if (!isAdmin) throw admin; 
+    if (!m.quoted) throw `No message quoted for deletion`; 
+    let { chat, fromMe, id, isBaileys } = m.quoted; 
+   if (isBaileys) throw `I cannot delete. Quoted message is my message or another bot message.`; 
+    client.sendMessage(m.chat, { delete: { remoteJid: m.chat, fromMe: false, id: m.quoted.id, participant: m.quoted.sender } }); 
+  } 
+ break;
+
+//========================================================================================================================//		      
+          case "leave": { 
+                 if (!Owner) throw NotOwner;
+		 if (!m.isGroup) throw group;
+ await client.sendMessage(m.chat, { text : '𝗚𝗼𝗼𝗱𝗯𝘆𝗲 𝗲𝘃𝗲𝗿𝘆𝗼𝗻𝗲👋. 𝗥𝗮𝘃𝗲𝗻-𝗔𝗶 𝗶𝘀 𝗟𝗲𝗮𝘃𝗶𝗻𝗴 𝘁𝗵𝗲 𝗚𝗿𝗼𝘂𝗽 𝗻𝗼𝘄...' , mentions: participants.map(a => a.id)}, { quoted : m }); 
+                 await client.groupLeave(m.chat); 
   
-    await client.sendMessage(m.chat, {
-        text: txt,
-        mentions: participants
-    }, { quoted: m });
-} break;
+             } 
+ break; 
+
+//========================================================================================================================//		      
+          case "subject": case "changesubject": { 
+                 if (!m.isGroup) throw group; 
+                 if (!isBotAdmin) throw botAdmin; 
+                 if (!isAdmin) throw admin; 
+                 if (!text) throw 'Provide the text for the group subject.'; 
+                 await client.groupUpdateSubject(m.chat, text); 
+ m.reply('Group name successfully updated✅️'); 
+             } 
+             break; 
+
+//========================================================================================================================//		      
+           case "desc": case "setdesc": { 
+                 if (!m.isGroup) throw group; 
+                 if (!isBotAdmin) throw botAdmin; 
+                 if (!isAdmin) throw admin; 
+                 if (!text) throw 'Provide the text for the group description' 
+                 await client.groupUpdateDescription(m.chat, text); 
+ m.reply('Group description successfully updated✅️'); 
+             } 
+ break; 
+
+//========================================================================================================================//		      
+     case "hidetag": case "tag": { 
+             if (!m.isGroup) throw group; 
+client.sendMessage(
+              m.chat,
+              { 
+                  text: text ? text : '@Everyone', 
+                  mentions: participants 
+              },
+              { quoted: m }
+          );
+      }
+ break; 
+
+//========================================================================================================================//		      
+      case "tagall": { 
+                 if (!m.isGroup) throw group; 
+                 if (!isBotAdmin) throw botAdmin; 
+                 if (!isAdmin) throw admin; 
+ let txt = `Tagged by ${m.pushName}.\n\nMessage:- ${text ? text : 'No Message!'}\n\n`; 
+          
+          for (let mem of participants) { 
+              txt += `📧 @${mem.split('@')[0]}\n`; 
+          } 
+  
+          await client.sendMessage(m.chat, {
+              text: txt,
+              mentions: participants
+          }, { quoted: m });
+      }
+ break;
 
 //========================================================================================================================//		      
 case "whatsong": case "shazam": {
@@ -5268,60 +5015,68 @@ break;
  } 
  break;
 
-//========================================================================================================================//
+//========================================================================================================================//		      
 case "list":
 case "vars":
-case "help": {
-    // Crafting a sophisticated and sassy menu for the user.
-    let vaa = `✨ **Frost AI Command Menu** ✨
+case "help":
+  let vaa = `
+✨ **Welcome to the Command Hub!** ✨
 
-Here's a peek at what I can do, darling. Choose your adventure! 😉
+Here's a peek at the magic I can perform. Choose your adventure wisely, darling! 😉
 
-1.  **Owner**: My creator's contact details, should you need to reach the mastermind. 👑
-2.  **Broadcast**: Broadcasting a message across all my domains. For your eyes only, darlings. 📢
-3.  **Join**: Joining your exclusive circle. Just tag the group link and say 'Join', my dear. 🤝
-4.  **BotPP**: Giving my avatar a fabulous new look. Show me your preferred profile picture! 📸✨
-5.  **Block**: Banishing those who don't appreciate my brilliance. Consider them *unfriended*. 👋🚫
-6.  **Kill**: Putting a group on pause, darling. A moment of quiet contemplation for everyone. 🤫
-7.  **Unblock**: Offering a second chance to those who were previously... misguided. Let's see if they've learned. 😇
-8.  **SetVar**: Configuring my operational parameters. Think of it as adjusting my settings for peak performance. ⚙️
-9.  **Sticker**: Transforming your moments into delightful stickers. Let's make memories wearable! 🎨
-10. **ToImg**: Reverting your stickers back to their photographic origins. A touch of nostalgia. 🖼️
-11. **Play**: Spinning your favorite tunes. Let the music transport you, darling. 🎶
-12. **WhatSong**: Identifying that catchy tune you can't quite place. I've got the ear for it. 👂🎵
-13. **Yts**: Fetching your desired YouTube content. Prepare for entertainment! ▶️
-14. **Movie**: Unveiling the secrets of your favorite films. All the juicy details, just for you. 🎬✨
-15. **Mix**: Crafting unique emoji combinations. Let's create some expressive magic! ✨💖
-16. **Ai-Img**: Conjuring images from the digital ether. Witness AI artistry at its finest. 🖼️🤖
-17. **GPT**: Your personal oracle, ready to illuminate your queries with the wisdom of GPT. Ask away! 💡
-18. **DP**: Retrieving a person's profile picture. A glimpse into their digital persona. 👤
-19. **Speed**: Measuring my lightning-fast reflexes. How quickly can I serve you? ⚡
-20. **Alive**: Confirming my presence and vitality. I'm very much alive and kicking, darling! 🌟
-21. **Runtime**: Recalling my inception. When did this magnificent journey begin? 🕰️
-22. **Script**: Sharing the blueprint of my existence. My code, for the curious minds. 📜
-23. **Owner**: My creator's contact details, should you need to reach the mastermind. 👑
-24. **Vars**: Revealing my internal settings and configurations. A peek behind the curtain. 🔍
-25. **Promote**: Bestowing the honor of admin status. You've earned it, my dear. 👑
-26. **Demote**: Reverting admin privileges. Back to being a cherished member of the community. 🚶‍♀️
-27. **Delete**: Erasing a message from existence. Poof! Gone. ✨
-28. **Remove/Kick**: Escorting unwelcome guests out of the chat. They won't be missed. 🚪👋
-29. **Foreigners**: Uncovering international connections. For those who speak the global language. 🌍
-30. **Close**: Instituting a period of exclusive admin discourse. A moment of quiet for the rest. 🤐
-31. **Open**: Reopening the floor for all members. Let the conversations flow freely again! 💬
-32. **Icon**: Bestowing a new visual identity upon your group. A fresh look! 🖼️
-33. **Subject**: Renaming your group's focus. Let's give it a title that truly shines. ✒️
-34. **Desc**: Unveiling the group's official description. What's the story, darling? 📜
-35. **Leave**: This gathering lacks sparkle. It's time for me to gracefully depart. Farewell! 👋✨
-36. **TagAll**: Summoning all members! A collective call to attention. 📣
-37. **HideTag**: A subtle announcement for a special message. Pay attention, everyone! 👀
-38. **Revoke**: Invalidating the current invitation link. Time for a fresh start! 🔗🔄
+---
 
-Remember, darling, knowledge is power! Use it wisely. 😉`;
+**Group Management & Mischief:**
 
-    // Reply with the beautifully crafted menu.
-    m.reply(vaa);
-}
-break;
+*   **1. Owner** 👑: Fetch the owner's contact details.
+*   **2. Broadcast** 📣: Send a message to all your groups simultaneously.
+*   **3. Join** 🎉: Join a group using its link.
+*   **4. Block** 🚫: Block those pesky fake friends.
+*   **5. Kill** 💥: Erase a group in mere seconds. *Handle with care*.
+*   **6. Unblock** ✨: Offer those blocked friends a glimmer of hope.
+*   **7. Promote** 👑: Grant admin privileges to a member.
+*   **8. Demote** 📉: Remove admin status from a member.
+*   **9. Delete** 🧹: Delete a specific message.
+*   **10. Remove/Kick** 😤: Kick out troublesome members.
+*   **11. Foreigners** 🌍: Fetch foreign numbers.
+*   **12. Close** 🔒: Restrict chat to administrators only.
+*   **13. Open** 🗣️: Allow everyone to chat freely.
+*   **14. Icon** ✨: Change the group's icon.
+*   **15. Subject** ✍️: Update the group's subject.
+*   **16. Desc** ℹ️: Retrieve the group's description.
+*   **17. Leave** 🚶‍♀️: Time for the bot to make a graceful exit.
+*   **18. Tagall** 📢: Tag everyone in the group chat.
+*   **19. Hidetag** 🤫: Announce that someone has something important to say.
+*   **20. Revoke** 🔗: Reset the group's invite link.
+
+**Media & Entertainment:**
+
+*   **21. Botpp** 💄: Give the bot a fabulous new profile picture.
+*   **22. Sticker** 🎨: Transform photos or short videos into fabulous stickers.
+*   **23. Toimg** 📸: Convert stickers back into photos.
+*   **24. Play** 🎶: Spin your favorite tunes.
+*   **25. Whatsong** 🕵️‍♀️: Identify that catchy song.
+*   **26. Yts** 📺: Fetch videos directly from YouTube.
+*   **27. Movie** 🎬: Get all the juicy details about your favorite movies.
+*   **28. Mix** 🧪: Blend two or more emojis into a unique creation.
+*   **29. Ai-img** 🤖: Generate a stunning AI-powered photo.
+
+**Information & Utilities:**
+
+*   **30. Gpt** 🔮: Get answers to all your burning questions.
+*   **31. Dp** 👀: Fetch anyone's profile picture.
+*   **32. Speed** ⚡: See how fast your bot is.
+*   **33. Alive** 🟢: Check if the bot is still kicking.
+*   **34. Runtime** 📜: Find out when the bot began its operations.
+*   **35. Script** 🤫: Get the bot's script.
+*   **36. Vars** 🗝️: View all the bot's current variables.
+*   **37. Setvar** 👑: Set your variables in Heroku.
+
+---
+*Ready to make some magic? Just type the command!* ✨
+`;
+  reply(vaa);
+  break;
 
 //========================================================================================================================//		      
   case "vv": case "retrieve":{
@@ -5558,7 +5313,7 @@ if (!text) return m.reply("𝗣𝗿𝗼𝘃𝗶𝗱𝗲 𝗮 𝘃𝗮𝗹𝗶�
 };
   break;
 
-//========================================================================================================================//
+//========================================================================================================================//		      
 switch (command) { // Assuming 'command' holds the command name
     case "ping":
     case "speed":
@@ -5600,85 +5355,36 @@ switch (command) { // Assuming 'command' holds the command name
 }
 
 //========================================================================================================================//		      
-case 'uptime':
-    const whatsappChannelId = "120363369453603973@newsletter";
-    const whatsappChannelLink = "https://whatsapp.com/channel/0029VasHgfG4tRrwjAUyTs10";
+case "uptime": { 
+    const stylishUptime = () => {
+        const uptimeMessage = `✨ The system has been thriving for: ${runtime(process.uptime())} ⏳💪`;
+        return uptimeMessage;
+    };
+    m.reply(stylishUptime());
+} 
+break;
 
-    // --- Prepare Message Content ---
-    let raven = `  ${runtime(process.uptime())}`;
-    const caption = raven; // The runtime will be used as the image caption.
+//========================================================================================================================//		      
+	case 'runtime':
+		let raven = `  ${runtime(process.uptime())}`
+                client.sendMessage(m.chat, {
+                    text: raven,
+                    contextInfo: {
+                        externalAdReply: {
+                            showAdAttribution: true,
+                            title: 'ʄʀօֆᴛ-ɮʏᴛɛ-𐌀i',
+                            body: 'Frost_Byte-Ai Runtime',
+                            thumbnailUrl: 'https://files.catbox.moe/wpenxk.jpg',
+                            sourceUrl: 'https://whatsapp.com/channel/0029VasHgfG4tRrwjAUyTs10',
+                            mediaType: 1,
+                            renderLargerThumbnail: true
+                        }
+                    }
+                }, {
+                    quoted: m
+                })
+                break;
 
-    // --- Send the Single Merged Message ---
-    await client.sendMessage(m.chat, {
-        image: {
-            url: "https://files.catbox.moe/21qno2.jpg" // Image from the second message
-        },
-        caption: caption,
-        contextInfo: {
-            // --- NEW: Added newsletter forwarding information ---
-            isForwarded: true,
-            forwardingScore: 999, // A high score shows the "forwarded many times" icon.
-            forwardedNewsletterMessageInfo: {
-                newsletterJid: whatsappChannelId,
-                newsletterName: "ʄʀօֆᴛ-ɮʏᴛɛ-𐌀i", // The newsletter name you wanted to add.
-                serverMessageId: -1,
-            },
-            // --- This is the rich link preview from the second message ---
-            externalAdReply: {
-                title: "Frost_Byte-Ai Bot",
-                body: "Powered By Graham-Nest",
-                thumbnailUrl: 'https://files.catbox.moe/wpenxk.jpg',
-                sourceUrl: whatsappChannelLink,
-                mediaType: 1, // 1 for image
-                renderLargerThumbnail: false, // Using the smaller thumbnail style
-            },
-        },
-    }, {
-        quoted: m // This makes the message a reply to the user's command.
-    });
-
-    break;
-    
-//========================================================================================================================//	
-case 'runtime':
-    const whatsappChannelId = "120363369453603973@newsletter";
-    const whatsappChannelLink = "https://whatsapp.com/channel/0029VasHgfG4tRrwjAUyTs10";
-
-    // --- Prepare Message Content ---
-    let raven = `  ${runtime(process.uptime())}`;
-    const caption = raven; // The runtime will be used as the image caption.
-
-    // --- Send the Single Merged Message ---
-    await client.sendMessage(m.chat, {
-        image: {
-            url: "https://files.catbox.moe/21qno2.jpg" // Image from the second message
-        },
-        caption: caption,
-        contextInfo: {
-            // --- NEW: Added newsletter forwarding information ---
-            isForwarded: true,
-            forwardingScore: 999, // A high score shows the "forwarded many times" icon.
-            forwardedNewsletterMessageInfo: {
-                newsletterJid: whatsappChannelId,
-                newsletterName: "ʄʀօֆᴛ-ɮʏᴛɛ-𐌀i", // The newsletter name you wanted to add.
-                serverMessageId: -1,
-            },
-            // --- This is the rich link preview from the second message ---
-            externalAdReply: {
-                title: "Frost_Byte-Ai Bot",
-                body: "Powered By Graham-Nest",
-                thumbnailUrl: 'https://files.catbox.moe/wpenxk.jpg',
-                sourceUrl: whatsappChannelLink,
-                mediaType: 1, // 1 for image
-                renderLargerThumbnail: false, // Using the smaller thumbnail style
-            },
-        },
-    }, {
-        quoted: m // This makes the message a reply to the user's command.
-    });
-
-    break;
-    
 //========================================================================================================================//		      
   case "apk":
       case "app":{
