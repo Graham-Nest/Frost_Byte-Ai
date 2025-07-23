@@ -179,11 +179,7 @@ function handleIncomingMessage(message) {
 }
 
 // --- Unicode Styling Helper Functions ---
-const whatsappChannelId = "120363369453603973@newsletter"; // Replace with your actual channel ID
-const whatsappChannelLink = "https://whatsapp.com/channel/0029VasHgfG4tRrwjAUyTs10"; // Replace with your actual channel link
 
-
-// --- Unicode Styling Helper Functions ---
 // Converts text to bold Unicode characters
 function toBoldUnicode(text) {
     let result = '';
@@ -202,6 +198,7 @@ function toBoldUnicode(text) {
 }
 
 // --- Sassy Phrase Definitions ---
+// Define the new sassy phrases with their emojis and example descriptions
 const sassyPhrases = [
     { name: "Ghosted Whispers", emoji: "👻", description: "frost_Byte-Ai caught the 👻 *ghosted whispers* before they could fade!" },
     { name: "Vanished Secrets", emoji: "✨", description: "No secret is safe from frost_Byte-Ai; it recovers all ✨ *vanished secrets*." },
@@ -216,12 +213,12 @@ function getRandomSassyPhraseDescription() {
 }
 
 // --- Main Message Revocation Handler ---
-// It attempts to retrieve and resend the deleted message content with enhanced styling.
+
 async function handleMessageRevocation(client, revocationMessage) {
   const remoteJid = revocationMessage.key.remoteJid;
   const messageId = revocationMessage.message.protocolMessage.key.id;
 
-  // Load the original message data using the provided helper function
+  // Load the original message data
   const chatData = loadChatData(remoteJid, messageId);
   const originalMessage = chatData.length > 0 ? chatData[0] : null;
 
@@ -230,268 +227,164 @@ async function handleMessageRevocation(client, revocationMessage) {
     return;
   }
 
-  // Determine who deleted the message.
   const deletedBy = revocationMessage.participant || revocationMessage.key.participant || revocationMessage.key.remoteJid;
-  // Format participant IDs for a cleaner display.
+  
+  // Format participant IDs for display
   const deletedByFormatted = deletedBy ? `@${deletedBy.split('@')[0]}` : 'Unknown';
 
-  // --- Construct the core notification parts ---
-  // This forms the initial stylish and sassy notification.
+  // --- Stylish and Sassy Notification Text ---
   let notificationText = `✨👑 𝒀𝒐𝒖 𝒄𝒂𝒏'𝒕 𝒉𝒊𝒅𝒆 𝒇𝒓𝒐𝒎 𝑭𝒓𝒐𝒔𝒕_𝑩𝒚𝒕𝒆-𝑨𝒊! 👑✨\n\n`;
-  // Incorporate a random sassy phrase.
+  
+  // Incorporate a random sassy phrase to enhance the message
   const randomSassyDescriptor = getRandomSassyPhraseDescription();
-  notificationText += `${randomSassyDescriptor}\n\n`;
-  // Combine with the specific message about silencing and the deleter.
-  const mainNotification = `${notificationText}🤫 𝒀𝒐𝒖 𝒄𝒂𝒏'𝒕 𝒔𝒊𝒍𝒆𝒏𝒄𝒆 𝒕𝒉𝒊𝒔 𝒎𝒆𝒔𝒔𝒂𝒈𝒆! 𝑫𝒆𝒍𝒆𝒕𝒆𝒅 𝑴𝒆𝒔𝒔𝒂𝒈𝒆 𝒃𝒚: ${toBoldUnicode(deletedByFormatted)} 🤫\n\n`;
+  notificationText += `${randomSassyDescriptor}\n\n`; // Using the full descriptive sentence
 
-  // --- Define common externalAdReply structure ---
-  // This structure will be used for all media messages to provide rich context.
-  const commonExternalAdReply = {
-      title: "Frost_Byte-Ai Bot",
-      body: "Powered By Graham-Nest",
-      thumbnailUrl: 'https://files.catbox.moe/wpenxk.jpg', // Consistent thumbnail for all media
-      sourceUrl: whatsappChannelLink, // Link to the bot's channel
-      renderLargerThumbnail: false,
-  };
+  notificationText += `🤫 𝒀𝒐𝒖 𝒄𝒂𝒏'𝒕 𝒔𝒊𝒍𝒆𝒏𝒄𝒆 𝒕𝒉𝒊𝒔 𝒎𝒆𝒔𝒔𝒂𝒈𝒆! 𝑫𝒆𝒍𝒆𝒕𝒆𝒅 𝑴𝒆𝒔𝒔𝒂𝒈𝒆 𝒃𝒚: ${toBoldUnicode(deletedByFormatted)} 🤫\n\n`;
+
+  let messageContent = '';
+  let mediaCaption = '';
 
   try {
-    // --- Message Content Handling based on Type ---
-    // This block determines the type of the deleted message and formats the content accordingly.
-
-    if (originalMessage.message?.conversation || originalMessage.message?.extendedTextMessage) {
-      // --- Text or Extended Text Message ---
-      let messageText = '';
-      if (originalMessage.message?.conversation) {
-        messageText = originalMessage.message.conversation;
-      } else if (originalMessage.message?.extendedTextMessage) {
-        messageText = originalMessage.message.extendedTextMessage.text;
-      }
-      
-      // Format the recovered message content.
-      const messageContent = `💬 𝑨 𝒎𝒆𝒔𝒔𝒂𝒈𝒆 𝒈𝒐𝒕 𝒆𝒓𝒂𝒔𝒆𝒅... 𝑯𝒆𝒓𝒆'𝒔 𝒘𝒉𝒂𝒕 𝒚𝒐𝒖 𝒎𝒊𝒔𝒔𝒆𝒅, 𝒅𝒆𝒂𝒓: \n\n${toBoldUnicode(messageText)} 💅`;
-      // Combine notification and message content.
-      const finalMessage = `${mainNotification}${messageContent}`;
-      
-      // Send the recovered text message with contextInfo.
-      await client.sendMessage(client.user.id, {
-          text: finalMessage, // The actual text content
-          contextInfo: {
-              isForwarded: true,
-              forwardingScore: 999,
-              forwardedNewsletterMessageInfo: {
-                  newsletterJid: whatsappChannelId,
-                  newsletterName: "ʄʀօֆᴛ-ɮʏᴛɛ-𐌀i",
-                  serverMessageId: -1,
-              },
-              externalAdReply: {
-                  ...commonExternalAdReply,
-                  mediaType: 0, // Use 0 for text/unknown media type in external ad reply
-                  title: "Frost_Byte-Ai Bot", // General title for text notifications
-                  body: "Recovered Deleted Message", // General body
-              },
-          },
-      });
-
+    // Check if the deleted message was sent by the bot itself, if so, ignore.
+    if (originalMessage.message?.conversation) {
+      // Text message
+      const messageText = originalMessage.message.conversation;
+      messageContent = `💬 𝑶𝒐𝒑𝒔! 𝑨 𝒎𝒆𝒔𝒔𝒂𝒈𝒆 𝒈𝒐𝒕 𝒆𝒓𝒂𝒔𝒆𝒅... 𝑯𝒆𝒓𝒆'𝒔 𝒘𝒉𝒂𝒕 𝒚𝒐𝒖 𝒎𝒊𝒔𝒔𝒆𝒅, 𝒅𝒆𝒂𝒓: \n\n${toBoldUnicode(messageText)} 💅`;
+    } else if (originalMessage.message?.extendedTextMessage) {
+      // Extended text message (quoted messages)
+      const messageText = originalMessage.message.extendedTextMessage.text;
+      messageContent = `💬 𝑨 𝒒𝒖𝒐𝒕𝒆𝒅 𝒎𝒆𝒔𝒔𝒂𝒈𝒆 𝒗𝒂𝒏𝒊𝒔𝒉𝒆𝒅! 𝑯𝒆𝒓𝒆'𝒔 𝒕𝒉𝒆 𝒄𝒐𝒏𝒕𝒆𝒏𝒕, 𝒅𝒓𝒂𝒎𝒂 𝒇𝒓𝒆𝒆: \n\n${toBoldUnicode(messageText)} 💖`;
     } else if (originalMessage.message?.imageMessage) {
-      // --- Image Message ---
+      // Image message
       const ImageM = originalMessage.message.imageMessage;
-      const messageContent = `📸 𝑨 𝒑𝒊𝒄𝒕𝒖𝒓𝒆 𝒑𝒆𝒓𝒇𝒆𝒄𝒕 𝒎𝒐𝒎𝒆𝒏𝒕, 𝒏𝒐𝒘 𝒓𝒆𝒄𝒐𝒗𝒆𝒓𝒆𝒅! 𝑭𝒓𝒐𝒔𝒕_𝑩𝒚𝒕𝒆-𝑨𝒊's 𝒈𝒐𝒕 𝒚𝒐𝒖𝒓 𝒃𝒂𝒄𝒌. [Image] 🌟`;
-      const mediaCaption = `✨ 𝑶𝒓𝒊𝒈𝒊𝒏𝒂𝒍 𝑪𝒂𝒑𝒕𝒊𝒐𝒏: ${ImageM.caption ? toBoldUnicode(ImageM.caption) : 'No caption provided. 🤷‍♀️'}`;
-      // Combine all parts for the final caption of the media message.
-      const fullCaption = `${mainNotification}${messageContent}\n${mediaCaption}`;
-
+      messageContent = `📸 𝑨 𝒑𝒊𝒄𝒕𝒖𝒓𝒆 𝒑𝒆𝒓𝒇𝒆𝒄𝒕 𝒎𝒐𝒎𝒆𝒏𝒕, 𝒏𝒐𝒘 𝒓𝒆𝒄𝒐𝒗𝒆𝒓𝒆𝒅! 𝑭𝒓𝒐𝒔𝒕_𝑩𝒚𝒕𝒆-𝑨𝒊's 𝒈𝒐𝒕 𝒚𝒐𝒖𝒓 𝒃𝒂𝒄𝒌. [Image] 🌟`;
+      mediaCaption = `✨ 𝑶𝒓𝒊𝒈𝒊𝒏𝒂𝒍 𝑪𝒂𝒑𝒕𝒊𝒐𝒏: ${ImageM.caption ? toBoldUnicode(ImageM.caption) : 'No caption provided. 🤷‍♀️'}`;
+      
+      // Attempt to download and send the media
       try {
-        // Download the media content.
         const buffer = await client.downloadMediaMessage(ImageM);
-        // Send the recovered image with the notification as caption and context.
-        await client.sendMessage(client.user.id, {
-          image: buffer, // Use the downloaded buffer for the image
-          caption: fullCaption, // Use the combined caption
-          contextInfo: {
-              isForwarded: true,
-              forwardingScore: 999,
-              forwardedNewsletterMessageInfo: {
-                  newsletterJid: whatsappChannelId, // Use the defined whatsappChannelId
-                  newsletterName: "ʄʀօֆᴛ-ɮʏᴛɛ-𐌀i", // Hardcoded name as in example
-                  serverMessageId: -1, // Placeholder as in example
-              },
-              externalAdReply: {
-                  ...commonExternalAdReply,
-                  mediaType: 1, // 1 for image
-              },
-          },
+        await client.sendMessage(client.user.id, { 
+          image: buffer,
+          caption: `${notificationText}\n${messageContent}\n${mediaCaption}`
         });
       } catch (mediaError) {
         console.error('Failed to download image:', mediaError);
-        // Send a notification if media recovery fails.
-        await client.sendMessage(client.user.id, { text: `${mainNotification}${messageContent}\n\n⚠️ Could not recover deleted image (media expired or inaccessible). 😥` });
+        await client.sendMessage(client.user.id, { text: `${notificationText}${messageContent}\n\n⚠️ Could not recover deleted image (media expired). 😥` });
       }
-
+      return; // Exit early as media is handled
     } else if (originalMessage.message?.videoMessage) {
-      // --- Video Message ---
+      // Video message
       const VideoM = originalMessage.message.videoMessage;
-      const messageContent = `🎬 𝑨 𝒗𝒊𝒅𝒆𝒐 𝒄𝒍𝒊𝒑 𝒕𝒉𝒂𝒕 𝒗𝒂𝒏𝒊𝒔𝒉𝒆𝒅... 𝑩𝒖𝒕 𝒏𝒐𝒕 𝒇𝒓𝒐𝒎 𝑭𝒓𝒐𝒔𝒕_𝑩𝒚𝒕𝒆-𝑨𝒊's 𝒎𝒆𝒎𝒐𝒓𝒚! 𝑩𝒓𝒊𝒏𝒈𝒊𝒏𝒈 𝒊𝒕 𝒃𝒂𝒄𝒌. [Video] 💎`;
-      const mediaCaption = `✨ 𝑶𝒓𝒊𝒈𝒊𝒏𝒂𝒍 𝑪𝒂𝒑𝒕𝒊𝒐𝒏: ${VideoM.caption ? toBoldUnicode(VideoM.caption) : 'No caption provided. 🤷‍♀️'}`;
-      const fullCaption = `${mainNotification}${messageContent}\n${mediaCaption}`;
+      messageContent = `🎬 𝑨 𝒗𝒊𝒅𝒆𝒐 𝒄𝒍𝒊𝒑 𝒕𝒉𝒂𝒕 𝒗𝒂𝒏𝒊𝒔𝒉𝒆𝒅... 𝑩𝒖𝒕 𝒏𝒐𝒕 𝒇𝒓𝒐𝒎 𝑭𝒓𝒐𝒔𝒕_𝑩𝒚𝒕𝒆-𝑨𝒊's 𝒎𝒆𝒎𝒐𝒓𝒚! 𝑩𝒓𝒊𝒏𝒈𝒊𝒏𝒈 𝒊𝒕 𝒃𝒂𝒄𝒌. [Video] 💎`;
+      mediaCaption = `✨ 𝑶𝒓𝒊𝒈𝒊𝒏𝒂𝒍 𝑪𝒂𝒑𝒕𝒊𝒐𝒏: ${VideoM.caption ? toBoldUnicode(VideoM.caption) : 'No caption provided. 🤷‍♀️'}`;
 
       try {
         const buffer = await client.downloadMediaMessage(VideoM);
-        // Send the recovered video.
-        await client.sendMessage(client.user.id, {
-          video: buffer, // Use the downloaded buffer
-          caption: fullCaption, // Use the combined caption
-          contextInfo: {
-              isForwarded: true,
-              forwardingScore: 999,
-              forwardedNewsletterMessageInfo: {
-                  newsletterJid: whatsappChannelId,
-                  newsletterName: "ʄʀօֆᴛ-ɮʏᴛɛ-𐌀i",
-                  serverMessageId: -1,
-              },
-              externalAdReply: {
-                  ...commonExternalAdReply,
-                  mediaType: 2, // 2 for video
-              },
-          },
+        await client.sendMessage(client.user.id, { 
+          video: buffer, 
+          caption: `${notificationText}\n${messageContent}\n${mediaCaption}`
         });
       } catch (mediaError) {
         console.error('Failed to download video:', mediaError);
-        await client.sendMessage(client.user.id, { text: `${mainNotification}${messageContent}\n\n⚠️ Could not recover deleted video (media expired or inaccessible). 😥` });
+        await client.sendMessage(client.user.id, { text: `${notificationText}${messageContent}\n\n⚠️ Could not recover deleted video (media expired). 😥` });
       }
-
+      return; // Exit early as media is handled
     } else if (originalMessage.message?.stickerMessage) {
-      // --- Sticker Message ---
+      // Sticker message
       const StickerM = originalMessage.message.stickerMessage;
-      const messageContent = `🎨 𝑨 𝒔𝒕𝒊𝒄𝒌𝒆𝒓 𝒕𝒉𝒂𝒕 𝒅𝒊𝒔𝒂𝒑𝒑𝒆𝒂𝒓𝒆𝒅! 𝑹𝒆𝒄𝒐𝒗𝒆𝒓𝒆𝒅 𝒂 𝒎𝒆𝒎𝒐𝒓𝒚 𝒇𝒐𝒓 𝒚𝒐𝒖. 💋 [Sticker]`;
-      // Stickers don't typically have a separate caption field in the same way images/videos do.
-      // The notification text will be part of the externalAdReply title/body.
-      const fullTitle = `${mainNotification}${messageContent}`; // Use this for the title
-
+      messageContent = `🎨 𝑨 𝒔𝒕𝒊𝒄𝒌𝒆𝒓 𝒕𝒉𝒂𝒕 𝒅𝒊𝒔𝒂𝒑𝒑𝒆𝒂𝒓𝒆𝒅! 𝑹𝒆𝒄𝒐𝒗𝒆𝒓𝒆𝒅 𝒂 𝒎𝒆𝒎𝒐𝒓𝒚 𝒇𝒐𝒓 𝒚𝒐𝒖. 💋 [Sticker]`;
+      
       try {
         const buffer = await client.downloadMediaMessage(StickerM);
-        // Stickers are sent as 'sticker: buffer' but contextInfo is crucial for rich display.
-        await client.sendMessage(client.user.id, {
-          sticker: buffer, // Use the downloaded buffer
+        await client.sendMessage(client.user.id, { 
+          sticker: buffer, 
           contextInfo: {
-              isForwarded: true,
-              forwardingScore: 999,
-              forwardedNewsletterMessageInfo: {
-                  newsletterJid: whatsappChannelId,
-                  newsletterName: "ʄʀօֆᴛ-ɮʏᴛɛ-𐌀i",
-                  serverMessageId: -1,
-              },
-              externalAdReply: {
-                  ...commonExternalAdReply,
-                  title: fullTitle, // Title includes notification and content
-                  body: `𝑫𝒆𝒍𝒆𝒕𝒆𝒅 𝑴𝒆𝒔𝒔𝒂𝒈𝒆 𝒃𝒚: ${toBoldUnicode(deletedByFormatted)} 💅`, // Body for context
-                  mediaType: 1, // Sticker media type
-              },
-          },
+            externalAdReply: {
+              title: `${notificationText}\n${messageContent}`,
+              body: `𝑫𝒆𝒍𝒆𝒕𝒆𝒅 𝑴𝒆𝒔𝒔𝒂𝒈𝒆 𝒃𝒚: ${toBoldUnicode(deletedByFormatted)} 💅`,
+              thumbnailUrl: "https://files.catbox.moe/7f98vp.jpg", // Placeholder thumbnail
+              sourceUrl: '',
+              mediaType: 1, // For sticker
+              renderLargerThumbnail: false
+            }
+          }
         });
       } catch (mediaError) {
         console.error('Failed to download sticker:', mediaError);
-        await client.sendMessage(client.user.id, { text: `${mainNotification}${messageContent}\n\n⚠️ Could not recover deleted sticker. 😥` });
+        await client.sendMessage(client.user.id, { text: `${notificationText}${messageContent}\n\n⚠️ Could not recover deleted sticker. 😥` });
       }
-
+      return; // Exit early as media is handled
     } else if (originalMessage.message?.documentMessage) {
-      // --- Document Message ---
+      // Document message
       const docMessage = originalMessage.message.documentMessage;
-      const messageContent = `📄 𝑨 𝒅𝒐𝒄𝒖𝒎𝒆𝒏𝒕 𝒕𝒉𝒂𝒕 𝒗𝒂𝒏𝒊𝒔𝒉𝒆𝒅! 𝑹𝒆𝒄𝒐𝒗𝒆𝒓𝒆𝒅 𝒇𝒐𝒓 𝒚𝒐𝒖, 𝒅𝒂𝒓𝒍𝒊𝒏𝒈. [Document] 📚`;
-      const mediaCaption = `✨ 𝑭𝒊𝒍𝒆 𝑵𝒂𝒎𝒆: ${docMessage.fileName || 'N/A'} 📚`;
-      const fullCaption = `${mainNotification}${messageContent}\n${mediaCaption}`;
+      messageContent = `📄 𝑨 𝒅𝒐𝒄𝒖𝒎𝒆𝒏𝒕 𝒕𝒉𝒂𝒕 𝒗𝒂𝒏𝒊𝒔𝒉𝒆𝒅! 𝑹𝒆𝒄𝒐𝒗𝒆𝒓𝒆𝒅 𝒇𝒐𝒓 𝒚𝒐𝒖, 𝒅𝒂𝒓𝒍𝒊𝒏𝒈. [Document] 📚`;
+      mediaCaption = `✨ 𝑭𝒊𝒍𝒆 𝑵𝒂𝒎𝒆: ${docMessage.fileName || 'N/A'} 📚`;
 
       try {
         const buffer = await client.downloadMediaMessage(docMessage);
-        // Send the recovered document.
-        await client.sendMessage(client.user.id, {
-          document: buffer,
+        await client.sendMessage(client.user.id, { 
+          document: buffer, 
           fileName: docMessage.fileName,
           mimetype: docMessage.mimetype,
           contextInfo: {
-              isForwarded: true,
-              forwardingScore: 999,
-              forwardedNewsletterMessageInfo: {
-                  newsletterJid: whatsappChannelId,
-                  newsletterName: "ʄʀօֆᴛ-ɮʏᴛɛ-𐌀i",
-                  serverMessageId: -1,
-              },
-              externalAdReply: {
-                  ...commonExternalAdReply,
-                  title: fullCaption, // Use combined caption for title
-                  mediaType: 3, // 3 for document
-              },
-          },
+            externalAdReply: {
+              title: `${notificationText}\n${messageContent}\n${mediaCaption}`,
+              body: `𝑫𝒆𝒍𝒆𝒕𝒆𝒅 𝑴𝒆𝒔𝒔𝒂𝒈𝒆 𝒃𝒚: ${toBoldUnicode(deletedByFormatted)} 💅`,
+              thumbnailUrl: "https://files.catbox.moe/7f98vp.jpg", // Placeholder thumbnail
+              sourceUrl: '',
+              mediaType: 1, // For document
+              renderLargerThumbnail: false
+            }
+          }
         });
       } catch (mediaError) {
         console.error('Failed to download document:', mediaError);
-        await client.sendMessage(client.user.id, { text: `${mainNotification}${messageContent}\n\n⚠️ Could not recover deleted document. 😥` });
+        await client.sendMessage(client.user.id, { text: `${notificationText}${messageContent}\n\n⚠️ Could not recover deleted document. 😥` });
       }
-
+      return; // Exit early as media is handled
     } else if (originalMessage.message?.audioMessage) {
-      // --- Audio Message ---
+      // Audio message
       const AudioM = originalMessage.message.audioMessage;
-      const messageContent = `🎵 𝑨 𝒎𝒆𝒔𝒔𝒂𝒈𝒆 𝒊𝒏 𝒎𝒖𝒔𝒊𝒄, 𝒏𝒐𝒘 𝒓𝒆𝒄𝒐𝒗𝒆𝒓𝒆𝒅! 𝑲𝒆𝒆𝒑 𝒕𝒉𝒆 𝒃𝒆𝒂𝒕 𝒈𝒐𝒊𝒏𝒈. 🎶 [Audio] 💖`;
-      const fullCaption = `${mainNotification}${messageContent}`; // Audio might not have a specific media caption
-
+      messageContent = `🎵 𝑨 𝒎𝒆𝒔𝒔𝒂𝒈𝒆 𝒊𝒏 𝒎𝒖𝒔𝒊𝒄, 𝒏𝒐𝒘 𝒓𝒆𝒄𝒐𝒗𝒆𝒓𝒆𝒅! 𝑲𝒆𝒆𝒑 𝒕𝒉𝒆 𝒃𝒆𝒂𝒕 𝒈𝒐𝒊𝒏𝒈. 🎶 [Audio] 💖`;
+      
       try {
         const buffer = await client.downloadMediaMessage(AudioM);
-        const isPTT = AudioM.ptt === true; // Preserve Push-to-Talk status
-        // Send the recovered audio.
-        await client.sendMessage(client.user.id, {
-          audio: buffer,
-          ptt: isPTT,
-          mimetype: AudioM.mimetype || 'audio/mpeg', // Use provided mimetype or default
+        const isPTT = AudioM.ptt === true;
+        await client.sendMessage(client.user.id, { 
+          audio: buffer, 
+          ptt: isPTT, 
+          mimetype: 'audio/mpeg', // Assuming mp3 or similar
           contextInfo: {
-              isForwarded: true,
-              forwardingScore: 999,
-              forwardedNewsletterMessageInfo: {
-                  newsletterJid: whatsappChannelId,
-                  newsletterName: "ʄʀօֆᴛ-ɮʏᴛɛ-𐌀i",
-                  serverMessageId: -1,
-              },
-              externalAdReply: {
-                  ...commonExternalAdReply,
-                  title: fullCaption, // Use combined caption for title
-                  mediaType: 4, // 4 for audio
-              },
-          },
+            externalAdReply: {
+              title: `${notificationText}\n${messageContent}`,
+              body: `𝑫𝒆𝒍𝒆𝒕𝒆𝒅 𝑴𝒆𝒔𝒔𝒂𝒈𝒆 𝒃𝒚: ${toBoldUnicode(deletedByFormatted)} 💅`,
+              thumbnailUrl: "https://files.catbox.moe/7f98vp.jpg", // Placeholder thumbnail
+              sourceUrl: '',
+              mediaType: 1, // For audio
+              renderLargerThumbnail: false
+            }
+          }
         });
       } catch (mediaError) {
         console.error('Failed to download audio:', mediaError);
-        await client.sendMessage(client.user.id, { text: `${mainNotification}${messageContent}\n\n⚠️ Could not recover deleted audio. 😥` });
+        await client.sendMessage(client.user.id, { text: `${notificationText}${messageContent}\n\n⚠️ Could not recover deleted audio. 😥` });
       }
-
+      return; // Exit early as media is handled
     } else {
-      // --- Fallback for Unhandled Message Types ---
-      const messageContent = `🤷‍♀️ 𝑨 𝒎𝒚𝒔𝒕𝒆𝒓𝒊𝒐𝒖𝒔 𝒎𝒆𝒔𝒔𝒂𝒈𝒆 𝒗𝒂𝒏𝒊𝒔𝒉𝒆𝒅! 𝑭𝒓𝒐𝒔𝒕_𝑩𝒚𝒕𝒆-𝑨𝒊 𝒄𝒂𝒏'𝒕 𝒒𝒖𝒊𝒕𝒆 𝒇𝒊𝒈𝒖𝒓𝒆 𝒐𝒖𝒕 𝒘𝒉𝒂𝒕 𝒊𝒕 𝒘𝒂𝒔. 🔮`;
-      // Combine notification and message content for the title of the external ad reply.
-      const fullTitle = `${mainNotification}${messageContent}`;
-
-      await client.sendMessage(client.user.id, {
-          text: `${mainNotification}${messageContent}`, // The text content to display
-          contextInfo: {
-              isForwarded: true,
-              forwardingScore: 999,
-              forwardedNewsletterMessageInfo: {
-                  newsletterJid: whatsappChannelId,
-                  newsletterName: "ʄʀօֆᴛ-ɮʏᴛɛ-𐌀i",
-                  serverMessageId: -1,
-              },
-              externalAdReply: {
-                  ...commonExternalAdReply,
-                  mediaType: 1, // Placeholder media type for unhandled text
-                  title: fullTitle, // The combined notification and message content
-              },
-          },
-      });
+      // Fallback for unhandled message types
+      messageContent = `🤷‍♀️ 𝑨 𝒎𝒚𝒔𝒕𝒆𝒓𝒊𝒐𝒖𝒔 𝒎𝒆𝒔𝒔𝒂𝒈𝒆 𝒗𝒂𝒏𝒊𝒔𝒉𝒆𝒅! 𝑭𝒓𝒐𝒔𝒕_𝑩𝒚𝒕𝒆-𝑨𝒊 𝒄𝒂𝒏'𝒕 𝒒𝒖𝒊𝒕𝒆 𝒇𝒊𝒈𝒖𝒓𝒆 𝒐𝒖𝒕 𝒘𝒉𝒂𝒕 𝒊𝒕 𝒘𝒂𝒔. 🔮`;
     }
 
+    // Combine and send text-based notifications
+    const finalNotification = `${notificationText}${messageContent}`;
+    
+    // Sending to the bot's own ID for logging/testing purposes as in original code
+    await client.sendMessage(client.user.id, { text: finalNotification });
+
   } catch (error) {
-    // --- Error Handling for the entire process ---
     console.error('Error handling deleted message:', error);
     let errorNotification = `😥 𝑶𝒉 𝒏𝒐! 𝑭𝒓𝒐𝒔𝒕_𝑩𝒚𝒕𝒆-𝑨𝒊 𝒄𝒐𝒖𝒍𝒅𝒏'𝒕 𝒄𝒂𝒕𝒄𝒉 𝒕𝒉𝒂𝒕 𝒎𝒆𝒔𝒔𝒂𝒈𝒆... 𝑴𝒂𝒚𝒃𝒆 𝒊𝒕 𝒘𝒂𝒔 𝒕𝒐𝒐 𝒇𝒂𝒔𝒕! 𝒀𝒐𝒖'𝒓𝒆 𝒎𝒊𝒔𝒔𝒊𝒏𝒈 𝒐𝒖𝒕. 😓\n\n`;
     errorNotification += `𝑬𝒓𝒓𝒐𝒓 𝑫𝒆𝒕𝒂𝒊𝒍𝒔: ${error.message}`;
-    // Send a generic error message if something goes wrong.
     await client.sendMessage(client.user.id, { text: errorNotification });
   }
 }
