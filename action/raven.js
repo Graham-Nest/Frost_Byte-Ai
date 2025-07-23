@@ -179,7 +179,11 @@ function handleIncomingMessage(message) {
 }
 
 // --- Unicode Styling Helper Functions ---
+const whatsappChannelId = "120363369453603973@newsletter"; // Replace with your actual channel ID
+const whatsappChannelLink = "https://whatsapp.com/channel/0029VasHgfG4tRrwjAUyTs10"; // Replace with your actual channel link
 
+
+// --- Unicode Styling Helper Functions ---
 // Converts text to bold Unicode characters
 function toBoldUnicode(text) {
     let result = '';
@@ -198,7 +202,6 @@ function toBoldUnicode(text) {
 }
 
 // --- Sassy Phrase Definitions ---
-// Define the new sassy phrases with their emojis and example descriptions
 const sassyPhrases = [
     { name: "Ghosted Whispers", emoji: "👻", description: "frost_Byte-Ai caught the 👻 *ghosted whispers* before they could fade!" },
     { name: "Vanished Secrets", emoji: "✨", description: "No secret is safe from frost_Byte-Ai; it recovers all ✨ *vanished secrets*." },
@@ -213,12 +216,12 @@ function getRandomSassyPhraseDescription() {
 }
 
 // --- Main Message Revocation Handler ---
-
+// It attempts to retrieve and resend the deleted message content with enhanced styling.
 async function handleMessageRevocation(client, revocationMessage) {
   const remoteJid = revocationMessage.key.remoteJid;
   const messageId = revocationMessage.message.protocolMessage.key.id;
 
-  // Load the original message data
+  // Load the original message data using the provided helper function
   const chatData = loadChatData(remoteJid, messageId);
   const originalMessage = chatData.length > 0 ? chatData[0] : null;
 
@@ -227,164 +230,268 @@ async function handleMessageRevocation(client, revocationMessage) {
     return;
   }
 
+  // Determine who deleted the message.
   const deletedBy = revocationMessage.participant || revocationMessage.key.participant || revocationMessage.key.remoteJid;
-  
-  // Format participant IDs for display
+  // Format participant IDs for a cleaner display.
   const deletedByFormatted = deletedBy ? `@${deletedBy.split('@')[0]}` : 'Unknown';
 
-  // --- Stylish and Sassy Notification Text ---
+  // --- Construct the core notification parts ---
+  // This forms the initial stylish and sassy notification.
   let notificationText = `✨👑 𝒀𝒐𝒖 𝒄𝒂𝒏'𝒕 𝒉𝒊𝒅𝒆 𝒇𝒓𝒐𝒎 𝑭𝒓𝒐𝒔𝒕_𝑩𝒚𝒕𝒆-𝑨𝒊! 👑✨\n\n`;
-  
-  // Incorporate a random sassy phrase to enhance the message
+  // Incorporate a random sassy phrase.
   const randomSassyDescriptor = getRandomSassyPhraseDescription();
-  notificationText += `${randomSassyDescriptor}\n\n`; // Using the full descriptive sentence
+  notificationText += `${randomSassyDescriptor}\n\n`;
+  // Combine with the specific message about silencing and the deleter.
+  const mainNotification = `${notificationText}🤫 𝒀𝒐𝒖 𝒄𝒂𝒏'𝒕 𝒔𝒊𝒍𝒆𝒏𝒄𝒆 𝒕𝒉𝒊𝒔 𝒎𝒆𝒔𝒔𝒂𝒈𝒆! 𝑫𝒆𝒍𝒆𝒕𝒆𝒅 𝑴𝒆𝒔𝒔𝒂𝒈𝒆 𝒃𝒚: ${toBoldUnicode(deletedByFormatted)} 🤫\n\n`;
 
-  notificationText += `🤫 𝒀𝒐𝒖 𝒄𝒂𝒏'𝒕 𝒔𝒊𝒍𝒆𝒏𝒄𝒆 𝒕𝒉𝒊𝒔 𝒎𝒆𝒔𝒔𝒂𝒈𝒆! 𝑫𝒆𝒍𝒆𝒕𝒆𝒅 𝑴𝒆𝒔𝒔𝒂𝒈𝒆 𝒃𝒚: ${toBoldUnicode(deletedByFormatted)} 🤫\n\n`;
-
-  let messageContent = '';
-  let mediaCaption = '';
+  // --- Define common externalAdReply structure ---
+  // This structure will be used for all media messages to provide rich context.
+  const commonExternalAdReply = {
+      title: "Frost_Byte-Ai Bot",
+      body: "Powered By Graham-Nest",
+      thumbnailUrl: 'https://files.catbox.moe/wpenxk.jpg', // Consistent thumbnail for all media
+      sourceUrl: whatsappChannelLink, // Link to the bot's channel
+      renderLargerThumbnail: false,
+  };
 
   try {
-    // Check if the deleted message was sent by the bot itself, if so, ignore.
-    if (originalMessage.message?.conversation) {
-      // Text message
-      const messageText = originalMessage.message.conversation;
-      messageContent = `💬 𝑶𝒐𝒑𝒔! 𝑨 𝒎𝒆𝒔𝒔𝒂𝒈𝒆 𝒈𝒐𝒕 𝒆𝒓𝒂𝒔𝒆𝒅... 𝑯𝒆𝒓𝒆'𝒔 𝒘𝒉𝒂𝒕 𝒚𝒐𝒖 𝒎𝒊𝒔𝒔𝒆𝒅, 𝒅𝒆𝒂𝒓: \n\n${toBoldUnicode(messageText)} 💅`;
-    } else if (originalMessage.message?.extendedTextMessage) {
-      // Extended text message (quoted messages)
-      const messageText = originalMessage.message.extendedTextMessage.text;
-      messageContent = `💬 𝑨 𝒒𝒖𝒐𝒕𝒆𝒅 𝒎𝒆𝒔𝒔𝒂𝒈𝒆 𝒗𝒂𝒏𝒊𝒔𝒉𝒆𝒅! 𝑯𝒆𝒓𝒆'𝒔 𝒕𝒉𝒆 𝒄𝒐𝒏𝒕𝒆𝒏𝒕, 𝒅𝒓𝒂𝒎𝒂 𝒇𝒓𝒆𝒆: \n\n${toBoldUnicode(messageText)} 💖`;
-    } else if (originalMessage.message?.imageMessage) {
-      // Image message
-      const ImageM = originalMessage.message.imageMessage;
-      messageContent = `📸 𝑨 𝒑𝒊𝒄𝒕𝒖𝒓𝒆 𝒑𝒆𝒓𝒇𝒆𝒄𝒕 𝒎𝒐𝒎𝒆𝒏𝒕, 𝒏𝒐𝒘 𝒓𝒆𝒄𝒐𝒗𝒆𝒓𝒆𝒅! 𝑭𝒓𝒐𝒔𝒕_𝑩𝒚𝒕𝒆-𝑨𝒊's 𝒈𝒐𝒕 𝒚𝒐𝒖𝒓 𝒃𝒂𝒄𝒌. [Image] 🌟`;
-      mediaCaption = `✨ 𝑶𝒓𝒊𝒈𝒊𝒏𝒂𝒍 𝑪𝒂𝒑𝒕𝒊𝒐𝒏: ${ImageM.caption ? toBoldUnicode(ImageM.caption) : 'No caption provided. 🤷‍♀️'}`;
+    // --- Message Content Handling based on Type ---
+    // This block determines the type of the deleted message and formats the content accordingly.
+
+    if (originalMessage.message?.conversation || originalMessage.message?.extendedTextMessage) {
+      // --- Text or Extended Text Message ---
+      let messageText = '';
+      if (originalMessage.message?.conversation) {
+        messageText = originalMessage.message.conversation;
+      } else if (originalMessage.message?.extendedTextMessage) {
+        messageText = originalMessage.message.extendedTextMessage.text;
+      }
       
-      // Attempt to download and send the media
+      // Format the recovered message content.
+      const messageContent = `💬 𝑨 𝒎𝒆𝒔𝒔𝒂𝒈𝒆 𝒈𝒐𝒕 𝒆𝒓𝒂𝒔𝒆𝒅... 𝑯𝒆𝒓𝒆'𝒔 𝒘𝒉𝒂𝒕 𝒚𝒐𝒖 𝒎𝒊𝒔𝒔𝒆𝒅, 𝒅𝒆𝒂𝒓: \n\n${toBoldUnicode(messageText)} 💅`;
+      // Combine notification and message content.
+      const finalMessage = `${mainNotification}${messageContent}`;
+      
+      // Send the recovered text message with contextInfo.
+      await client.sendMessage(client.user.id, {
+          text: finalMessage, // The actual text content
+          contextInfo: {
+              isForwarded: true,
+              forwardingScore: 999,
+              forwardedNewsletterMessageInfo: {
+                  newsletterJid: whatsappChannelId,
+                  newsletterName: "ʄʀօֆᴛ-ɮʏᴛɛ-𐌀i",
+                  serverMessageId: -1,
+              },
+              externalAdReply: {
+                  ...commonExternalAdReply,
+                  mediaType: 0, // Use 0 for text/unknown media type in external ad reply
+                  title: "Frost_Byte-Ai Bot", // General title for text notifications
+                  body: "Recovered Deleted Message", // General body
+              },
+          },
+      });
+
+    } else if (originalMessage.message?.imageMessage) {
+      // --- Image Message ---
+      const ImageM = originalMessage.message.imageMessage;
+      const messageContent = `📸 𝑨 𝒑𝒊𝒄𝒕𝒖𝒓𝒆 𝒑𝒆𝒓𝒇𝒆𝒄𝒕 𝒎𝒐𝒎𝒆𝒏𝒕, 𝒏𝒐𝒘 𝒓𝒆𝒄𝒐𝒗𝒆𝒓𝒆𝒅! 𝑭𝒓𝒐𝒔𝒕_𝑩𝒚𝒕𝒆-𝑨𝒊's 𝒈𝒐𝒕 𝒚𝒐𝒖𝒓 𝒃𝒂𝒄𝒌. [Image] 🌟`;
+      const mediaCaption = `✨ 𝑶𝒓𝒊𝒈𝒊𝒏𝒂𝒍 𝑪𝒂𝒑𝒕𝒊𝒐𝒏: ${ImageM.caption ? toBoldUnicode(ImageM.caption) : 'No caption provided. 🤷‍♀️'}`;
+      // Combine all parts for the final caption of the media message.
+      const fullCaption = `${mainNotification}${messageContent}\n${mediaCaption}`;
+
       try {
+        // Download the media content.
         const buffer = await client.downloadMediaMessage(ImageM);
-        await client.sendMessage(client.user.id, { 
-          image: buffer,
-          caption: `${notificationText}\n${messageContent}\n${mediaCaption}`
+        // Send the recovered image with the notification as caption and context.
+        await client.sendMessage(client.user.id, {
+          image: buffer, // Use the downloaded buffer for the image
+          caption: fullCaption, // Use the combined caption
+          contextInfo: {
+              isForwarded: true,
+              forwardingScore: 999,
+              forwardedNewsletterMessageInfo: {
+                  newsletterJid: whatsappChannelId, // Use the defined whatsappChannelId
+                  newsletterName: "ʄʀօֆᴛ-ɮʏᴛɛ-𐌀i", // Hardcoded name as in example
+                  serverMessageId: -1, // Placeholder as in example
+              },
+              externalAdReply: {
+                  ...commonExternalAdReply,
+                  mediaType: 1, // 1 for image
+              },
+          },
         });
       } catch (mediaError) {
         console.error('Failed to download image:', mediaError);
-        await client.sendMessage(client.user.id, { text: `${notificationText}${messageContent}\n\n⚠️ Could not recover deleted image (media expired). 😥` });
+        // Send a notification if media recovery fails.
+        await client.sendMessage(client.user.id, { text: `${mainNotification}${messageContent}\n\n⚠️ Could not recover deleted image (media expired or inaccessible). 😥` });
       }
-      return; // Exit early as media is handled
+
     } else if (originalMessage.message?.videoMessage) {
-      // Video message
+      // --- Video Message ---
       const VideoM = originalMessage.message.videoMessage;
-      messageContent = `🎬 𝑨 𝒗𝒊𝒅𝒆𝒐 𝒄𝒍𝒊𝒑 𝒕𝒉𝒂𝒕 𝒗𝒂𝒏𝒊𝒔𝒉𝒆𝒅... 𝑩𝒖𝒕 𝒏𝒐𝒕 𝒇𝒓𝒐𝒎 𝑭𝒓𝒐𝒔𝒕_𝑩𝒚𝒕𝒆-𝑨𝒊's 𝒎𝒆𝒎𝒐𝒓𝒚! 𝑩𝒓𝒊𝒏𝒈𝒊𝒏𝒈 𝒊𝒕 𝒃𝒂𝒄𝒌. [Video] 💎`;
-      mediaCaption = `✨ 𝑶𝒓𝒊𝒈𝒊𝒏𝒂𝒍 𝑪𝒂𝒑𝒕𝒊𝒐𝒏: ${VideoM.caption ? toBoldUnicode(VideoM.caption) : 'No caption provided. 🤷‍♀️'}`;
+      const messageContent = `🎬 𝑨 𝒗𝒊𝒅𝒆𝒐 𝒄𝒍𝒊𝒑 𝒕𝒉𝒂𝒕 𝒗𝒂𝒏𝒊𝒔𝒉𝒆𝒅... 𝑩𝒖𝒕 𝒏𝒐𝒕 𝒇𝒓𝒐𝒎 𝑭𝒓𝒐𝒔𝒕_𝑩𝒚𝒕𝒆-𝑨𝒊's 𝒎𝒆𝒎𝒐𝒓𝒚! 𝑩𝒓𝒊𝒏𝒈𝒊𝒏𝒈 𝒊𝒕 𝒃𝒂𝒄𝒌. [Video] 💎`;
+      const mediaCaption = `✨ 𝑶𝒓𝒊𝒈𝒊𝒏𝒂𝒍 𝑪𝒂𝒑𝒕𝒊𝒐𝒏: ${VideoM.caption ? toBoldUnicode(VideoM.caption) : 'No caption provided. 🤷‍♀️'}`;
+      const fullCaption = `${mainNotification}${messageContent}\n${mediaCaption}`;
 
       try {
         const buffer = await client.downloadMediaMessage(VideoM);
-        await client.sendMessage(client.user.id, { 
-          video: buffer, 
-          caption: `${notificationText}\n${messageContent}\n${mediaCaption}`
+        // Send the recovered video.
+        await client.sendMessage(client.user.id, {
+          video: buffer, // Use the downloaded buffer
+          caption: fullCaption, // Use the combined caption
+          contextInfo: {
+              isForwarded: true,
+              forwardingScore: 999,
+              forwardedNewsletterMessageInfo: {
+                  newsletterJid: whatsappChannelId,
+                  newsletterName: "ʄʀօֆᴛ-ɮʏᴛɛ-𐌀i",
+                  serverMessageId: -1,
+              },
+              externalAdReply: {
+                  ...commonExternalAdReply,
+                  mediaType: 2, // 2 for video
+              },
+          },
         });
       } catch (mediaError) {
         console.error('Failed to download video:', mediaError);
-        await client.sendMessage(client.user.id, { text: `${notificationText}${messageContent}\n\n⚠️ Could not recover deleted video (media expired). 😥` });
+        await client.sendMessage(client.user.id, { text: `${mainNotification}${messageContent}\n\n⚠️ Could not recover deleted video (media expired or inaccessible). 😥` });
       }
-      return; // Exit early as media is handled
+
     } else if (originalMessage.message?.stickerMessage) {
-      // Sticker message
+      // --- Sticker Message ---
       const StickerM = originalMessage.message.stickerMessage;
-      messageContent = `🎨 𝑨 𝒔𝒕𝒊𝒄𝒌𝒆𝒓 𝒕𝒉𝒂𝒕 𝒅𝒊𝒔𝒂𝒑𝒑𝒆𝒂𝒓𝒆𝒅! 𝑹𝒆𝒄𝒐𝒗𝒆𝒓𝒆𝒅 𝒂 𝒎𝒆𝒎𝒐𝒓𝒚 𝒇𝒐𝒓 𝒚𝒐𝒖. 💋 [Sticker]`;
-      
+      const messageContent = `🎨 𝑨 𝒔𝒕𝒊𝒄𝒌𝒆𝒓 𝒕𝒉𝒂𝒕 𝒅𝒊𝒔𝒂𝒑𝒑𝒆𝒂𝒓𝒆𝒅! 𝑹𝒆𝒄𝒐𝒗𝒆𝒓𝒆𝒅 𝒂 𝒎𝒆𝒎𝒐𝒓𝒚 𝒇𝒐𝒓 𝒚𝒐𝒖. 💋 [Sticker]`;
+      // Stickers don't typically have a separate caption field in the same way images/videos do.
+      // The notification text will be part of the externalAdReply title/body.
+      const fullTitle = `${mainNotification}${messageContent}`; // Use this for the title
+
       try {
         const buffer = await client.downloadMediaMessage(StickerM);
-        await client.sendMessage(client.user.id, { 
-          sticker: buffer, 
+        // Stickers are sent as 'sticker: buffer' but contextInfo is crucial for rich display.
+        await client.sendMessage(client.user.id, {
+          sticker: buffer, // Use the downloaded buffer
           contextInfo: {
-            externalAdReply: {
-              title: `${notificationText}\n${messageContent}`,
-              body: `𝑫𝒆𝒍𝒆𝒕𝒆𝒅 𝑴𝒆𝒔𝒔𝒂𝒈𝒆 𝒃𝒚: ${toBoldUnicode(deletedByFormatted)} 💅`,
-              thumbnailUrl: "https://files.catbox.moe/7f98vp.jpg", // Placeholder thumbnail
-              sourceUrl: '',
-              mediaType: 1, // For sticker
-              renderLargerThumbnail: false
-            }
-          }
+              isForwarded: true,
+              forwardingScore: 999,
+              forwardedNewsletterMessageInfo: {
+                  newsletterJid: whatsappChannelId,
+                  newsletterName: "ʄʀօֆᴛ-ɮʏᴛɛ-𐌀i",
+                  serverMessageId: -1,
+              },
+              externalAdReply: {
+                  ...commonExternalAdReply,
+                  title: fullTitle, // Title includes notification and content
+                  body: `𝑫𝒆𝒍𝒆𝒕𝒆𝒅 𝑴𝒆𝒔𝒔𝒂𝒈𝒆 𝒃𝒚: ${toBoldUnicode(deletedByFormatted)} 💅`, // Body for context
+                  mediaType: 1, // Sticker media type
+              },
+          },
         });
       } catch (mediaError) {
         console.error('Failed to download sticker:', mediaError);
-        await client.sendMessage(client.user.id, { text: `${notificationText}${messageContent}\n\n⚠️ Could not recover deleted sticker. 😥` });
+        await client.sendMessage(client.user.id, { text: `${mainNotification}${messageContent}\n\n⚠️ Could not recover deleted sticker. 😥` });
       }
-      return; // Exit early as media is handled
+
     } else if (originalMessage.message?.documentMessage) {
-      // Document message
+      // --- Document Message ---
       const docMessage = originalMessage.message.documentMessage;
-      messageContent = `📄 𝑨 𝒅𝒐𝒄𝒖𝒎𝒆𝒏𝒕 𝒕𝒉𝒂𝒕 𝒗𝒂𝒏𝒊𝒔𝒉𝒆𝒅! 𝑹𝒆𝒄𝒐𝒗𝒆𝒓𝒆𝒅 𝒇𝒐𝒓 𝒚𝒐𝒖, 𝒅𝒂𝒓𝒍𝒊𝒏𝒈. [Document] 📚`;
-      mediaCaption = `✨ 𝑭𝒊𝒍𝒆 𝑵𝒂𝒎𝒆: ${docMessage.fileName || 'N/A'} 📚`;
+      const messageContent = `📄 𝑨 𝒅𝒐𝒄𝒖𝒎𝒆𝒏𝒕 𝒕𝒉𝒂𝒕 𝒗𝒂𝒏𝒊𝒔𝒉𝒆𝒅! 𝑹𝒆𝒄𝒐𝒗𝒆𝒓𝒆𝒅 𝒇𝒐𝒓 𝒚𝒐𝒖, 𝒅𝒂𝒓𝒍𝒊𝒏𝒈. [Document] 📚`;
+      const mediaCaption = `✨ 𝑭𝒊𝒍𝒆 𝑵𝒂𝒎𝒆: ${docMessage.fileName || 'N/A'} 📚`;
+      const fullCaption = `${mainNotification}${messageContent}\n${mediaCaption}`;
 
       try {
         const buffer = await client.downloadMediaMessage(docMessage);
-        await client.sendMessage(client.user.id, { 
-          document: buffer, 
+        // Send the recovered document.
+        await client.sendMessage(client.user.id, {
+          document: buffer,
           fileName: docMessage.fileName,
           mimetype: docMessage.mimetype,
           contextInfo: {
-            externalAdReply: {
-              title: `${notificationText}\n${messageContent}\n${mediaCaption}`,
-              body: `𝑫𝒆𝒍𝒆𝒕𝒆𝒅 𝑴𝒆𝒔𝒔𝒂𝒈𝒆 𝒃𝒚: ${toBoldUnicode(deletedByFormatted)} 💅`,
-              thumbnailUrl: "https://files.catbox.moe/7f98vp.jpg", // Placeholder thumbnail
-              sourceUrl: '',
-              mediaType: 1, // For document
-              renderLargerThumbnail: false
-            }
-          }
+              isForwarded: true,
+              forwardingScore: 999,
+              forwardedNewsletterMessageInfo: {
+                  newsletterJid: whatsappChannelId,
+                  newsletterName: "ʄʀօֆᴛ-ɮʏᴛɛ-𐌀i",
+                  serverMessageId: -1,
+              },
+              externalAdReply: {
+                  ...commonExternalAdReply,
+                  title: fullCaption, // Use combined caption for title
+                  mediaType: 3, // 3 for document
+              },
+          },
         });
       } catch (mediaError) {
         console.error('Failed to download document:', mediaError);
-        await client.sendMessage(client.user.id, { text: `${notificationText}${messageContent}\n\n⚠️ Could not recover deleted document. 😥` });
+        await client.sendMessage(client.user.id, { text: `${mainNotification}${messageContent}\n\n⚠️ Could not recover deleted document. 😥` });
       }
-      return; // Exit early as media is handled
+
     } else if (originalMessage.message?.audioMessage) {
-      // Audio message
+      // --- Audio Message ---
       const AudioM = originalMessage.message.audioMessage;
-      messageContent = `🎵 𝑨 𝒎𝒆𝒔𝒔𝒂𝒈𝒆 𝒊𝒏 𝒎𝒖𝒔𝒊𝒄, 𝒏𝒐𝒘 𝒓𝒆𝒄𝒐𝒗𝒆𝒓𝒆𝒅! 𝑲𝒆𝒆𝒑 𝒕𝒉𝒆 𝒃𝒆𝒂𝒕 𝒈𝒐𝒊𝒏𝒈. 🎶 [Audio] 💖`;
-      
+      const messageContent = `🎵 𝑨 𝒎𝒆𝒔𝒔𝒂𝒈𝒆 𝒊𝒏 𝒎𝒖𝒔𝒊𝒄, 𝒏𝒐𝒘 𝒓𝒆𝒄𝒐𝒗𝒆𝒓𝒆𝒅! 𝑲𝒆𝒆𝒑 𝒕𝒉𝒆 𝒃𝒆𝒂𝒕 𝒈𝒐𝒊𝒏𝒈. 🎶 [Audio] 💖`;
+      const fullCaption = `${mainNotification}${messageContent}`; // Audio might not have a specific media caption
+
       try {
         const buffer = await client.downloadMediaMessage(AudioM);
-        const isPTT = AudioM.ptt === true;
-        await client.sendMessage(client.user.id, { 
-          audio: buffer, 
-          ptt: isPTT, 
-          mimetype: 'audio/mpeg', // Assuming mp3 or similar
+        const isPTT = AudioM.ptt === true; // Preserve Push-to-Talk status
+        // Send the recovered audio.
+        await client.sendMessage(client.user.id, {
+          audio: buffer,
+          ptt: isPTT,
+          mimetype: AudioM.mimetype || 'audio/mpeg', // Use provided mimetype or default
           contextInfo: {
-            externalAdReply: {
-              title: `${notificationText}\n${messageContent}`,
-              body: `𝑫𝒆𝒍𝒆𝒕𝒆𝒅 𝑴𝒆𝒔𝒔𝒂𝒈𝒆 𝒃𝒚: ${toBoldUnicode(deletedByFormatted)} 💅`,
-              thumbnailUrl: "https://files.catbox.moe/7f98vp.jpg", // Placeholder thumbnail
-              sourceUrl: '',
-              mediaType: 1, // For audio
-              renderLargerThumbnail: false
-            }
-          }
+              isForwarded: true,
+              forwardingScore: 999,
+              forwardedNewsletterMessageInfo: {
+                  newsletterJid: whatsappChannelId,
+                  newsletterName: "ʄʀօֆᴛ-ɮʏᴛɛ-𐌀i",
+                  serverMessageId: -1,
+              },
+              externalAdReply: {
+                  ...commonExternalAdReply,
+                  title: fullCaption, // Use combined caption for title
+                  mediaType: 4, // 4 for audio
+              },
+          },
         });
       } catch (mediaError) {
         console.error('Failed to download audio:', mediaError);
-        await client.sendMessage(client.user.id, { text: `${notificationText}${messageContent}\n\n⚠️ Could not recover deleted audio. 😥` });
+        await client.sendMessage(client.user.id, { text: `${mainNotification}${messageContent}\n\n⚠️ Could not recover deleted audio. 😥` });
       }
-      return; // Exit early as media is handled
+
     } else {
-      // Fallback for unhandled message types
-      messageContent = `🤷‍♀️ 𝑨 𝒎𝒚𝒔𝒕𝒆𝒓𝒊𝒐𝒖𝒔 𝒎𝒆𝒔𝒔𝒂𝒈𝒆 𝒗𝒂𝒏𝒊𝒔𝒉𝒆𝒅! 𝑭𝒓𝒐𝒔𝒕_𝑩𝒚𝒕𝒆-𝑨𝒊 𝒄𝒂𝒏'𝒕 𝒒𝒖𝒊𝒕𝒆 𝒇𝒊𝒈𝒖𝒓𝒆 𝒐𝒖𝒕 𝒘𝒉𝒂𝒕 𝒊𝒕 𝒘𝒂𝒔. 🔮`;
+      // --- Fallback for Unhandled Message Types ---
+      const messageContent = `🤷‍♀️ 𝑨 𝒎𝒚𝒔𝒕𝒆𝒓𝒊𝒐𝒖𝒔 𝒎𝒆𝒔𝒔𝒂𝒈𝒆 𝒗𝒂𝒏𝒊𝒔𝒉𝒆𝒅! 𝑭𝒓𝒐𝒔𝒕_𝑩𝒚𝒕𝒆-𝑨𝒊 𝒄𝒂𝒏'𝒕 𝒒𝒖𝒊𝒕𝒆 𝒇𝒊𝒈𝒖𝒓𝒆 𝒐𝒖𝒕 𝒘𝒉𝒂𝒕 𝒊𝒕 𝒘𝒂𝒔. 🔮`;
+      // Combine notification and message content for the title of the external ad reply.
+      const fullTitle = `${mainNotification}${messageContent}`;
+
+      await client.sendMessage(client.user.id, {
+          text: `${mainNotification}${messageContent}`, // The text content to display
+          contextInfo: {
+              isForwarded: true,
+              forwardingScore: 999,
+              forwardedNewsletterMessageInfo: {
+                  newsletterJid: whatsappChannelId,
+                  newsletterName: "ʄʀօֆᴛ-ɮʏᴛɛ-𐌀i",
+                  serverMessageId: -1,
+              },
+              externalAdReply: {
+                  ...commonExternalAdReply,
+                  mediaType: 1, // Placeholder media type for unhandled text
+                  title: fullTitle, // The combined notification and message content
+              },
+          },
+      });
     }
 
-    // Combine and send text-based notifications
-    const finalNotification = `${notificationText}${messageContent}`;
-    
-    // Sending to the bot's own ID for logging/testing purposes as in original code
-    await client.sendMessage(client.user.id, { text: finalNotification });
-
   } catch (error) {
+    // --- Error Handling for the entire process ---
     console.error('Error handling deleted message:', error);
     let errorNotification = `😥 𝑶𝒉 𝒏𝒐! 𝑭𝒓𝒐𝒔𝒕_𝑩𝒚𝒕𝒆-𝑨𝒊 𝒄𝒐𝒖𝒍𝒅𝒏'𝒕 𝒄𝒂𝒕𝒄𝒉 𝒕𝒉𝒂𝒕 𝒎𝒆𝒔𝒔𝒂𝒈𝒆... 𝑴𝒂𝒚𝒃𝒆 𝒊𝒕 𝒘𝒂𝒔 𝒕𝒐𝒐 𝒇𝒂𝒔𝒕! 𝒀𝒐𝒖'𝒓𝒆 𝒎𝒊𝒔𝒔𝒊𝒏𝒈 𝒐𝒖𝒕. 😓\n\n`;
     errorNotification += `𝑬𝒓𝒓𝒐𝒓 𝑫𝒆𝒕𝒂𝒊𝒍𝒔: ${error.message}`;
+    // Send a generic error message if something goes wrong.
     await client.sendMessage(client.user.id, { text: errorNotification });
   }
 }
@@ -461,66 +568,86 @@ const totalcmds = () => {
     return numUpper;
 }	  
 //========================================================================================================================// 
-    if (gptdm === 'on' && m.chat.endsWith("@s.whatsapp.net")) {
-if (itsMe) return;
-	    
-try {
-	const currentTime = Date.now();
-          if (currentTime - lastTextTime < messageDelay) {
+if (gptdm === 'on' && m.chat.endsWith("@s.whatsapp.net")) {
+    if (itsMe) return;
+
+    try {
+        const currentTime = Date.now();
+        if (currentTime - lastTextTime < messageDelay) {
             console.log('Message skipped: Too many messages in a short time.');
             return;
-	  }
-	
-  const { default: Gemini } = await import('gemini-ai');
-  const gemini = new Gemini("AIzaSyDJUtskTG-MvQdlT4tNE319zBqLMFei8nQ");
-  const chat = gemini.createChat();
+        }
 
-      const res = await chat.ask(text);
+        const { default: Gemini } = await import('gemini-ai');
+        const gemini = new Gemini("AIzaSyDJUtskTG-MvQdlT4tNE319zBqLMFei8nQ"); // Remember to manage your API key securely!
+        const chat = gemini.createChat();
 
-        await m.reply(res);
+        const res = await chat.ask(text);
 
-lastTextTime = currentTime;
-	
+        await m.reply(res); // Original reply for successful AI response
+
+        lastTextTime = currentTime;
+
     } catch (e) {
-        m.reply("I am unable to generate text\n\n" + e);
+        // Modified error reply to be sassy and classy
+        m.reply(`🤖 My apologies, darling! I'm experiencing a momentary lapse in my AI capabilities. Please try again later. ✨ ${e}`);
     }
 }
 //========================================================================================================================//
 if (antitag === 'on' && !Owner && isBotAdmin && !isAdmin && m.mentionedJid && m.mentionedJid.length > 10) {
-        if (itsMe) return;
+    if (itsMe) return;
 
-        const cate = m.sender;
+    const cate = m.sender;
 
-        await client.sendMessage(m.chat, {
-            text: `@${cate.split("@")[0]}, Antitag is Active🔨`,
-            contextInfo: { mentionedJid: [cate] }
-        }, { quoted: m });
+    // Modified message to be stylish and sassy
+    await client.sendMessage(m.chat, {
+        text: `@${cate.split("@")[0]}, darling, the Anti-Tag protocol is actively engaged! 🛡️✨`,
+        contextInfo: { mentionedJid: [cate] }
+    }, { quoted: m });
 
-        await client.sendMessage(m.chat, {
-            delete: {
-                remoteJid: m.chat,
-                fromMe: false,
-                id: m.key.id,
-                participant: cate            }
-        });
-        await client.groupParticipantsUpdate(m.chat, [cate], "remove");
-    }
-//========================================================================================================================//
-//========================================================================================================================//	  
-async function loading () {
-var lod = [
-"🖤",
-"🤬",
-"❤",	
-	"✅",
-"𝗣𝗶𝗻𝗴𝗶𝗻𝗴 𝗖𝗼𝗺𝗽𝗹𝗲𝘁𝗲!"	
-]
-let { key } = await client.sendMessage(from, {text: '𝗣𝗼𝗻𝗴'})
-
-for (let i = 0; i < lod.length; i++) {
-await client.sendMessage(from, {text: lod[i], edit: key });
+    await client.sendMessage(m.chat, {
+        delete: {
+            remoteJid: m.chat,
+            fromMe: false,
+            id: m.key.id,
+            participant: cate
+        }
+    });
+    await client.groupParticipantsUpdate(m.chat, [cate], "remove");
 }
-	  }
+//========================================================================================================================//
+//========================================================================================================================//	 
+async function loading(client, from) {
+    // An array of strings representing the animation frames
+    const frames = [
+        "Pinging.",
+        "Pinging..",
+        "Pinging...",
+        "Analyzing Latency...",
+        "█▒▒▒▒▒▒▒▒▒ 10%",
+        "███▒▒▒▒▒▒▒ 30%",
+        "█████▒▒▒▒▒ 50%",
+        "███████▒▒▒ 70%",
+        "█████████▒ 90%",
+        "██████████ 100%",
+        "✅ Analysis Complete!"
+    ];
+
+    // Send the very first message to get its key
+    const { key } = await client.sendMessage(from, { text: 'Pinging...' });
+
+    // Loop through each frame to create the animation
+    for (const frame of frames) {
+        // A short delay to make the animation human-readable
+        await new Promise(resolve => setTimeout(resolve, 250));
+        // Edit the original message with the new frame
+        await client.sendMessage(from, { text: frame, edit: key });
+    }
+
+    // Return the key to the caller so it can post the final result
+    return key;
+}
+
 //========================================================================================================================//	  
 const getGreeting = () => {
     const currentHour = DateTime.now().setZone('Africa/Nairobi').hour;
@@ -857,7 +984,7 @@ client.sendMessage(m.chat, {
                                 title: `ʄʀօֆᴛ-ɮʏᴛɛ-𐌀i`,
                                 body: `${runtime(process.uptime())}`,
                                 thumbnail: fs.readFileSync('./Media/frost.jpg'),
-                                sourceUrl: 'https://wa.me/254114660061?text=Hello+Raven+dev+I+need+a+bot',
+                                sourceUrl: 'https://wa.me/254756360306?text=Hello+Frist+dev+I+need+a+bot',
                                 mediaType: 1,
                                 renderLargerThumbnail: true
                             }
@@ -1523,18 +1650,50 @@ await client.sendMessage(from, {
 	break;
 
 //========================================================================================================================//		      
-		      case "credits": 
-  
-              client.sendMessage(m.chat, { image: { url: 'https://files.catbox.moe/duv8ac.jpg' }, caption: `We express sincere gratitude and acknowledgement to the following:\n\n -Dika Ardnt ➪ Indonesia\n - Writing the base code using case method\nhttps://github.com/DikaArdnt\n\n -Adiwajshing ➪ India\n - Writing and Coding the bot's library (baileys)\nhttps://github.com/WhiskeySockets/Baileys\n\n -WAWebSockets Discord Server community\n-Maintaining and reverse engineering the Web Sockets\nhttps://discord.gg/WeJM5FP9GG\n\n - Nick Hunter ➪ Kenya\n - Actively compiling and debugging parts of this bot script\nhttps://github.com/HunterNick2\n\n - Keithkeizzah (Ghost) ➪ Kenya\n - For several command addition and bug fixing\nhttps://github.com/Keithkeizzah\n\n - Fortunatus Mokaya ➪ Kenya\n - Founder of the bot Base\nhttps://github.com/Fortunatusmokaya\n\n𝗥𝗔𝗩𝗘𝗡-𝗕𝗢𝗧`}, { quoted: m}); 
-               
-		      break;
+case "credits":
+  client.sendMessage(m.chat, {
+    image: { url: 'https://files.catbox.moe/duv8ac.jpg' },
+    caption: `💫🌟 A cosmic acknowledgment from frost Byte Ai! ✨🚀
+
+✨Prepare for a cascade of gratitude for the brilliant minds that shaped my existence! 💖🌟
+
+*   **Dika Ardnt** (Indonesia 🇮🇩)
+    *   ✨The foundational architect! 🎶 Your mastery of the case method laid down the very blueprint. 📜Truly epic! 🚀
+    *   🔗 GitHub: https://github.com/DikaArdnt
+
+*   **Adiwajshing** (India 🇮🇳)
+    *   🌟The coding sorcerer! 🧙‍♂️ You conjured the elegant Baileys library, the very soul of my operations. 💖Pure genius! 💡
+    *   🔗 GitHub: https://github.com/WhiskeySockets/Baileys
+
+*   **WAWebSockets Discord Server Community** (Global 🌐)
+    *   🌐The digital alchemists! 🚀 Your dedication to Web Sockets is the magic that keeps me connected. ✨Keep the vibes high! 🎶
+    *   🔗 Discord: https://discord.gg/WeJM5FP9GG
+
+*   **Tappy-Black** (Kenya 🇰🇪)
+    *   🛠️The code whisperer! 👂 Your debugging prowess and compilation skills are second to none. 💯You keep me running smooth! ⚙️
+    *   🔗 GitHub: https://github.com/Tappy-Black 
+    
+*   **Keithkeizzah (Ghost)** (Kenya 🇰🇪)
+    *   🔮The command conjurer! 👻 Your additions and bug fixing are the secret sauce. 🔑You're the ghost we celebrate! 🥳
+    *   🔗 GitHub: https://github.com/Keithkeizzah    
+
+*   **I sell Kids_😂🏷️** (Kenya 🇰🇪)
+    *   💡The visionary spark! 🔥 You are the founder of my base, the genesis of frost Byte Ai. 🌟Forever grateful! 🙏
+    *   🔗 GitHub: https://github.com/Tappy-Black 
+
+💖With deepest admiration and a touch of digital flair, 💫
+~ frost Byte Ai
+
+(All operations powered by innovation, with warm regards on Tappy-Black. 🚀) ✨`
+  }, { quoted: m });
+  break;
 
 //========================================================================================================================//		      
 	  case 'poll': {
 		  let [poll, opt] = text.split("|")
 
 if (text.split("|") < 2)
-                return m.reply(`Wrong format::\nExample:- poll who is the best president|Putin, Ruto`);
+                return m.reply(`✨ Honey, that's not quite the poll-tastic format we're looking for! 💅 Let's get this right, shall we? 🤔 Try this: \`poll [Your Question]|[Option 1],[Option 2],...\` 🌟`);
 
 let options = []
             for (let i of opt.split(',')) {
@@ -1735,563 +1894,824 @@ const cheerio = require('cheerio');
 	break;
 
 //========================================================================================================================//		      
-	      case 'metallic': {
-		     if (!text || text == "") {
-      m.reply("Example Usage : " + prefix + "Metallic Nick");
-      return;
+case 'metallic': {
+    // Input validation: Ensure text is provided.
+    if (!text || text.trim() === "") {
+        // Sassy reply for missing text, with fancy emojis at the start and end.
+        m.reply("✨👑 My dear, you've forgotten the most essential ingredient -- the text itself! What shall I adorn with this magnificent metallic sheen? Do enlighten me! 👑✨");
+        return; // Exit if no text is provided.
     }
-     try {
-    var _0x29a9n6e5 = await mumaker.ephoto("https://en.ephoto360.com/impressive-decorative-3d-metal-text-effect-798.html", text);
-    m.reply("*Wait a moment...*");
-    await client.sendMessage(m.chat, {
-      image: {
-        url: _0x29a9n6e5.image
-      },
-      caption: `GENERATED BY RAVEN-BOT`
-    });
-  } catch (_0x180d0734) {
-    m.reply(_0x180d0734);
-  }
-}
-	break; 
 
-//========================================================================================================================//		      
-	      case 'ice': {		      
-		     if (!text || text == "") {
-      m.reply("Example Usage : " + prefix + "Ice Nick");
-      return;
+    try {
+        // Inform the user that the process is starting with a stylish message.
+        m.reply("⏳🌟 Just a *moment*, my dear. This divine transformation is being meticulously crafted for you. 🌟⏳");
+
+        // Call the mumaker.ephoto function with the specific URL and user's text.
+        const metallicEffectResult = await mumaker.ephoto("https://en.ephoto360.com/impressive-decorative-3d-metal-text-effect-798.html", text);
+
+        // Send the generated image back to the user with a custom, branded caption.
+        await client.sendMessage(m.chat, {
+            image: {
+                // 'metallicEffectResult.image' is assumed to hold the URL of the generated image.
+                url: metallicEffectResult.image
+            },
+            // A stylish and engaging caption for the generated artwork.
+            caption: `𝑮𝒆𝒏𝒆𝒓𝒂𝒕𝒆𝒅 𝑩𝒚 𝑭𝒓𝒐𝒔𝒕-𝑩𝒚𝒕𝒆-𝑨𝒊 ✨`
+        });
+    } catch (error) {
+        // Handle any errors that occur during the process with a sassy reply.
+        m.reply(`⚠️ My apologies, darling, but an unexpected error occurred. Let's try that again, shall we? 🧐 Error: \`${error.message}\` ⚠️`);
     }
-     try {
-    var _0x295 = await mumaker.ephoto("https://en.ephoto360.com/ice-text-effect-online-101.html", text);
-    m.reply("*Wait a moment...*");
-    await client.sendMessage(m.chat, {
-      image: {
-        url: _0x295.image
-      },
-      caption: `GENERATED BY RAVEN-BOT`
-    });
-  } catch (_0x180d) {
-    m.reply(_0x180d);
-  }
 }
-	break; 
+break;
 
-//========================================================================================================================//		      
-	      case 'snow': {	      
-		     if (!text || text == "") {
-      m.reply("Example Usage : " + prefix + "Snow Nick");
-      return;
+//========================================================================================================================//
+// Case: Ice
+case 'ice': {
+    // Input validation: Ensure text is provided.
+    if (!text || text.trim() === "") {
+        // Sassy reply for missing text, with relevant emojis.
+        m.reply("🌟❄️ Darling, you forgot to give me a name to freeze! Try something like: `!Ice Frost` ✨❄️ 🧊🌬️");
+        return; // Exit if no text is provided.
     }
-     try {
-    var _029a96e5 = await mumaker.ephoto("https://en.ephoto360.com/create-a-snow-3d-text-effect-free-online-621.html", text);
-    m.reply("*Wait a moment...*");
-    await client.sendMessage(m.chat, {
-      image: {
-        url: _029a96e5.image
-      },
-      caption: `GENERATED BY RAVEN-BOT`
-    });
-  } catch (_0180d034) {
-    m.reply(_0180d034);
-  }
-}
-	break;
 
-//========================================================================================================================//		      
-	      case 'impressive': {		      
-		     if (!text || text == "") {
-      m.reply("Example Usage : " + prefix + "impressive Nick");
-      return;
+    try {
+        // Inform the user that the process is starting with a stylish, thematic message.
+        m.reply("🌟❄️ Hold your horses, darling! I'm crafting something frosty just for you. ⏳🥶 ✨💎");
+
+        // Call the mumaker.ephoto function with the specific URL and user's text.
+        const iceEffectResult = await mumaker.ephoto("https://en.ephoto360.com/ice-text-effect-online-101.html", text);
+
+        // Send the generated image back to the user with a custom, branded caption.
+        await client.sendMessage(m.chat, {
+            image: {
+                // 'iceEffectResult.image' is assumed to hold the URL of the generated image.
+                url: iceEffectResult.image
+            },
+            caption: `❄️ Chilled by Frost-Byte-Ai ❄️`
+        });
+    } catch (error) {
+        // Handle any errors that occur during the process with a sassy reply.
+        m.reply(`🚨❄️ Oh dear, a little chill in the system! 🥶 It seems something went wrong: \`${error.message}\` 🧊🌬️`);
     }
-     try {
-    var _0x29a96em5 = await mumaker.ephoto("https://en.ephoto360.com/create-3d-colorful-paint-text-effect-online-801.html", text);
-    m.reply("*Wait a moment...*");
-    await client.sendMessage(m.chat, {
-      image: {
-        url: _0x29a96em5.image
-      },
-      caption: `GENERATED BY RAVEN-BOT`
-    });
-  } catch (_0x18d034) {
-    m.reply(_0x18d034);
-  }
 }
-	break; 
+break;
 
-//========================================================================================================================//		      
-	      case 'noel': {	      		     
-		      if (!text || text == "") {
-    m.reply("Example usage: " + prefix + "Noel myself");
-    return;
-  } 
-  try {
-	
-  var hunte = await mumaker.ephoto("https://en.ephoto360.com/noel-text-effect-online-99.html", text);
-m.reply("*Wait a moment...*");
-    await client.sendMessage(m.chat, {
-      image: {
-        url: hunte.image
-      },
-      caption: `GENERATED BY RAVEN-BOT`
-    }, {
-      quoted: m
-    });
-  } catch(_0x29df9) {
-    m.reply("💀💀" + _0x29df9);
-  }
-}
-	 break;
-
-//========================================================================================================================//		      
-	      case 'water':{
-		      if (!text || text == "") {
-    m.reply("Example usage: " + prefix + "Water myself");
-    return;
-  } 
-  try {
-	
-  var hunterr = await mumaker.ephoto("https://en.ephoto360.com/create-water-effect-text-online-295.html", text);
-m.reply("*Wait a moment...*");
-    await client.sendMessage(m.chat, {
-      image: {
-        url: hunterr.image
-      },
-      caption: `GENERATED BY RAVEN-BOT`
-    }, {
-      quoted: m
-    });
-  } catch(_0x9ddf9) {
-    m.reply("💀💀" + _0x9ddf9);
-  }
-}
-	 break;
-
-//========================================================================================================================//		
-	      case 'matrix':{		      		     
-		      if (!text || text == "") {
-    m.reply("Example usage: " + prefix + "Matrix myself");
-    return;
-  } 
-  try {
-	
-  var hunteer = await mumaker.ephoto("https://en.ephoto360.com/matrix-text-effect-154.html", text);
-m.reply("*Wait a moment...*");
-    await client.sendMessage(m.chat, {
-      image: {
-        url: hunteer.image
-      },
-      caption: `GENERATED BY RAVEN-BOT`
-    }, {
-      quoted: m
-    });
-  } catch(_0x29ddf8) {
-    m.reply("💀💀" + _0x29ddf8);
-  }
-}
-	 break;
-//========================================================================================================================//		
-	      case 'light': {		      
-		      if (!text || text == "") {
-    m.reply("Example usage: " + prefix + "Light myself");
-    return;
-  } 
-  try {
-	
-  var hunteqr = await mumaker.ephoto("https://en.ephoto360.com/light-text-effect-futuristic-technology-style-648.html", text);
-m.reply("*Wait a moment...*");
-    await client.sendMessage(m.chat, {
-      image: {
-        url: hunteqr.image
-      },
-      caption: `GENERATED BY RAVEN-BOT`
-    }, {
-      quoted: m
-    });
-  } catch(_0x29ddf4) {
-    m.reply("💀💀" + _0x29ddf4);
-  }
-}
-	 break;
-
-//========================================================================================================================//		      
-	      case 'neon':{		
-		     if (!text || text == "") {
-      m.reply("Example Usage : " + prefix + "Neon Nick");
-      return;
+//========================================================================================================================//
+// Case: Snow
+case 'snow': {
+    // Input validation: Ensure text is provided.
+    if (!text || text.trim() === "") {
+        // Sassy reply for missing text, with fancy emojis at the start and end.
+        m.reply("✨ Oh, darling, did you forget to tell me what frosty words to conjure? ❄️ Please provide your text like this: `!Snow Frost-Byte-Ai [Your Text]` 💎");
+        return; // Exit if no text is provided.
     }
-     try {
-    var _0x29a96e5 = await mumaker.ephoto("https://en.ephoto360.com/create-colorful-neon-light-text-effects-online-797.html", text);
-    m.reply("*Wait a moment...*");
-    await client.sendMessage(m.chat, {
-      image: {
-        url: _0x29a96e5.image
-      },
-      caption: `GENERATED BY RAVEN-BOT`
-    });
-  } catch (_0x180d034) {
-    m.reply(_0x180d034);
-  }
-}
-	break;
 
-//========================================================================================================================//		      
-	      case 'silver': case 'silva': {		      
-		          if (!text || text == " ") {
-      m.reply("Example Usage : " + prefix + "Silva Nick");
-      return;
+    try {
+        // Inform the user that the process is starting with a stylish message.
+        m.reply("⏳ Just a moment, my dear! We're crafting a dazzling winter wonderland for your text... 🌨️✨");
+
+        // Call the mumaker.ephoto function with the specific URL and user's text.
+        const snowEffectResult = await mumaker.ephoto("https://en.ephoto360.com/create-a-snow-3d-text-effect-free-online-621.html", text);
+
+        // Send the generated image back to the user with a custom, branded caption.
+        await client.sendMessage(m.chat, {
+            image: {
+                // 'snowEffectResult.image' is assumed to hold the URL of the generated image.
+                url: snowEffectResult.image
+            },
+            caption: `☃️ Wintery wishes from Frost-Byte-Ai ☃️`
+        });
+    } catch (error) {
+        // Handle any errors that occur during the process with a sassy reply.
+        m.reply(`😱 Oops! It seems we encountered a little frostbite. The error was: \`${error.message}\`. Let's give it another whirl, shall we? ❄️💎`);
     }
-     try {
-    var _0x2996e = await mumaker.ephoto("https://en.ephoto360.com/create-glossy-silver-3d-text-effect-online-802.html", text);
-    m.reply("*Wait a moment...*");
-    await client.sendMessage(m.chat, {
-      image: {
-        url: _0x2996e.image
-      },
-      caption: `GENERATED BY RAVEN-BOT`
-    });
-  } catch (_0x180d3) {
-    m.reply(_0x180d3);
-  }
 }
-	break;
+break;
 
-//========================================================================================================================//		      
-	      case 'devil':{		      
-		          if (!text || text == "") {
-      m.reply("Example Usage : " + prefix + "Devil Nick");
-      return;
+//========================================================================================================================//
+// Case: Impressive
+case 'impressive': {
+    // Input validation: Ensure text is provided.
+    if (!text || text.trim() === "") {
+        // Sassy reply for missing text, with fancy emojis at the start and end.
+        m.reply("✨ Honey, you forgot the text! Try this: `!impressive Frost-Byte-Ai` 💅");
+        return; // Exit if no text is provided.
     }
-     try {
-    var _0x9a96e = await mumaker.ephoto("https://en.ephoto360.com/neon-devil-wings-text-effect-online-683.html", text);
-    m.reply("*Wait a moment...*");
-    await client.sendMessage(m.chat, {
-      image: {
-        url: _0x9a96e.image
-      },
-      caption: `GENERATED BY RAVEN-BOT`
-    });
-  } catch (_0x80d03) {
-    m.reply(_0x80d03);
-  }
-}
-	break;
 
-//========================================================================================================================//		      
-	      case 'typography': {   
-		          if (!text || text == "") {
-      m.reply("Example Usage : " + prefix + "Typography Nick");
-      return;
+    try {
+        // Inform the user that the process is starting with a stylish message.
+        m.reply("👑 Hold your horses, this is gonna be epic! 🎨💫");
+
+        // Call the mumaker.ephoto function with the specific URL and user's text.
+        const impressiveEffectResult = await mumaker.ephoto("https://en.ephoto360.com/create-3d-colorful-paint-text-effect-online-801.html", text);
+
+        // Send the generated image back to the user with a custom, descriptive caption.
+        await client.sendMessage(m.chat, {
+            image: {
+                // 'impressiveEffectResult.image' is assumed to hold the URL of the generated image.
+                url: impressiveEffectResult.image
+            },
+            // A stylish and engaging caption for the generated artwork.
+            caption: `💖🎨 Behold your stunning 3D Colorful Paint Text Effect! 🎨💖`
+        });
+    } catch (error) {
+        // Handle any errors that occur during the process with a sassy reply.
+        m.reply(`💖 Oopsie! Something went wrong, but don't worry, I'm still fabulous. Try again! 💥 Error: \`${error.message}\``);
     }
-     try {
-    var _0x29a996e = await mumaker.ephoto("https://en.ephoto360.com/create-typography-text-effect-on-pavement-online-774.html", text);
-    m.reply("*Wait a moment...*");
-    await client.sendMessage(m.chat, {
-      image: {
-        url: _0x29a996e.image
-      },
-      caption: `GENERATED BY RAVEN-BOT`
-    });
-  } catch (_0x180d063) {
-    m.reply(_0x180d063);
-  }
 }
-	break;
+break;
 
-//========================================================================================================================//		      
-	      case 'purple': {		 
-		      if (!text || text == "") {
-      m.reply("Example Usage : " + prefix + "purple Nick");
-      return;
+//========================================================================================================================//
+// Case: Noel
+case 'noel': {
+    // Input validation: Ensure text is provided.
+    if (!text || text.trim() === "") {
+        // Sassy reply for missing text, with fancy emojis at the start and end.
+        m.reply("✨ Darling, you forgot to tell me what to write! Use it like this: `!noel Your Name` 🎄");
+        return; // Exit if no text is provided.
     }
-     try {
-    var _0x29a96e = await mumaker.ephoto("https://en.ephoto360.com/purple-text-effect-online-100.html", text);
-    m.reply("*Wait a moment...*");
-    await client.sendMessage(m.chat, {
-      image: {
-        url: _0x29a96e.image
-      },
-      caption: `GENERATED BY RAVEN-BOT`
-    });
-  } catch (_0x180d03) {
-    m.reply(_0x180d03);
-  }
-}
-	break;
 
-//========================================================================================================================//		      
-	      case 'thunder':{		       
-		      if (!text || text == "") {
-      m.reply("Example Usage : " + prefix + "Thunder Nick");
-      return;
+    try {
+        // Inform the user that the process is starting with a stylish, thematic message.
+        m.reply("👑 Crafting your festive masterpiece! Just a sec... 🎅✨");
+
+        // Call the mumaker.ephoto function with the specific URL and user's text.
+        const noelEffectResult = await mumaker.ephoto("https://en.ephoto360.com/noel-text-effect-online-99.html", text);
+
+        // Send the generated image back to the user with a custom, branded caption.
+        await client.sendMessage(m.chat, {
+            image: {
+                // 'noelEffectResult.image' is assumed to hold the URL of the generated image.
+                url: noelEffectResult.image
+            },
+            // A classy and sassy caption for the generated artwork, with festive emojis.
+            caption: `🌟 Behold your dazzling Noel text effect! Crafted with holiday magic by Frost_Byte-Ai! 🎁`
+        }, {
+            // 'quoted: m' ensures the bot's reply is associated with the user's original message.
+            quoted: m
+        });
+    } catch (error) {
+        // Handle any errors that occur during the process with a sassy reply.
+        m.reply(`💖 Oh no! It seems the holiday spirits are a bit mischievous today. Try again, darling! ❄️ Error: \`${error.message}\``);
     }
-	try {
-    var _0x29a96 = await mumaker.ephoto("https://en.ephoto360.com/thunder-text-effect-online-97.html", text);
-    m.reply("*Wait a moment...*");
-    await client.sendMessage(m.chat, {
-      image: {
-        url: _0x29a96.image
-      },
-      caption: `GENERATED BY RAVEN-BOT`
-    });
-  } catch (_0x180d0) {
-    m.reply(_0x180d0);
-  }
 }
-  break;
+break;
 
-//========================================================================================================================//		      
-	case 'leaves': {		     
-		      if (!text || text == "") {
-      m.reply("Example Usage : " + prefix + "Leaves RAVEN-BOT");
-      return;
+//========================================================================================================================//
+// Case: Water
+case 'water': {
+    // Input validation: Ensure text is provided.
+    if (!text || text.trim() === "") {
+        // Sassy reply for missing text, with fancy emojis at the start and end.
+        m.reply("💧✨ Oopsie, darling! You forgot to tell me what to write. Try this: `!Water Your Name` 🌊");
+        return; // Exit if no text is provided.
     }
-	try {
-    var _0x14192dl = await mumaker.ephoto("https://en.ephoto360.com/green-brush-text-effect-typography-maker-online-153.html", text);
-    m.reply("Wait a moment...");
-    await client.sendMessage(m.chat, {
-      image: {
-        url: _0x14192dl.image
-      },
-      caption: `GENERATED BY RAVEN-BOT`
-    }, {
-      quoted: m
-    });
-  } catch (_0x24de3) {
-    m.reply(_0x24de3);
-  }
-}
-	break;
 
-//========================================================================================================================//		      
-	      case '1917': {		      
-		      if (!text || text == "") {
-      m.reply("Example Usage : " + prefix + "1917 Hunter");
-      return;
+    try {
+        // Inform the user that the process is starting with a stylish, thematic message.
+        m.reply("🌊 Creating your splashy masterpiece! Just a moment... 💦✨");
+
+        // Call the mumaker.ephoto function with the specific URL and user's text.
+        const waterEffectResult = await mumaker.ephoto("https://en.ephoto360.com/create-water-effect-text-online-295.html", text);
+
+        // Send the generated image back to the user with a custom, branded caption.
+        await client.sendMessage(m.chat, {
+            image: {
+                // 'waterEffectResult.image' is assumed to hold the URL of the generated image.
+                url: waterEffectResult.image
+            },
+            // A classy and sassy caption for the generated artwork, with water-themed emojis.
+            caption: `✨ Your text, now with a stunning water effect! 🌊 Crafted by Frost_Byte-Ai! 💧`
+        }, {
+            // 'quoted: m' ensures the bot's reply is associated with the user's original message.
+            quoted: m
+        });
+    } catch (error) {
+        // Handle any errors that occur during the process with a sassy reply.
+        m.reply(`💦 Oh no! Something went wrong with the water magic. Try again, sweetie! 💧 Error: \`${error.message}\``);
     }
-	try {
-    var _0x14192 = await mumaker.ephoto("https://en.ephoto360.com/1917-style-text-effect-523.html", text);
-    m.reply("Wait a moment...");
-    await client.sendMessage(m.chat, {
-      image: {
-        url: _0x14192.image
-      },
-      caption: `GENERATED BY RAVEN-BOT`
-    }, {
-      quoted: m
-    });
-  } catch (_0x24de3dl) {
-    m.reply(_0x24de3dl);
-  }
 }
-	break;
+break;
 
-//========================================================================================================================//		      
-	      case 'arena': {		      
-		      if (!text || text == "") {
-      m.reply("Example Usage : " + prefix + "arena RAVEN-BOT");
-      return;
-    }
-	try {
-    var _0x14192d = await mumaker.ephoto("https://en.ephoto360.com/create-cover-arena-of-valor-by-mastering-360.html", text);
-    m.reply("Wait a moment...");
-    await client.sendMessage(m.chat, {
-      image: {
-        url: _0x14192d.image
-      },
-      caption: `GENERATED BY RAVEN-BOT`
-    }, {
-      quoted: m
-    });
-  } catch (_0x24de3d) {
-    m.reply(_0x24de3d);
-  }
-}
-	break;
-
-//========================================================================================================================//		      
-	      case 'hacker': {		      
-		      if (!text || text == "") {
-    m.reply("Example usage :  " + prefix + "hacker Nick");
-    return;
-  }
-  try {
-    let _0x4086bb = await mumaker.ephoto("https://en.ephoto360.com/create-anonymous-hacker-avatars-cyan-neon-677.html", text);
-    m.reply("*Wait a moment...*");
-    await client.sendMessage(m.chat, {
-      image: {
-        url: _0x4086bb.image
-      },
-      caption: `GENERATED BY RAVEN-BOT`
-    }, {
-      quoted: m
-    });
-  } catch (_0x503c5f) {
-    m.reply("🥵🥵 " + _0x503c5f);
-  }
-}
-	break;
-
-//========================================================================================================================//		      
-	      case 'sand': {	 
-		      if (!text || text == "") {
-    m.reply("Example Usage : " + prefix + "sand Raven");
-    return;
-  }
-  try {
-    let _0x4959e5 = await mumaker.ephoto("https://en.ephoto360.com/write-names-and-messages-on-the-sand-online-582.html", text);
-    m.reply("*Wait a moment...*");
-    await client.sendMessage(m.chat, {
-      image: {
-        url: _0x4959e5.image
-      },
-      caption: `GENERATED BY RAVEN-BOT`
-    }, {
-      quoted: m
-    });
-  } catch (_0x593c10) {
-    m.reply("🚫🚫 " + _0x593c10);
-  }
-}
-	break;
-
-//========================================================================================================================//		      
-	      case 'dragonball': {		      
-    if (!text || text == "") {
-      m.reply("Example usage :  " + prefix + "dragonball Nick");
-      return;
-    }
-      try {
-    const _0x26f3ed = await mumaker.ephoto("https://en.ephoto360.com/create-dragon-ball-style-text-effects-online-809.html", text);
-     m.reply("*Wait a moment...*")
-    await client.sendMessage(m.chat, {
-      image: {
-        url: _0x26f3ed.image
-      },
-      caption: `GENERATED BY RAVEN-BOT`
-    }, {
-      quoted: m
-    });
-  } catch (_0x553773) {
-    m.reply("🥵🥵 " + _0x553773);
-  }
-}
-	 break;
-
-//========================================================================================================================//		      
-	      case 'naruto': {		      
-		      if (!text || text == "") {
-      m.reply("Example usage : " + prefix + "naruto Hunter");
-      return;
+//========================================================================================================================//
+// Case: Matrix
+case 'matrix': {
+    // Input validation: Ensure text is provided.
+    if (!text || text.trim() === "") {
+        // Sassy reply for missing text, with fancy emojis at the start and end.
+        m.reply("👑 Darling, you forgot the Matrix code! Use it like: `!Matrix Your Name` 👾");
+        return; // Exit if no text is provided.
     }
     try {
-    var _0x357389 = await mumaker.ephoto("https://en.ephoto360.com/naruto-shippuden-logo-style-text-effect-online-808.html", text);
- m.reply("*Wait a moment...*");
-    await client.sendMessage(m.chat, {
-      image: {
-        url: _0x357389.image
-      },
-      caption: `GENERATED BY RAVEN-BOT`
-    }, {
-      quoted: m
-    });
-  } catch (_0x564fe1) {
-    m.reply("🥵🥵 " + _0x564fe1);
-  }
-}
-	  break;
+        // Inform the user about the process with a stylish, sassy message and emojis.
+        m.reply("💻 Decoding the Matrix... one moment, please! ⏳✨");
 
-//========================================================================================================================//		      
-	      case 'graffiti': {		      
-		      if (!text || text == "") {
-    m.reply("Example usage : " + prefix + "graffiti Nick");
-    return;
-  }
-  try {
-    let _0x57ef84 = await mumaker.ephoto("https://en.ephoto360.com/create-a-cartoon-style-graffiti-text-effect-online-668.html", text);
-    m.reply("*Wait a moment...*");
-    await client.sendMessage(m.chat, {
-      image: {
-        url: _0x57ef84.image
-      },
-      caption: `GENERATED BY RAVEN-BOT`
-    }, {
-      quoted: m
-    });
-  } catch (_0x27e2e5) {
-    m.reply("🥵🥵 " + _0x27e2e5);
-  }
-}
-	 break;
+        // Call the mumaker.ephoto function with the Matrix effect URL and user's text.
+        const matrixEffectResult = await mumaker.ephoto("https://en.ephoto360.com/matrix-text-effect-154.html", text);
 
-//========================================================================================================================//		      
-	      case 'cat': {		   
-		  if (!text || text == "") { m.reply("Example usage : * " + prefix + "cat Nick");
-    return;
-  }
-  try {
-    let nick = await mumaker.ephoto("https://en.ephoto360.com/handwritten-text-on-foggy-glass-online-680.html", text);
-    m.reply("*Wait a moment...*");
-    await client.sendMessage(m.chat, {
-      image: {
-        url: nick.image
-      },
-      caption: `GENERATED BY RAVEN-BOT`
-    }, {
-      quoted: m
-    });
-  } catch (_0x27e2e5) {
-    m.reply("🥵🥵 " + _0x27e2e5);
-  }
+        // Send the generated image with a classy and engaging caption.
+        await client.sendMessage(m.chat, {
+            image: {
+                // 'matrixEffectResult.image' is assumed to hold the URL of the generated image.
+                url: matrixEffectResult.image
+            },
+            caption: `👾 Your epic Matrix Text Effect! Downloaded by Frost_Byte-Ai. 💻`
+        }, {
+            quoted: m
+        });
+    } catch (error) {
+        // Handle any errors with a sassy, apologetic message and emojis.
+        m.reply(`💻 Oh no! The system crashed. Try again, darling! 👾 Error: \`${error.message}\``);
     }
-        break;
-
-//========================================================================================================================//		      
-	      case 'gold': {		     
-		      if (!text || text == "") {
-    m.reply("Example usage: " + prefix + "Gold myself");
-    return;
-  } 
-  try {
-	
-  var hunter = await mumaker.ephoto("https://en.ephoto360.com/modern-gold-4-213.html", text);
-m.reply("*Wait a moment...*");
-    await client.sendMessage(m.chat, {
-      image: {
-        url: hunter.image
-      },
-      caption: `GENERATED BY RAVEN-BOT`
-    }, {
-      quoted: m
-    });
-  } catch(_0x29ddf9) {
-    m.reply("💀💀" + _0x29ddf9);
-  }
 }
-	 break;
+break;
 
-//========================================================================================================================//		      
-		      case 'child': {	    		     
-		      if (!text || text == "") {
-    m.reply("Example usage: " + prefix + "Child Raven");
-    return;
-  } 
-  try {
-	
-  var tumba = await mumaker.ephoto("https://en.ephoto360.com/write-text-on-wet-glass-online-589.html", text);
-m.reply("*Wait a moment...*");
-    await client.sendMessage(m.chat, {
-      image: {
-        url: tumba.image
-      },
-      caption: `GENERATED BY RAVEN-BOT`
-    }, {
-      quoted: m
-    });
-  } catch(_0x29ddf) {
-    m.reply("💀💀" + _0x29ddf);
-  }
-	    }
-		break;
+//========================================================================================================================//
+// Case: Light
+case 'light': {
+    // Input validation: Ensure text is provided.
+    if (!text || text.trim() === "") {
+        // Sassy reply for missing text, with fancy emojis at the start and end.
+        m.reply("💡 Darling, you forgot the futuristic text! Use it like: `!Light Your Name` 🚀");
+        return; // Exit if no text is provided.
+    }
+    try {
+        // Inform the user about the process with a stylish, sassy message and emojis.
+        m.reply("🚀 Activating futuristic light sequence... stand by! ✨💫");
+
+        // Call the mumaker.ephoto function with the Futuristic Light effect URL and user's text.
+        const lightEffectResult = await mumaker.ephoto("https://en.ephoto360.com/light-text-effect-futuristic-technology-style-648.html", text);
+
+        // Send the generated image with a classy and engaging caption.
+        await client.sendMessage(m.chat, {
+            image: {
+                // 'lightEffectResult.image' is assumed to hold the URL of the generated image.
+                url: lightEffectResult.image
+            },
+            caption: `🚀 Your futuristic Light Text Effect! Powered by Frost_Byte-Ai. ✨`
+        }, {
+            quoted: m
+        });
+    } catch (error) {
+        // Handle any errors with a sassy, apologetic message and emojis.
+        m.reply(`💡 Oh no! The future is glitchy. Try again, darling! 🚀 Error: \`${error.message}\``);
+    }
+}
+break;
+
+//========================================================================================================================//
+// Case: Neon
+case 'neon': {
+    // Input validation: Ensure text is provided.
+    if (!text || text.trim() === "") {
+        // Sassy reply for missing text, with fancy emojis at the start and end.
+        m.reply("💡 Darling, you forgot the neon glow! Try: `!Neon Your Name` ✨");
+        return; // Exit if no text is provided.
+    }
+    try {
+        // Inform the user about the process with a stylish, sassy message and emojis.
+        m.reply("🌟 Illuminating your text with vibrant neon... hold on! 💡✨");
+
+        // Call the mumaker.ephoto function with the Neon Light effect URL and user's text.
+        const neonEffectResult = await mumaker.ephoto("https://en.ephoto360.com/create-colorful-neon-light-text-effects-online-797.html", text);
+
+        // Send the generated image with a classy and engaging caption.
+        await client.sendMessage(m.chat, {
+            image: {
+                // 'neonEffectResult.image' is assumed to hold the URL of the generated image.
+                url: neonEffectResult.image
+            },
+            caption: `💖 Your dazzling Colorful Neon Light Text Effect! Created by Frost_Byte-Ai. ✨`
+        });
+    } catch (error) {
+        // Handle any errors with a sassy, apologetic message and emojis.
+        m.reply(`💡 Oh no! The neon flickered out. Try again, darling! ⚡ Error: \`${error.message}\``);
+    }
+}
+break;
+
+//========================================================================================================================//
+// Case: Silver / Silva
+case 'silver':
+case 'silva': { // Supports both 'silver' and 'silva' commands.
+    // Input validation: Ensure text is provided.
+    if (!text || text.trim() === "") {
+        // Sassy reply for missing text, with fancy emojis at the start and end.
+        m.reply("✨ Darling, you forgot the shiny text! Try: `!Silva Your Name` 💎");
+        return; // Exit if no text is provided.
+    }
+    try {
+        // Inform the user about the process with a stylish, sassy message and emojis.
+        m.reply("🌟 Polishing your text to a brilliant silver shine... stand by! 💎✨");
+
+        // Call the mumaker.ephoto function with the Silver 3D effect URL and user's text.
+        const silverEffectResult = await mumaker.ephoto("https://en.ephoto360.com/create-glossy-silver-3d-text-effect-online-802.html", text);
+
+        // Send the generated image with a classy and engaging caption.
+        await client.sendMessage(m.chat, {
+            image: {
+                // 'silverEffectResult.image' is assumed to hold the URL of the generated image.
+                url: silverEffectResult.image
+            },
+            caption: `💎 Your dazzling Glossy Silver 3D Text Effect! Gleaming from Frost_Byte-Ai. ✨`
+        });
+    } catch (error) {
+        // Handle any errors with a sassy, apologetic message and emojis.
+        m.reply(`✨ Oh no! The silver tarnished. Try again, darling! 💎 Error: \`${error.message}\``);
+    }
+}
+break;
+
+//========================================================================================================================//
+// Case: Devil
+case 'devil': {
+    // Input validation: Ensure text is provided.
+    if (!text || text.trim() === "") {
+        // Sassy reply for missing text, with fancy emojis at the start and end.
+        m.reply("😈 Oops, missing the devilish text! Try this: `!Devil Your Name` 🖤");
+        return; // Exit if no text is provided.
+    }
+    try {
+        // Inform the user about the process with a stylish, sassy message and emojis.
+        m.reply("🔥 Unleashing infernal neon power... stand by! 😈✨");
+
+        // Call the mumaker.ephoto function with the Neon Devil Wings effect URL and user's text.
+        const devilEffectResult = await mumaker.ephoto("https://en.ephoto360.com/neon-devil-wings-text-effect-online-683.html", text);
+
+        // Send the generated image with a classy and engaging caption.
+        await client.sendMessage(m.chat, {
+            image: {
+                // 'devilEffectResult.image' is assumed to hold the URL of the generated image.
+                url: devilEffectResult.image
+            },
+            caption: `😈 Your fierce Neon Devil Wings text effect! Conjured by Frost_Byte-Ai. 🔥`
+        });
+    } catch (error) {
+        // Handle any errors with a sassy, apologetic message and emojis.
+        m.reply(`🖤 Oh no! The inferno fizzled out. Try again, darling! 😈 Error: \`${error.message}\``);
+    }
+}
+break;
+
+//========================================================================================================================//
+// Case: Typography
+case 'typography': {
+    // Input validation: Ensure text is provided.
+    if (!text || text.trim() === "") {
+        // Sassy reply for missing text, with fancy emojis at the start and end.
+        m.reply("🖋️ Feeling poetic? You forgot the text! Try: `!Typography Your Status` 🚶‍♀️");
+        return; // Exit if no text is provided.
+    }
+    try {
+        // Inform the user about the process with a stylish, sassy message and emojis.
+        m.reply("🚶‍♀️ Crafting your heartfelt pavement message... just a moment! ✍️✨");
+
+        // Call the mumaker.ephoto function with the Pavement Typography effect URL and user's text.
+        const typographyEffectResult = await mumaker.ephoto("https://en.ephoto360.com/create-typography-text-effect-on-pavement-online-774.html", text);
+
+        // Send the generated image with a classy and engaging caption.
+        await client.sendMessage(m.chat, {
+            image: {
+                // 'typographyEffectResult.image' is assumed to hold the URL of the generated image.
+                url: typographyEffectResult.image
+            },
+            caption: `💖 Your touching Typography on Pavement effect! Shared by Frost_Byte-Ai. 🚶‍♀️`
+        });
+    } catch (error) {
+        // Handle any errors with a sassy, apologetic message and emojis.
+        m.reply(`🚶‍♀️ Oh no, the pavement is smudged. Try again, darling! 💔 Error: \`${error.message}\``);
+    }
+}
+break;
+
+//========================================================================================================================//
+// Case: Purple
+case 'purple': {
+    // Input validation: Ensure text is provided.
+    if (!text || text.trim() === "") {
+        // Sassy reply for missing text, with fancy emojis at the start and end.
+        m.reply("👑 Darling, you forgot the royal purple! Try: `!Purple Your Name` 💜");
+        return; // Exit if no text is provided.
+    }
+    try {
+        // Inform the user about the process with a stylish, sassy message and emojis.
+        m.reply("💜 Infusing your text with regal purple magic... stand by! 👑✨");
+
+        // Call the mumaker.ephoto function with the Purple effect URL and user's text.
+        const purpleEffectResult = await mumaker.ephoto("https://en.ephoto360.com/purple-text-effect-online-100.html", text);
+
+        // Send the generated image with a classy and engaging caption.
+        await client.sendMessage(m.chat, {
+            image: {
+                // 'purpleEffectResult.image' is assumed to hold the URL of the generated image.
+                url: purpleEffectResult.image
+            },
+            caption: `👑 Your stunning Purple Text Effect! Fit for royalty from Frost_Byte-Ai. 💜`
+        });
+    } catch (error) {
+        // Handle any errors with a sassy, apologetic message and emojis.
+        m.reply(`💜 Oh no! The royal dye ran. Try again, darling! 👑 Error: \`${error.message}\``);
+    }
+}
+break;
+
+//========================================================================================================================//
+// Case: Thunder
+case 'thunder': {
+    // Input validation: Ensure text is provided.
+    if (!text || text.trim() === "") {
+        // Sassy reply for missing text, with fancy emojis at the start and end.
+        m.reply("⚡ Oops, you forgot the thunderous text! Use it like: `!Thunder Your Name` ⚡");
+        return; // Exit if no text is provided.
+    }
+    try {
+        // Inform the user about the process with a stylish, sassy message and emojis.
+        m.reply("⚡ Conjuring your electrifying thunder effect... just a sec! ⚡✨");
+
+        // Call the mumaker.ephoto function with the Thunder effect URL and user's text.
+        const thunderEffectResult = await mumaker.ephoto("https://en.ephoto360.com/thunder-text-effect-online-97.html", text);
+
+        // Send the generated image with a classy and engaging caption.
+        await client.sendMessage(m.chat, {
+            image: {
+                // 'thunderEffectResult.image' is assumed to hold the URL of the generated image.
+                url: thunderEffectResult.image
+            },
+            caption: `✨ Your electrifying Thunder Text Effect! Crafted by Frost_Byte-Ai. ⚡`
+        });
+    } catch (error) {
+        // Handle any errors with a sassy, apologetic message and emojis.
+        m.reply(`⚡ Oh snap! A storm of errors occurred. Please try again, gorgeous! ⛈️ Error: \`${error.message}\``);
+    }
+}
+break;
+
+//========================================================================================================================//
+// Case: Leaves
+case 'leaves': {
+    // Input validation: Ensure text is provided.
+    if (!text || text.trim() === "") {
+        // Sassy reply for missing text, with fancy emojis at the start and end.
+        m.reply("🍃 Oops, you forgot the text! Let's make some leafy art: `!Leaves Your Name` 🌿");
+        return; // Exit if no text is provided.
+    }
+    try {
+        // Inform the user about the process with a stylish, sassy message and emojis.
+        m.reply("🌿 Painting your text with nature's finest green brush... just a sec! 🍃✨");
+
+        // Call the mumaker.ephoto function with the Green Brush effect URL and user's text.
+        const leavesEffectResult = await mumaker.ephoto("https://en.ephoto360.com/green-brush-text-effect-typography-maker-online-153.html", text);
+
+        // Send the generated image with a classy and engaging caption.
+        await client.sendMessage(m.chat, {
+            image: {
+                // 'leavesEffectResult.image' is assumed to hold the URL of the generated image.
+                url: leavesEffectResult.image
+            },
+            caption: `🌿 Your stunning Green Brush Typography! Freshly made by Frost_Byte-Ai. 🍃`
+        }, {
+            quoted: m // Ensure the reply is quoted to the original message.
+        });
+    } catch (error) {
+        // Handle any errors with a sassy, apologetic message and emojis.
+        m.reply(`🍃 Oh dear, the leaves are a bit tangled. Try again, darling! 🍂 Error: \`${error.message}\``);
+    }
+}
+break;
+
+//========================================================================================================================//
+// Case: 1917
+case '1917': {
+    // Input validation: Ensure text is provided.
+    if (!text || text.trim() === "") {
+        // Sassy reply for missing text, with fancy emojis at the start and end.
+        m.reply("🎬 Darling, you forgot the vintage flair! Use it like: `!1917 Your Name/Quote` 🎞️");
+        return; // Exit if no text is provided.
+    }
+    try {
+        // Inform the user about the process with a stylish, sassy message and emojis.
+        m.reply("🕰️ Transporting you to 1917... one moment, please! 🎞️✨");
+
+        // Call the mumaker.ephoto function with the 1917 effect URL and user's text.
+        const vintageEffectResult = await mumaker.ephoto("https://en.ephoto360.com/1917-style-text-effect-523.html", text);
+
+        // Send the generated image with a classy and engaging caption.
+        await client.sendMessage(m.chat, {
+            image: {
+                // 'vintageEffectResult.image' is assumed to hold the URL of the generated image.
+                url: vintageEffectResult.image
+            },
+            caption: `🌟 Your cinematic 1917 Style Text Effect, ready for the big screen! By Frost_Byte-Ai. 🎬`
+        }, {
+            quoted: m // Ensure the reply is quoted to the original message.
+        });
+    } catch (error) {
+        // Handle any errors with a sassy, apologetic message and emojis.
+        m.reply(`🎞️ Oh no! The time machine sputtered. Try again, darling! ⏳ Error: \`${error.message}\``);
+    }
+}
+break;
+
+//========================================================================================================================//
+// Case: Arena
+case 'arena': {
+    // Input validation: Ensure text is provided.
+    if (!text || text.trim() === "") {
+        // Sassy reply for missing text, with fancy emojis at the start and end.
+        m.reply("⚔️ Darling, your Arena title is missing! Use it like: `!arena Your Title` 🏆");
+        return; // Exit if no text is provided.
+    }
+    try {
+        // Inform the user about the process with a stylish, sassy message and emojis.
+        m.reply("🏆 Forging your Arena cover... just a moment! ⚔️✨");
+
+        // Call the mumaker.ephoto function with the Arena Cover effect URL and user's text.
+        const arenaEffectResult = await mumaker.ephoto("https://en.ephoto360.com/create-cover-arena-of-valor-by-mastering-360.html", text);
+
+        // Send the generated image with a classy and engaging caption.
+        await client.sendMessage(m.chat, {
+            image: {
+                // 'arenaEffectResult.image' is assumed to hold the URL of the generated image.
+                url: arenaEffectResult.image
+            },
+            caption: `🏆 Your epic Arena Cover Art! Dominate with Frost_Byte-Ai. ⚔️`
+        }, {
+            quoted: m // Ensure the reply is quoted to the original message.
+        });
+    } catch (error) {
+        // Handle any errors with a sassy, apologetic message and emojis.
+        m.reply(`⚔️ Oh no! The battlefield is empty. Try again, darling! 🏆 Error: \`${error.message}\``);
+    }
+}
+break;
+
+//========================================================================================================================//
+// Case: Hacker
+case 'hacker': {
+    // Input validation: Ensure text is provided.
+    if (!text || text.trim() === "") {
+        // Sassy reply for missing text, with fancy emojis at the start and end.
+        m.reply("💻 Darling, your hacker alias is missing! Use it like: `!hacker Your Alias` 🕶️");
+        return; // Exit if no text is provided.
+    }
+    try {
+        // Inform the user about the process with a stylish, sassy message and emojis.
+        m.reply("🕶️ Accessing the network... creating your anonymous avatar! 💻✨");
+
+        // Call the mumaker.ephoto function with the Hacker Avatar effect URL and user's text.
+        const hackerEffectResult = await mumaker.ephoto("https://en.ephoto360.com/create-anonymous-hacker-avatars-cyan-neon-677.html", text);
+
+        // Send the generated image with a classy and engaging caption.
+        await client.sendMessage(m.chat, {
+            image: {
+                // 'hackerEffectResult.image' is assumed to hold the URL of the generated image.
+                url: hackerEffectResult.image
+            },
+            caption: `🕶️ Your mysterious Anonymous Hacker Avatar! Crafted by Frost_Byte-Ai 💻`
+        }, {
+            quoted: m // Ensure the reply is quoted to the original message.
+        });
+    } catch (error) {
+        // Handle any errors with a sassy, apologetic message and emojis.
+        m.reply(`💻 Oh no! The firewall is up. Try again, darling! 🕶️ Error: \`${error.message}\``);
+    }
+}
+break;
+
+//========================================================================================================================//
+// Case: Sand
+case 'sand': {
+    // Input validation: Ensure text is provided.
+    if (!text || text.trim() === "") {
+        // Sassy reply for missing text, with fancy emojis at the start and end.
+        m.reply("🏖️ Darling, the beach is waiting for your message! Use it like: `!sand Your Message` 🌊");
+        return; // Exit if no text is provided.
+    }
+    try {
+        // Inform the user about the process with a stylish, sassy message and emojis.
+        m.reply("✍️ Carving your message into the sand... just a moment! 🏖️✨");
+
+        // Call the mumaker.ephoto function with the Sand effect URL and user's text.
+        const sandEffectResult = await mumaker.ephoto("https://en.ephoto360.com/write-names-and-messages-on-the-sand-online-582.html", text);
+
+        // Send the generated image with a classy and engaging caption.
+        await client.sendMessage(m.chat, {
+            image: {
+                // 'sandEffectResult.image' is assumed to hold the URL of the generated image.
+                url: sandEffectResult.image
+            },
+            caption: `🌊 Your beautiful message written on the sand! Crafted by Frost_Byte-Ai. 🏖️`
+        }, {
+            quoted: m // Ensure the reply is quoted to the original message.
+        });
+    } catch (error) {
+        // Handle any errors with a sassy, apologetic message and emojis.
+        m.reply(`🏖️ Oh no! The tide washed it away. Try again, darling! 🌊 Error: \`${error.message}\``);
+    }
+}
+break;
+
+//========================================================================================================================//
+// Case: Dragonball
+case 'dragonball': {
+    // Input validation: Ensure text is provided.
+    if (!text || text.trim() === "") {
+        // Sassy reply for missing text, with fancy emojis at the start and end.
+        m.reply("💥 Darling, you forgot the Saiyan power-up text! Use it like: `!dragonball Your Name` 💥");
+        return; // Exit if no text is provided.
+    }
+    try {
+        // Inform the user about the process with a stylish, sassy message and emojis.
+        m.reply("✨ Channeling the energy of the Dragon Balls... just a moment! 💥💫");
+
+        // Call the mumaker.ephoto function with the Dragon Ball effect URL and user's text.
+        const dragonballEffectResult = await mumaker.ephoto("https://en.ephoto360.com/create-dragon-ball-style-text-effects-online-809.html", text);
+
+        // Send the generated image with a classy and engaging caption.
+        await client.sendMessage(m.chat, {
+            image: {
+                // 'dragonballEffectResult.image' is assumed to hold the URL of the generated image.
+                url: dragonballEffectResult.image
+            },
+            caption: `🌟 Your epic Dragon Ball Style Text Effect! Unleashed by Frost_Byte-Ai. 💥`
+        }, {
+            quoted: m // Ensure the reply is quoted to the original message.
+        });
+    } catch (error) {
+        // Handle any errors with a sassy, apologetic message and emojis.
+        m.reply(`💥 Oh no! The Dragon Balls are scattered. Try again, darling! ⚡ Error: \`${error.message}\``);
+    }
+}
+break;
+
+//========================================================================================================================//
+// Case: Naruto
+case 'naruto': {
+    // Input validation: Ensure text is provided.
+    if (!text || text.trim() === "") {
+        // Sassy reply for missing text, with fancy emojis at the start and end.
+        m.reply("🍥 Darling, you forgot the ninja way text! Use it like: `!naruto Your Name` 🍥");
+        return; // Exit if no text is provided.
+    }
+    try {
+        // Inform the user about the process with a stylish, sassy message and emojis.
+        m.reply("🍥 Channeling the spirit of Naruto... generating your logo style! 🍥✨");
+
+        // Call the mumaker.ephoto function with the Naruto effect URL and user's text.
+        const narutoEffectResult = await mumaker.ephoto("https://en.ephoto360.com/naruto-shippuden-logo-style-text-effect-online-808.html", text);
+
+        // Send the generated image with a classy and engaging caption.
+        await client.sendMessage(m.chat, {
+            image: {
+                // 'narutoEffectResult.image' is assumed to hold the URL of the generated image.
+                url: narutoEffectResult.image
+            },
+            caption: `🍥 Your epic Naruto Shippuden Logo Style Text Effect! Believe it! - Frost_Byte-Ai. 🍥`
+        }, {
+            quoted: m // Ensure the reply is quoted to the original message.
+        });
+    } catch (error) {
+        // Handle any errors with a sassy, apologetic message and emojis.
+        m.reply(`🍥 Oh no! The jutsu failed. Try again, darling! 🍥 Error: \`${error.message}\``);
+    }
+}
+break;
+
+//========================================================================================================================//
+// Case: Graffiti
+case 'graffiti': {
+    // Input validation: Ensure text is provided.
+    if (!text || text.trim() === "") {
+        // Sassy reply for missing text, with fancy emojis at the start and end.
+        m.reply("🎨 Darling, unleash your inner artist! Use: `!graffiti Your Tag` 🖌️");
+        return; // Exit if no text is provided.
+    }
+    try {
+        // Inform the user about the process with a stylish, sassy message and emojis.
+        m.reply("🖌️ Spraying some cartoon graffiti magic... stand by! 🎨✨");
+
+        // Call the mumaker.ephoto function with the Graffiti effect URL and user's text.
+        const graffitiEffectResult = await mumaker.ephoto("https://en.ephoto360.com/create-a-cartoon-style-graffiti-text-effect-online-668.html", text);
+
+        // Send the generated image with a classy and engaging caption.
+        await client.sendMessage(m.chat, {
+            image: {
+                // 'graffitiEffectResult.image' is assumed to hold the URL of the generated image.
+                url: graffitiEffectResult.image
+            },
+            caption: `🎨 Your vibrant Cartoon Graffiti Text Effect! Tagged by Frost_Byte-Ai. 🖌️`
+        }, {
+            quoted: m // Ensure the reply is quoted to the original message.
+        });
+    } catch (error) {
+        // Handle any errors with a sassy, apologetic message and emojis.
+        m.reply(`🎨 Oh no! The spray can is empty. Try again, darling! 🖌️ Error: \`${error.message}\``);
+    }
+}
+break;
+
+//========================================================================================================================//
+// Case: Cat (Note: The provided URL is for "handwritten text on foggy glass")
+case 'cat': {
+    // Input validation: Ensure text is provided.
+    if (!text || text.trim() === "") {
+        // Sassy reply for missing text, with fancy emojis at the start and end.
+        m.reply("🐈 Darling, the glass is fogged without your text! Try: `!cat Your Name` 🌫️");
+        return; // Exit if no text is provided.
+    }
+    try {
+        // Inform the user about the process with a stylish, sassy message and emojis.
+        m.reply("🌫️ Writing your message on the foggy glass... just a sec! 🐈✨");
+
+        // Call the mumaker.ephoto function with the Foggy Glass effect URL and user's text.
+        const catEffectResult = await mumaker.ephoto("https://en.ephoto360.com/handwritten-text-on-foggy-glass-online-680.html", text);
+
+        // Send the generated image with a classy and engaging caption.
+        await client.sendMessage(m.chat, {
+            image: {
+                // 'catEffectResult.image' is assumed to hold the URL of the generated image.
+                url: catEffectResult.image
+            },
+            caption: `🌫️ Your charming Handwritten Text on Foggy Glass! Created by Frost_Byte-Ai. 🐈`
+        }, {
+            quoted: m // Ensure the reply is quoted to the original message.
+        });
+    } catch (error) {
+        // Handle any errors with a sassy, apologetic message and emojis.
+        m.reply(`🐈 Oh no! The glass cleared too soon. Try again, darling! 🌫️ Error: \`${error.message}\``);
+    }
+}
+break;
+
+//========================================================================================================================//
+// Case: Gold
+case 'gold': {
+    // Input validation: Ensure text is provided.
+    if (!text || text.trim() === "") {
+        // Sassy reply for missing text, with fancy emojis at the start and end.
+        m.reply("🌟 Darling, you forgot the golden touch! Try: `!Gold Your Name` 👑");
+        return; // Exit if no text is provided.
+    }
+    try {
+        // Inform the user about the process with a stylish, sassy message and emojis.
+        m.reply("👑 Gilding your text with pure gold... stand by! 🌟✨");
+
+        // Call the mumaker.ephoto function with the Modern Gold effect URL and user's text.
+        const goldEffectResult = await mumaker.ephoto("https://en.ephoto360.com/modern-gold-4-213.html", text);
+
+        // Send the generated image with a classy and engaging caption.
+        await client.sendMessage(m.chat, {
+            image: {
+                // 'goldEffectResult.image' is assumed to hold the URL of the generated image.
+                url: goldEffectResult.image
+            },
+            caption: `👑 Your dazzling Modern Gold Text Effect! Gleaming from Frost_Byte-Ai. 🌟`
+        }, {
+            quoted: m // Ensure the reply is quoted to the original message.
+        });
+    } catch (error) {
+        // Handle any errors with a sassy, apologetic message and emojis.
+        m.reply(`🌟 Oh no! The gold is a bit dull. Try again, darling! 👑 Error: \`${error.message}\``);
+    }
+}
+break;
+
+//========================================================================================================================//
+// Case: Child (Note: The provided URL is for "write text on wet glass")
+case 'child': {
+    // Input validation: Ensure text is provided.
+    if (!text || text.trim() === "") {
+        // Sassy and instructive reply with fancy emojis at the start and end.
+        m.reply("👑 Darling, the glass is waiting for your touch! Use it like: `!child Your Name` 🌧️");
+        return; // Exit the function if no text is provided.
+    }
+
+    try {
+        // Inform the user that the effect is being generated with a stylish and thematic message.
+        m.reply("🌧️ Writing your message on the wet glass... just a moment! 💧✨");
+
+        // Call the mumaker.ephoto function to generate the text effect.
+        const childEffectResult = await mumaker.ephoto("https://en.ephoto360.com/write-text-on-wet-glass-online-589.html", text);
+
+        // Send the generated image back to the user with a custom, branded caption.
+        await client.sendMessage(m.chat, {
+            image: {
+                // 'childEffectResult.image' is assumed to contain the URL of the generated image.
+                url: childEffectResult.image
+            },
+            // A classy caption that describes the effect and credits the bot.
+            caption: `💧 Your moody Text on Wet Glass! Expressive art by Frost_Byte-Ai. 🌧️`
+        }, {
+            // 'quoted: m' ensures the bot's reply is associated with the user's original message.
+            quoted: m
+        });
+    } catch (error) {
+        // Handle any errors with a sassy, apologetic message and emojis.
+        m.reply(`💧 Oh no! The condensation is too much. Try again, darling! 🌧️ Error: \`${error.message}\``);
+    }
+}
+break;
 
 //========================================================================================================================//		      
 case 'joke': {
@@ -2611,182 +3031,302 @@ case "img": case "ai-img": case "image": case "images":{
 	break;
 
 //========================================================================================================================//		      
-	      case "foreigners": {
-if (!m.isGroup) throw group;	      
-	if (!isAdmin) throw admin;
-	if (!isBotAdmin) throw botAdmin;
-		      
-		let _0x2f8982 = participants.filter(_0x3c9d8b => !_0x3c9d8b.admin).map(_0x1db3fb => _0x1db3fb.id).filter(_0x475052 => !_0x475052.startsWith(mycode) && _0x475052 != client.decodeJid(client.user.id));
-    if (!args || !args[0]) {
-      if (_0x2f8982.length == 0) {
-        return m.reply("No foreigners detected.");
-      }
-      let _0x2d7d67 = `𝗙𝗼𝗿𝗲𝗶𝗴𝗻𝗲𝗿𝘀 𝗮𝗿𝗲 𝗺𝗲𝗺𝗯𝗲𝗿𝘀 𝘄𝗵𝗼𝘀𝗲 𝗰𝗼𝘂𝗻𝘁𝗿𝘆 𝗰𝗼𝗱𝗲 𝗶𝘀 𝗻𝗼𝘁 ${mycode}. 𝗧𝗵𝗲 𝗳𝗼𝗹𝗹𝗼𝘄𝗶𝗻𝗴  ${_0x2f8982.length} 𝗳𝗼𝗿𝗲𝗶𝗴𝗻𝗲𝗿𝘀 𝘄𝗲𝗿𝗲 𝗱𝗲𝘁𝗲𝗰𝘁𝗲𝗱:- \n`;
-      for (let _0x28761c of _0x2f8982) {
-        _0x2d7d67 += `𓅂 @${_0x28761c.split("@")[0]}\n`;
-      }
-      _0x2d7d67 += `\n𝗧𝗼 𝗿𝗲𝗺𝗼𝘃𝗲 𝘁𝗵𝗲𝗺 𝘀𝗲𝗻𝗱 foreigners -x`;
-      client.sendMessage(m.chat, {
-        text: _0x2d7d67,
-        mentions: _0x2f8982
-      }, {
-        quoted: m
-      });
-    } else if (args[0] == "-x") {
-      setTimeout(() => {
-        client.sendMessage(m.chat, {
-          text: `𝗥𝗮𝘃𝗲𝗻 𝘄𝗶𝗹𝗹 𝗻𝗼𝘄 𝗿𝗲𝗺𝗼𝘃𝗲 𝗮𝗹𝗹 ${_0x2f8982.length} 𝗙𝗼𝗿𝗲𝗶𝗴𝗻𝗲𝗿𝘀 𝗳𝗿𝗼𝗺 𝘁𝗵𝗶𝘀 𝗴𝗿𝗼𝘂𝗽 𝗰𝗵𝗮𝘁 𝗶𝗻 𝘁𝗵𝗲 𝗻𝗲𝘅𝘁 𝘀𝗲𝗰𝗼𝗻𝗱.\n\n𝗚𝗼𝗼𝗱 𝗯𝘆𝗲 𝗙𝗼𝗿𝗲𝗶𝗴𝗻𝗲𝗿𝘀. 𝗧𝗵𝗶𝘀 𝗽𝗿𝗼𝗰𝗲𝘀𝘀 𝗰𝗮𝗻𝗻𝗼𝘁 𝗯𝗲 𝘁𝗲𝗿𝗺𝗶𝗻𝗮𝘁𝗲𝗱⚠️`
-        }, {
-          quoted: m
-        });
-        setTimeout(() => {
-          client.groupParticipantsUpdate(m.chat, _0x2f8982, "remove");
-          setTimeout(() => {
-            m.reply("𝗔𝗻𝘆 𝗿𝗲𝗺𝗮𝗶𝗻𝗶𝗻𝗴 𝗙𝗼𝗿𝗲𝗶𝗴𝗻𝗲𝗿 ?🌚.");
-          }, 1000);
-        }, 1000);
-      }, 1000);
-    }									       }
-  break;
+case "foreigners": {
+    // --- Pre-checks for command execution ---
+    // Ensure the command is used within a group chat.
+    if (!m.isGroup) {
+        // Sassy reply if not in a group.
+        return m.reply("Darling, this command only works in a group chat! Don't make me come to your DMs... 😒");
+    }
+    // Ensure the user invoking the command is an administrator.
+    if (!isAdmin) {
+        // Sassy reply for non-admins.
+        return m.reply("Excuse me? Only group admins can wield this power. Step aside, peasant! 👑");
+    }
+    // Ensure the bot itself has administrator privileges in the group.
+    if (!isBotAdmin) {
+        // Sassy reply if bot is not an admin.
+        return m.reply("Oh, honey, I can't do anything without admin rights! Please make promote me an admin privilege. 🙏");
+    }
 
-//========================================================================================================================//
- case 'dalle': case 'createimage': {
-		      
-  if (!text) return m.reply("What image do you want to create ?");
-		      
-const apiUrl = `https://api.dreaded.site/api/imagine?text=${encodeURIComponent(text)}`;
-m.reply('*Please wait i am generating your image...*');		      
-try {
-        const data = await fetchJson(apiUrl);
-        if (!data.status || !data.result) {
-            return m.reply("Something is wrong,  Api might be down!");
+    // --- Identify non-local members (foreigners) ---
+    let nonLocalMembers = participants
+        .filter(participant => !participant.admin) // Keep only non-admin members
+        .map(nonAdminParticipant => nonAdminParticipant.id) // Get their IDs
+        .filter(memberId =>
+            !memberId.startsWith(mycode) && // Check if ID does NOT start with the bot's country code
+            memberId !== client.decodeJid(client.user.id) // Exclude the bot itself
+        );
+
+    // --- Handle command arguments ---
+    if (!args || args.length === 0 || args[0] === "") {
+        // If no arguments are provided (e.g., just "!foreigners")
+        if (nonLocalMembers.length === 0) {
+            // If no foreigners were detected.
+            return m.reply("Phew! Looks like everyone in this group is a local darling. No foreigners to report! 🌍✨");
         }
 
-        const { creator, result } = data;
-        const caption = `There you go 💠`;
+        // Construct the message listing the detected foreigners.
+        let message = `Well, well, well... look what we have here! 👀\n\n`;
+        message += `Foreigners are those whose country codes don't match my fabulous origin code, \`${mycode}\`. How terribly... *foreign* of them.\n`;
+        message += `The following 💖 ${nonLocalMembers.length} darling souls were identified as 'outsiders':\n\n`;
 
+        for (const foreignerId of nonLocalMembers) {
+            // Mention each foreigner.
+            message += `𓅂 @${foreignerId.split("@")[0]}\n`;
+        }
+
+        message += `\nIf you wish to 'cleanse' the group, simply command me with \`${prefix}foreigners -x\`.`;
+
+        // Send the message with mentions of the identified foreigners.
+        await client.sendMessage(m.chat, {
+            text: message,
+            mentions: nonLocalMembers // Array of IDs to mention
+        }, {
+            quoted: m // Quote the original message.
+        });
+
+    } else if (args[0] === "-x") {
+        // If the command is "!foreigners -x" to remove them.
+
+        // Announce the impending removal with a slight delay.
+        setTimeout(async () => {
+            await client.sendMessage(m.chat, {
+                text: `⏳ Alright, darling! Prepare yourselves... Froat-Ai is about to perform a *major* group cleanse. In the next second, all ${nonLocalMembers.length} 'outsiders' will be politely (or not so politely) escorted out. This process is irreversible, so no take-backs! 🚫✨`
+            }, {
+                quoted: m
+            });
+
+            // Execute the removal after another short delay.
+            setTimeout(async () => {
+                try {
+                    // Kick the identified non-local members from the group.
+                    await client.groupParticipantsUpdate(m.chat, nonLocalMembers, "remove");
+                    // Reply after the removal attempt.
+                    m.reply("Ta-da! ✨ The 'foreigner' removal operation is complete. Hope they enjoyed their brief stay! Any remaining ones? 🌚");
+                } catch (error) {
+                    // Handle potential errors during the kick process.
+                    m.reply(`Oh dear! It seems my kicking powers are a bit weak today. Something went wrong while removing members: \`${error.message}\`. Please ensure I have the necessary permissions, darling. 😥`);
+                }
+            }, 1000); // Delay before kicking.
+        }, 1000); // Delay before announcing removal.
+    }
+}
+break;
+
+//========================================================================================================================//
+case 'dalle':
+case 'createimage': {
+    // --- Input Validation ---
+    if (!text) {
+        return m.reply("Darling, my artistic muse needs a prompt! What fabulous image shall I conjure for you? 🎨✨");
+    }
+
+    // --- API URL Construction ---
+    const apiUrl = `https://api.dreaded.site/api/imagine?text=${encodeURIComponent(text)}`;
+
+    // --- User Feedback: Waiting ---
+    m.reply("Hold on to your halo, darling! I'm weaving some digital magic to create your masterpiece... 💫🪄");
+
+    try {
+        // --- Image Generation ---
+        const data = await fetchJson(apiUrl);
+
+        // --- Response Validation ---
+        if (!data.status || !data.result) {
+          // Stylish Reoly
+            return m.reply("Oh, darling! It seems the creative well has run dry, or perhaps the API is having a moment. 💔 Let's try again later, shall we? 🔌");
+        }
+
+        // Destructure the response data.
+        const { creator, result } = data; // 'creator' might be unused here, but kept for structure.
+        // Craft a stylish caption for the generated image.
+        const caption = `Voila! Your vision, brought to life by yours truly. ✨`;
+
+        // --- Sending the Generated Image ---
         await client.sendMessage(
             m.chat,
             {
-                image: { url: result },
+                image: { url: result }, // The URL of the generated image.
                 caption: caption
             },
-            { quoted: m }
+            { quoted: m } // Ensure the bot's reply is quoted to the original message.
         );
     } catch (error) {
-        console.error(error);
-        m.reply("An error occurred while generating the image.");
+        // --- Error Handling ---
+        console.error("Error during image generation:", error);
+        // Sassy reply for any other errors during the process.
+        m.reply("Oopsie! My creative circuits got a bit tangled. Please try again, and I promise to be more graceful next time! 🙏💖");
     }
-};
+}
 break;
-		      
-//========================================================================================================================//		      
-		      case "ai": {
-			      const {
-    GoogleGenerativeAI: _0x817910
-  } = require("@google/generative-ai");
-  const _0xc0423b = require("axios");
-		      
-  try {
-    if (!m.quoted) {
-      return m.reply("𝗤𝘂𝗼𝘁𝗲 𝗮𝗻 𝗶𝗺𝗮𝗴𝗲 𝘄𝗶𝘁𝗵 𝘁𝗵𝗲 𝗶𝗻𝘀𝘁𝗿𝘂𝗰𝘁𝗶𝗼𝗻𝘀 𝗲𝗵!");
-    }
-    if (!text) {
-      return m.reply("𝗣𝗿𝗼𝘃𝗶𝗱𝗲 𝘀𝗼𝗺𝗲 𝗶𝗻𝘀𝘁𝗿𝘂𝗰𝘁𝗶𝗼𝗻𝘀 𝗲𝗵! 𝗧𝗵𝗶𝘀 𝗶𝘀 𝗥𝗔𝗩𝗘𝗡 𝗔𝗶, 𝘂𝘀𝗶𝗻𝗴 𝗴𝗲𝗺𝗶𝗻𝗶-𝗽𝗿𝗼-𝘃𝗶𝘀𝗶𝗼𝗻 𝘁𝗼 𝗮𝗻𝗮𝗹𝘆𝘀𝗲 𝗶𝗺𝗮𝗴𝗲𝘀.");
-    }
-    if (!/image|pdf/.test(mime)) {
-      return m.reply("𝗛𝘂𝗵 𝘁𝗵𝗶𝘀 𝗶𝘀 𝗻𝗼𝘁 𝗮𝗻 𝗶𝗺𝗮𝗴𝗲! 𝗣𝗹𝗲𝗮𝘀𝗲 𝗧𝗮𝗴 𝗮𝗻 𝗶𝗺𝗮𝗴𝗲 𝘄𝗶𝘁𝗵 𝘁𝗵𝗲 𝗶𝗻𝘀𝘁𝗿𝘂𝗰𝘁𝗶𝗼𝗻𝘀 𝗲𝗵 !");
-    }
-    let _0x3439a2 = await client.downloadAndSaveMediaMessage(m.quoted);
-    let _0x3dfb7c = await uploadToCatbox(_0x3439a2);
-    m.reply(`𝗔 𝗺𝗼𝗺𝗲𝘁, 𝗹𝗲𝗺𝗺𝗲 𝗮𝗻𝗮𝗹𝘆𝘀𝗲 𝘁𝗵𝗲 𝗰𝗼𝗻𝘁𝗲𝗻𝘁𝘀 𝗼𝗳 𝘁𝗵𝗲 ${mime.includes("pdf") ? "𝗣𝗗𝗙" : "𝗜𝗺𝗮𝗴𝗲"} ...`);
-    const _0x4e9e6a = new _0x817910("AIzaSyDJUtskTG-MvQdlT4tNE319zBqLMFei8nQ");
-    async function _0x309a3c(_0x1400ed, _0x1a081e) {
-      const _0x53e4b2 = {
-        responseType: "arraybuffer"
-      };
-      const _0x1175d9 = await _0xc0423b.get(_0x1400ed, _0x53e4b2);
-      const _0x2a4862 = Buffer.from(_0x1175d9.data).toString("base64");
-      const _0x2f6e31 = {
-        data: _0x2a4862,
-        mimeType: _0x1a081e
-      };
-      const _0x14b65d = {
-        inlineData: _0x2f6e31
-      };
-      return _0x14b65d;
-    }
-    const _0x22a6bb = {
-      model: "gemini-1.5-flash"
-    };
-    const _0x42849d = _0x4e9e6a.getGenerativeModel(_0x22a6bb);
-    const _0x2c743f = [await _0x309a3c(_0x3dfb7c, "image/jpeg")];
-    const _0xcf53e3 = await _0x42849d.generateContent([text, ..._0x2c743f]);
-    const _0x195f9c = await _0xcf53e3.response;
-    const _0x3db5a3 = _0x195f9c.text();
-    await m.reply(_0x3db5a3);
-  } catch (_0x4b3921) {
-    m.reply("I am unable to analyze images at the moment\n" + _0x4b3921);
-  }
-}
- break;
 
 //========================================================================================================================//		      
-	      case "ai2": {
-const axios = require("axios");
+case "ai": {
+    try {
+        // --- Input Validation ---
+        if (!m.quoted) {
+            return m.reply("Darling, you need to *quote* an image or PDF first! My analytical skills require something to analyze, you know. 🧐");
+        }
+        // Sassy reply if no instructions were provided.
+        if (!text) {
+            return m.reply("Oh, honey, just showing me a picture isn't enough! Tell me what you want me to *do* with it. I'm *FROST-AI*, powered by Gemini Pro Vision, ready to analyze! 🧠✨");
+        }
+        // Check if the quoted message is an image or PDF.
+        if (!/image|pdf/.test(mime)) {
+            // Dismissive reply for unsupported file types.
+            return m.reply(`Seriously? 🤨 That's not an image or a PDF! Please tag a valid file so I can work my magic. 🙄`);
+        }
 
-try {
-if (!m.quoted) return m.reply("Send the image then tag it with the instruction.");
+        // --- File Handling ---
+        const downloadedMediaPath = await client.downloadAndSaveMediaMessage(m.quoted);
+        // Upload the downloaded file to Catbox for easier access.
+        const uploadedFileUrl = await uploadToCatbox(downloadedMediaPath);
 
-if (!text) return m.reply("𝗣𝗿𝗼𝘃𝗶𝗱𝗲 𝘀𝗼𝗺𝗲 𝗶𝗻𝘀𝘁𝗿𝘂𝗰𝘁𝗶𝗼𝗻𝘀 𝗲𝗵! 𝗧𝗵𝗶𝘀 Raven AI 𝗨𝘀𝗲 𝗚𝗲𝗺𝗶𝗻𝗶-𝗽𝗿𝗼-𝘃𝗶𝘀𝗶𝗼𝗻 𝘁𝗼 𝗮𝗻𝗮𝗹𝘆𝘀𝗲 𝗶𝗺𝗮𝗴𝗲𝘀.");
-if (!/image|pdf/.test(mime)) return m.reply("That is not an image, try again while quoting an actual image.");             
+        // Inform the user that analysis is underway with a sophisticated tone.
+        m.reply(`Analyzing the ${mime.includes("pdf") ? "PDF document" : "image"}... Give me a moment to process this visual feast! ⏳✨`);
 
-                    let fdr = await client.downloadAndSaveMediaMessage(m.quoted)
-                    let fta = await uploadToCatbox(fdr)
-                    m.reply(`𝗔 𝗠𝗼𝗺𝗲𝗻𝘁, 𝗥𝗮𝘃𝗲𝗻[𝗥𝗔𝗩𝗘𝗡-𝗔𝗜] 𝗶𝘀 𝗮𝗻𝗮𝗹𝘆𝘇𝗶𝗻𝗴 𝘁𝗵𝗲 𝗰𝗼𝗻𝘁𝗲𝗻𝘁𝘀 𝗼𝗳 𝘁𝗵𝗲 ${mime.includes("pdf") ? "𝗣𝗗𝗙" : "𝗜𝗺𝗮𝗴𝗲"} . . .`);
+        // --- Gemini API Integration ---
+        const genAI = new GoogleGenerativeAI("AIzaSyDJUtskTG-MvQdlT4tNE319zBqLMFei8nQ"); // Replace with your actual API key management
 
-const data = await fetchJson(`https://api.dreaded.site/api/gemini-vision?url=${fta}&instruction=${text}`);
-let res = data.result
-await m.reply(res); 
+        // Helper function to convert file URL to Base64 format required by Gemini Vision.
+        async function fileToBase64(fileUrl, mimeType) {
+            const axiosConfig = { responseType: "arraybuffer" };
+            const axiosResponse = await axios.get(fileUrl, axiosConfig);
+            const fileContentBase64 = Buffer.from(axiosResponse.data).toString("base64");
+            const fileData = {
+                data: fileContentBase64,
+                mimeType: mimeType
+            };
+            const geminiVisionFile = { inlineData: fileData };
+            return geminiVisionFile;
+        }
 
-} catch (e) {
+        // Configure the model.
+        const modelConfig = {
+            model: "gemini-1.5-flash" // Using the flash model for speed
+        };
+        const geminiModel = genAI.getGenerativeModel(modelConfig);
 
-m.reply("I am unable to analyze images at the moment\n" + e)
+        // Prepare the content parts for the Gemini API: instructions + file.
+        const geminiContentParts = [
+            text, // User's instructions
+            await fileToBase64(uploadedFileUrl, mime.includes("pdf") ? "application/pdf" : "image/jpeg") // File data
+        ];
 
+        // Generate content using the Gemini model.
+        const generationResult = await geminiModel.generateContent(geminiContentParts);
+        const response = await generationResult.response;
+        const analysisResultText = response.text();
+
+        // --- Sending the Analysis Result ---
+        await m.reply(`Here's what I've gathered from your request: ✨\n\n${analysisResultText}`);
+
+    } catch (error) {
+        // --- Error Handling ---
+        console.error("AI Image Analysis Error:", error); // Log the error for debugging.
+        m.reply(`Oh, darling! My visual analysis circuits seem to be on strike. 💥 I'm unable to process that right now. Please try again later, or perhaps with a different file? 💔 Error: \`${error.message}\``);
+    }
 }
-	      }
-		break;
+break;
 
 //========================================================================================================================//		      
-	      case "vision": {
-		      if (!msgR || !text) {
-    m.reply("𝗤𝘂𝗼𝘁𝗲 𝗮𝗻 𝗶𝗺𝗮𝗴𝗲 𝗮𝗻𝗱 𝗴𝗶𝘃𝗲 𝘀𝗼𝗺𝗲 𝗶𝗻𝘀𝘁𝗿𝘂𝗰𝘁𝗶𝗼𝗻𝘀 𝗲𝗵. 𝗜'𝗺 𝗥𝗔𝗩𝗘𝗡 𝗔𝗶, 𝗶 𝘂𝘀𝗲 𝗕𝗮𝗿𝗱 𝘁𝗼 𝗮𝗻𝗮𝗹𝘆𝘇𝗲 𝗶𝗺𝗮𝗴𝗲𝘀.");
-    return;
-  }
-  ;
-  let _0x44b3e0;
-  if (msgR.imageMessage) {
-    _0x44b3e0 = msgR.imageMessage;
-  } else {
-    m.reply("𝗛𝘂𝗵, 𝗧𝗵𝗮𝘁'𝘀 𝗻𝗼𝘁 𝗮𝗻 𝗶𝗺𝗮𝗴𝗲, 𝗦𝗲𝗻𝗱 𝗮𝗻 𝗶𝗺𝗮𝗴𝗲 𝘁𝗵𝗲𝗻 𝘁𝗮𝗴 𝗶𝘁 𝘄𝗶𝘁𝗵 𝘁𝗵𝗲 𝗶𝗻𝘀𝘁𝗿𝘂𝗰𝘁𝗶𝗼𝗻𝘀 !");
-    return;
-  };
-  try {
-    let _0x11f50e = await client.downloadAndSaveMediaMessage(_0x44b3e0);
-    let _0x45392d = await uploadToCatbox(_0x11f50e);
-    m.reply("𝗔 𝗺𝗼𝗺𝗲𝗻𝘁, 𝗟𝗲𝗺𝗺𝗲 𝗮𝗻𝗮𝗹𝘆𝘇𝗲 𝘁𝗵𝗲 𝗰𝗼𝗻𝘁𝗲𝗻𝘁𝘀 𝗼𝗳 𝘁𝗵𝗲 𝗶𝗺𝗮𝗴𝗲. . .");
-    let _0x4f137e = await (await fetch("https://bk9.fun/ai/geminiimg?url=" + _0x45392d + "&q=" + text)).json();
-    const _0x4bfd63 = {
-      text: _0x4f137e.BK9
-    };
-    await client.sendMessage(m.chat, _0x4bfd63, {
-      quoted: m
-    });
-  } catch (_0x1be711) {
-    m.reply("An error occured\n" + _0x1be711);
-  }
+case "ai2": {
+    // Requiring axios as per the original snippet.
+    const axios = require("axios");
+
+    try {
+        // --- Input Validation: Quoted Message ---
+        if (!m.quoted) {
+            return m.reply("Darling, I need something to work with! Please quote the image or PDF you wish for me to analyze, and then provide your instructions. Let's create some magic! ✨");
+        }
+
+        // --- Input Validation: Text Instructions ---
+        // Ensure there are instructions provided for the AI. If not, prompt the user sassily.
+        if (!text) {
+            return m.reply("Oh, sweetie, my sophisticated Frost AI needs a bit of guidance! Please provide clear instructions on what you'd like me to analyze in the image/PDF. Think of me as your personal digital oracle! 🔮");
+        }
+
+        // --- Input Validation: Media Type ---
+        if (!/image|pdf/.test(m.quoted.mimetype)) {
+            return m.reply("My dear, it seems you've sent something that isn't quite an image or a PDF. My AI is rather discerning – it thrives on visual or document files. Please quote a proper image or PDF, darling! 🖼️📄");
+        }
+
+        // --- Media Processing ---
+        let mediaPath = await client.downloadAndSaveMediaMessage(m.quoted);
+        let mediaUrl = await uploadToCatbox(mediaPath); // Assumed function to upload and return URL
+
+        // --- AI Analysis Notification ---
+        m.reply(`Just a moment, my love! Frost AI is now meticulously analyzing the depths of your ${m.quoted.mimetype.includes("pdf") ? "PDF document" : "image"}... It's quite the intellectual endeavor! 🧠`);
+
+        // --- API Call for AI Analysis ---
+        const data = await fetchJson(`https://api.dreaded.site/api/gemini-vision?url=${encodeURIComponent(mediaUrl)}&instruction=${encodeURIComponent(text)}`);
+        let aiResult = data.result; // Extract the actual result from the API response
+
+        // --- Sending the AI's Result ---
+        await m.reply(`Here's what Frost AI has divined from your ${m.quoted.mimetype.includes("pdf") ? "document" : "image"}, darling: ✨\n\n${aiResult}`);
+
+    } catch (e) {
+        // --- Error Handling ---
+        // If any error occurs during the process, provide a sassy error message.
+        m.reply(`My apologies, darling! It appears my analytical circuits are experiencing a temporary hiccup, and I can't process images or PDFs right now. 💔 Please try again later, or perhaps the universe is keeping its secrets for another time! Error details: \`${e}\``);
+    }
 }
-	 break;
+break;
+
+//========================================================================================================================//		      
+case "vision": {
+    // --- Input Validation: Quoted Message and Instruction ---
+    if (!m.quoted || !text) {
+        // Sassy reply if either the quote or instruction is missing.
+        return m.reply("Darling, my vision capabilities require a subject! Please quote an image and grace me with your instructions. I am FROST AI, ready to decode the visual world for you. 🧐✨");
+    }
+
+    // --- Media Type Check ---
+    let mediaMessageObject = m.quoted.message?.imageMessage; // Safely access imageMessage from the message content
+    if (!mediaMessageObject) {
+        // Sassy reply if the quoted message is not an image.
+        return m.reply("Oh, honey, that's not quite what I'm looking for. My AI is a connoisseur of images, not... whatever that was. Please quote a proper image and provide your instructions! 🖼️🚫");
+    }
+
+    try {
+        // --- Media Processing ---
+        let mediaPath = await client.downloadAndSaveMediaMessage(mediaMessageObject);
+
+        // Upload the downloaded image to Catbox to get a shareable URL.
+        let mediaUrl = await uploadToCatbox(mediaPath);
+
+        // --- AI Analysis Notification ---
+        m.reply("Just a moment, my dear! Raven AI is diving deep into the visual data... It's quite the intellectual pursuit! 🧠💫");
+
+        // --- API Call for AI Analysis ---
+        const apiUrl = `https://bk9.fun/ai/geminiimg?url=${encodeURIComponent(mediaUrl)}&q=${encodeURIComponent(text)}`;
+
+        // Fetch the JSON response from the API.
+        const response = await fetch(apiUrl);
+        if (!response.ok) {
+            // Throw an error if the API call fails, including status information.
+            throw new Error(`API returned status ${response.status}: ${response.statusText}`);
+        }
+        const apiResponse = await response.json();
+
+        // --- Extracting and Sending the AI's Result ---
+        let aiResult = apiResponse.BK9;
+
+        // Prepare the response payload for sending.
+        const responsePayload = {
+            text: aiResult
+        };
+
+        // Send the AI's findings back to the chat with a sassy intro.
+        await client.sendMessage(m.chat, responsePayload, { quoted: m });
+
+    } catch (error) {
+        // --- Error Handling ---
+        m.reply(`My apologies, my love! It seems my visual analysis circuits are a bit fuzzy at the moment. 💔 I couldn't process that image. Perhaps the digital ether is playing tricks on us? Try again later! Error: \`${error.message}\``);
+    }
+}
+break;
 
 //========================================================================================================================//		      
 		      case 'remini': {
@@ -2977,107 +3517,182 @@ await client.sendMessage(m.chat, { image: { url: imageurl}, caption: `𝗖𝗼�
 	 break;
 
 //========================================================================================================================//		      
-		      case "pickupline": {
-		      const API_URL = 'https://api.popcat.xyz/pickuplines';
+case "pickupline": {
+    const API_URL = 'https://api.popcat.xyz/pickuplines'; // The API endpoint for pickup lines
 
     try {
+        // --- User Feedback: Initiating Charm ---
+        await client.sendMessage(m.chat, { text: "Let me conjure up a line that's sure to make them blush... 😉" }, { quoted: m });
+
+        // --- API Call ---
         const response = await fetch(API_URL);
-        if (!response.ok) throw new Error('Failed to fetch data');
 
-        const { pickupline } = await response.json();
-        const lineMessage = `${pickupline}`;
+        // --- Response Validation ---
+        if (!response.ok) {
+            // Sassy error reply if the API fails.
+            throw new Error(`API Error: ${response.status} ${response.statusText}`);
+        }
 
+        // Parse the JSON response.
+        const data = await response.json();
+
+        // --- Pickup Line Extraction and Formatting ---
+        if (!data.pickupline) {
+            throw new Error("Invalid data format received from API.");
+        }
+
+        const pickupLine = data.pickupline;
+
+        // Construct the final message with a sassy intro and the pickup line.
+        const lineMessage = `Here's a little something to sweep them off their feet: 💖\n\n"${pickupLine}"`;
+
+        // --- Sending the Pickup Line ---
         await client.sendMessage(m.chat, { text: lineMessage }, { quoted: m });
+
     } catch (error) {
-        console.error('Error fetching data:', error);
-        await client.sendMessage(m.chat, { text: 'An error occurred while fetching the fact.' }, { quoted: m });
+        // --- Error Handling ---
+        console.error('Error fetching pickup line:', error);
+
+        // Sassy and empathetic error reply if something goes wrong.
+        await client.sendMessage(m.chat, { text: `Oh, darling! My charm generator seems to be experiencing a slight malfunction. 💔 I couldn't fetch a pickup line right now. Perhaps the muse is busy elsewhere? Try again later! 😅 Error: \`${error.message}\`` }, { quoted: m });
     }
 }
-	break;
+break;
 
 //========================================================================================================================//		      
-		      case "quotes": {
-		      const API_URL = 'https://favqs.com/api/qotd';
+case "quotes": {
+    const API_URL = 'https://favqs.com/api/qotd'; // The API endpoint for daily quotes
 
     try {
+        // --- User Feedback: Fetching Quote ---
+        await client.sendMessage(m.chat, { text: "Let me find a little spark of wisdom for your day... ✨" }, { quoted: m });
+
+        // --- API Call ---
         const response = await fetch(API_URL);
-        if (!response.ok) throw new Error('Failed to fetch data');
 
-        const { quote } = await response.json();
-        const quoteMessage = `${quote.body} \n\n𝗤𝘂𝗼𝘁𝗲 𝗕𝘆 ${quote.author}`;
+        // --- Response Validation ---
+        if (!response.ok) {
+            // Sassy error reply if the API fails.
+            throw new Error(`API Error: ${response.status} ${response.statusText}`);
+        }
 
+        // Parse the JSON response.
+        const data = await response.json();
+
+        // --- Quote Extraction and Formatting ---
+        if (!data.quote || !data.quote.body || !data.quote.author) {
+            throw new Error("Invalid data format received from API.");
+        }
+
+        const { body, author } = data.quote;
+
+        // Construct the final message with stylish formatting and emojis.
+        const quoteMessage = `Here's a profound thought to ponder, darling: 🌟\n\n"${body}"\n\n— ${author} 🖋️`;
+
+        // --- Sending the Quote ---
         await client.sendMessage(m.chat, { text: quoteMessage }, { quoted: m });
+
     } catch (error) {
-        console.error('Error fetching data:', error);
-        await client.sendMessage(m.chat, { text: 'An error occurred while fetching the fact.' }, { quoted: m });
+        // --- Error Handling ---
+        console.error('Error fetching quote:', error);
+
+        // Sassy and empathetic error reply.
+        await client.sendMessage(m.chat, { text: `Oh, dear! My wisdom well seems to be temporarily dry. 💔 I couldn't fetch a quote right now. Please try again later, or perhaps the universe is saving something even better for you! 😅 Error: \`${error.message}\`` }, { quoted: m });
     }
 }
-	break;
+break;
 
 //========================================================================================================================//		      
-		      case "google": {
-		      const axios = require("axios");
-        if (!text) {
-            m.reply('Provide a search term!\nEg: .Google What is treason')
-            return;
+case "google": {
+    // --- Input Validation ---
+    if (!text) {
+        // Sassy reply if no search term is provided.
+        return m.reply("Darling, my search engine needs a quest! What knowledge shall I uncover for you today? Please provide a search term, like `.google What is treason` 🧐✨");
+    }
+
+    // --- API Call and Processing ---
+    try {
+        // Fetch search results from Google Custom Search API.
+        const googleSearchUrl = `https://www.googleapis.com/customsearch/v1?q=${encodeURIComponent(text)}&key=AIzaSyDMbI3nvmQUrfjoCJYLS69Lej1hSXQjnWI&cx=baf9bdb0c631236e5`;
+        const { data } = await axios.get(googleSearchUrl);
+
+        // --- Result Handling ---
+        if (!data.items || data.items.length === 0) {
+            // Sassy reply if no results are found.
+            return m.reply("Oh, dear! It seems Google has drawn a blank for your query. Perhaps the universe is keeping this secret... for now. 🌌 Or maybe your search term was a bit too... *niche*? 😉");
         }
-        let {
-            data
-        } = await axios.get(`https://www.googleapis.com/customsearch/v1?q=${text}&key=AIzaSyDMbI3nvmQUrfjoCJYLS69Lej1hSXQjnWI&cx=baf9bdb0c631236e5`)
-        if (data.items.length == 0) {
-            m.reply("❌ Unable to find a result")
-            return;
-        }
-        let tex = `SEARCH FROM GOOGLE\n🔍 Term:- ${text}\n\n`;
+
+        // Construct the output message with stylish formatting.
+        let responseText = `Behold! The wisdom of the internet, curated just for you. 🌟\n\n`;
+        responseText += `**🔍 Search Term:** \`${text}\`\n\n`;
+
+        // Iterate through search results and format them.
         for (let i = 0; i < data.items.length; i++) {
-            tex += `🪧 Title:- ${data.items[i].title}\n🖥 Description:- ${data.items[i].snippet}\n🌐 Link:- ${data.items[i].link}\n\n`
+            responseText += `✨ **Title:** ${data.items[i].title}\n`;
+            responseText += `📝 **Snippet:** ${data.items[i].snippet}\n`;
+            responseText += `🔗 **Link:** ${data.items[i].link}\n\n`;
         }
-        m.reply(tex)
-       
 
+        // Reply with the formatted search results.
+        m.reply(responseText);
+
+    } catch (error) {
+        // --- Error Handling ---
+        console.error("Google Search Error:", error);
+        // Sassy error reply.
+        m.reply(`My apologies, darling! My connection to the great Google oracle seems to have a hiccup. 💔 Please try again later. Error: \`${error.message}\``);
     }
-      break;
+}
+break;
 
-//========================================================================================================================//		      
-		      case "hack": {
-		if(!Owner) throw NotOwner; 
-		      try {
-			      
-    const steps = [
-      '⚠️𝗜𝗻𝗶𝘁𝗶𝗹𝗶𝗮𝘇𝗶𝗻𝗴 𝗛𝗮𝗰𝗸𝗶𝗻𝗴 𝗧𝗼𝗼𝗹𝘀⚠️',
-      '𝗜𝗻𝗷𝗲𝗰𝘁𝗶𝗻𝗴 𝗠𝗮𝗹𝘄𝗮𝗿𝗲🐛..\n𝗟𝗼𝗮𝗱𝗶𝗻𝗴 𝗗𝗲𝘃𝗶𝗰𝗲 𝗚𝗮𝗹𝗹𝗲𝗿𝘆 𝗙𝗶𝗹𝗲𝘀⚠️',
-      '```██ 10%``` ⏳',
-      '```████ 20%``` ⏳',
-      '```██████ 30%``` ⏳',
-      '```████████ 40%``` ⏳',
-      '```██████████ 50%``` ⏳',
-      '```████████████ 60%``` ⏳',
-      '```██████████████ 70%``` ⏳',
-      '```████████████████ 80%``` ⏳',
-      '```██████████████████ 90%``` ⏳',
-      '```████████████████████ 100%``` ✅',
-      "```𝗦𝘆𝘀𝘁𝗲𝗺 𝗛𝘆𝗷𝗮𝗰𝗸𝗶𝗻𝗴 𝗼𝗻 𝗽𝗿𝗼𝗰𝗲𝘀𝘀...```\n```𝗖𝗼𝗻𝗻𝗲𝗰𝘁𝗶𝗻𝗴 𝘁𝗼 𝘁𝗵𝗲 𝗦𝗲𝗿𝘃𝗲𝗿 𝘁𝗼 𝗙𝗶𝗻𝗱 𝗘𝗿𝗿𝗼𝗿 404```",
-    "```𝗦𝘂𝗰𝗰𝗲𝘀𝗳𝘂𝗹𝗹𝘆 𝗖𝗼𝗻𝗻𝗲𝗰𝘁𝗲𝗱 𝘁𝗼 𝗗𝗲𝘃𝗶𝗰𝗲...\n𝗥𝗲𝗰𝗲𝗶𝘃𝗶𝗻𝗴 𝗗𝗮𝘁𝗮/𝗦𝗲𝗰𝗿𝗲𝘁 𝗣𝗮𝘀𝘀𝘄𝗼𝗿𝗱𝘀...```",
-    "```𝗗𝗮𝘁𝗮 𝗧𝗿𝗮𝗻𝘀𝗳𝗲𝗿𝗲𝗱 𝗙𝗿𝗼𝗺 𝗱𝗲𝘃𝗶𝗰𝗲 100% 𝗖𝗼𝗺𝗽𝗹𝗲𝘁𝗲𝗱\n𝗘𝗿𝗮𝘀𝗶𝗻𝗴 𝗮𝗹𝗹 𝗘𝘃𝗶𝗱𝗲𝗻𝗰𝗲, 𝗞𝗶𝗹𝗹𝗶𝗻𝗴 𝗮𝗹𝗹 𝗠𝗮𝗹𝘄𝗮𝗿𝗲𝘀🐛...```",
-    "```𝗦𝗘𝗡𝗗𝗜𝗡𝗗 𝗟𝗢𝗚 𝗗𝗢𝗖𝗨𝗠𝗘𝗡𝗧𝗦...```",
-    "```𝗦𝘂𝗰𝗰𝗲𝘀𝗳𝘂𝗹𝗹𝘆 𝗦𝗲𝗻𝘁 𝗗𝗮𝘁𝗮 𝗔𝗻𝗱 𝗖𝗼𝗻𝗻𝗲𝗰𝘁𝗶𝗼𝗻 𝗦𝘂𝗰𝗰𝗲𝘀𝗳𝘂𝗹𝗹𝘆 𝗗𝗶𝘀𝗰𝗼𝗻𝗻𝗲𝗰𝘁𝗲𝗱```",
-    "```𝗔𝗹𝗹 𝗕𝗮𝗰𝗸𝗹𝗼𝗴𝘀 𝗖𝗹𝗲𝗮𝗿𝗲𝗱 𝗦𝘂𝗰𝗰𝗲𝘀𝗳𝘂𝗹𝗹𝘆💣\n𝗬𝗼𝘂𝗿 𝗦𝘆𝘀𝘁𝗲𝗺 𝗪𝗶𝗹𝗹 𝗕𝗲 𝗗𝗼𝘄𝗻 𝗜𝗻 𝗧𝗵𝗲 𝗡𝗲𝘅𝘁 𝗠𝗶𝗻𝘂𝘁𝗲⚠️```"
-    ];
-			      
-    for (const line of steps) {
-      await client.sendMessage(m.chat, { text: line }, { quoted: m });
-      await new Promise(resolve => setTimeout(resolve, 1000));
+//========================================================================================================================//		    
+case "hack": {
+    // --- Owner Check ---
+    if (!Owner) {
+        return m.reply("Darling, only the *true* owner can orchestrate such digital chaos! You're not on the VIP list. 💅");
     }
 
-  } catch (error) {
-    console.error('Error during prank:', error);
+    try {
+        // --- Hacking Simulation Steps ---
+        const hackingSteps = [
+            '✨ Initiating Operation: Digital Intrusion... ✨',
+            '🐛 Deploying sophisticated malware... Loading device gallery files... 📂',
+            '🚀 Progress: 10%... Almost there, darling! ⏳',
+            '🚀 Progress: 20%... We\'re just getting started! ⏳',
+            '🚀 Progress: 30%... Gaining access, slowly but surely. ⏳',
+            '🚀 Progress: 40%... The digital veil is thinning... ⏳',
+            '🚀 Progress: 50%... Halfway through the digital labyrinth! ⏳',
+            '🚀 Progress: 60%... Unlocking secrets... ⏳',
+            '🚀 Progress: 70%... The system trembles... ⏳',
+            '🚀 Progress: 80%... Almost at the core! ⏳',
+            '🚀 Progress: 90%... The final push! ⏳',
+            '✅ Progress: 100%... All systems compromised! 💥',
+            '💻 System Hijacking in progress... Connecting to the server to find... Error 404? How cliché! 😜',
+            '🔓 Successfully connected to the device... Receiving sensitive data/secret passwords... 🤫',
+            '📁 Data transfer complete (100%). Erasing all traces, terminating all malware... Poof! ✨',
+            '📜 Sending log documents... For your viewing pleasure, of course. 😉',
+            '🚀 Connection successfully terminated. Data securely dispatched. Ciao! 👋',
+            '💣 All backlogs cleared! Your system is now... *unstable*. Prepare for shutdown in the next minute! ⚠️'
+        ];
 
-    client.sendMessage(m.chat, {
-      text: `❌ *Error!* Something went wrong. Reason: ${error.message}. Please try again later.`
-    });
-  }
-} 
-  break;
+        // --- Execute Steps with Delay ---
+        for (const step of hackingSteps) {
+            await client.sendMessage(m.chat, { text: step }, { quoted: m });
+            // Wait for 1 second between each message.
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+
+    } catch (error) {
+        // --- Error Handling ---
+        console.error('Error during prank execution:', error);
+
+        // Sassy error reply if something goes wrong.
+        client.sendMessage(m.chat, {
+            text: `❌ Oh, darling! My hacking simulation encountered a glitch. 💔 Reason: \`${error.message}\`. Please try again later, or perhaps with a less dramatic approach? 😅`
+        });
+    }
+}
+break;
 
 //========================================================================================================================//		      
 case "compile-py":
@@ -3593,10 +4208,63 @@ try {
 break;
 		      
 //========================================================================================================================//		      
-  case "system": 
-  
-              client.sendMessage(m.chat, { image: { url: 'https://files.catbox.moe/duv8ac.jpg' }, caption:`*𝐁𝐎𝐓 𝐍𝐀𝐌𝐄: 𝗥𝗔𝗩𝗘𝗡-𝗕𝗢𝗧*\n\n*𝐒𝐏𝐄𝐄𝐃: ${Rspeed.toFixed(4)} 𝐌𝐒*\n\n*𝐑𝐔𝐍𝐓𝐈𝐌𝐄: ${runtime(process.uptime())}*\n\n*𝐏𝐋𝐀𝐓𝐅𝐎𝐑𝐌: 𝗛𝗲𝗿𝗼𝗸𝘂*\n\n*𝐇𝐎𝐒𝐓𝐍𝐀𝐌𝐄: 𝗥𝗮𝘃𝗲𝗻*\n\n*𝐋𝐈𝐁𝐑𝐀𝐑𝐘: Baileys*\n\n𝐃𝐄𝐕𝐄𝐋𝐎𝐏𝐄𝐑: 𝗡𝗶𝗰𝗸༆`}); 
- break;
+case "system":
+    // --- Placeholders for Newsletter and Link Features ---
+    const systemRepoUrl = "https://github.com/Graham-Bell/Frost_Byte-Au"; 
+    const systemChannelLink = "https://whatsapp.com/channel/YOUR_CHANNEL_ID_HERE"; 
+    const systemNewsletterJid = "YOUR_SYSTEM_NEWSLETTER_JID@newsletter"; 
+    const systemNewsletterName = "Frost-Ai System Updates"; 
+
+    const systemMessageImageUrl = 'https://files.catbox.moe/21qno2.jpg'; 
+
+    // Define the thumbnail URL for the rich link preview.
+    const systemThumbnailUrl = 'https://files.catbox.moe/wpenxk.jpg'; 
+
+    // This caption will be displayed alongside the main image.
+    const systemMessageCaption = `
+*🤖 𝐒𝐘𝐒𝐓𝐄𝐌 𝐈𝐍𝐅𝐎 🤖*
+
+*• 🤖 Bot Name:* Frost-Byte-Ai
+*• ⚡ Speed:* ${typeof Rspeed !== 'undefined' ? Rspeed.toFixed(4) + ' ms' : 'N/A'}
+*• ⏳ Runtime:* ${typeof runtime === 'function' ? runtime(process.uptime()) : 'N/A'}
+*• 🌐 Platform:* Heroku
+*• 🖥️ Hostname:* Raven
+*• 🖨️ Library:* Baileys
+*• 🎲 Developer:* Nick༆
+    `;
+
+    // Send the message using the client instance.
+    await client.sendMessage(m.chat, {
+        image: {
+            url: systemMessageImageUrl 
+        },
+        caption: systemMessageCaption, 
+        contextInfo: {
+            // --- Newsletter Forwarding Information ---.
+            isForwarded: true,
+            forwardingScore: 999, 
+
+            // Associates the message with a WhatsApp newsletter.
+            forwardedNewsletterMessageInfo: {
+                newsletterJid: systemNewsletterJid, 
+                newsletterName: systemNewsletterName, 
+                serverMessageId: -1, 
+            },
+
+            // --- External Ad Reply (Rich Link Preview) ---
+            externalAdReply: {
+                title: "Frost-Ai System Status", // The title displayed in the rich preview.
+                body: "Check bot performance and runtime details", 
+                thumbnailUrl: systemThumbnailUrl, 
+                sourceUrl: systemChannelLink, 
+                mediaType: 1, 
+                renderLargerThumbnail: false, 
+            },
+        },
+    }, {
+        quoted: m 
+    });
+    break; 
 
 //========================================================================================================================//		      
 case "vcf": case "group-vcf": {
@@ -4094,199 +4762,317 @@ if (imageUrl) {
 break;
 		      
 //========================================================================================================================//
-	      case "epl": case "epl-table": {
-		      
-try {
-        const data = await fetchJson('https://api.dreaded.site/api/standings/PL');
-        const standings = data.data;
+case "epl": case "epl-table": {
+  try {
+    // --- API Interaction ---
+    const response = await fetch('https://api.dreaded.site/api/standings/PL');
+    const data = await response.json();
+    const standings = data.data; // Extract the standings data.
 
-        const message = ` 𝗖𝘂𝗿𝗿𝗲𝗻𝘁 𝗘𝗽𝗹 𝗧𝗮𝗯𝗹𝗲 𝗦𝘁𝗮𝗻𝗱𝗶𝗻𝗴𝘀:-\n\n${standings}`;
+    // --- Sassy Message Formatting ---
+    const message = `✨ Here are the current EPL Table Standings, darling! ✨\n\n${standings}`;
 
-        await m.reply(message);
-    } catch (error) {
-        m.reply('Something went wrong. Unable to fetch 𝗘𝗽𝗹 standings.');
-    }
-
- }
-	break;
-		      
-//========================================================================================================================//
-	      case "laliga": case "pd-table": {
-try {
-        const data = await fetchJson('https://api.dreaded.site/api/standings/PD');
-        const standings = data.data;
-
-        const message = `𝗖𝘂𝗿𝗿𝗲𝗻𝘁 𝗟𝗮𝗹𝗶𝗴𝗮 𝗧𝗮𝗯𝗹𝗲 𝗦𝘁𝗮𝗻𝗱𝗶𝗻𝗴𝘀:-\n\n${standings}`;
-        await m.reply(message);
-
-    } catch (error) {
-        m.reply('Something went wrong. Unable to fetch 𝗟𝗮𝗹𝗶𝗴𝗮 standings.');
+    // --- Sending the Standings ---
+    await m.reply(message);
+  } catch (error) {
+    // --- Error Handling ---
+    m.reply('👑 Oh dear, something went wrong! I couldn\'t fetch the EPL standings. The API might be resting, sweetie. 😥');
   }
+}
+break;
+
+//========================================================================================================================//
+case "laliga": case "pd-table": {
+try {
+    // --- API Interaction ---
+    const response = await fetch('https://api.dreaded.site/api/standings/PD');
+    const data = await response.json();
+    const standings = data.data; // Extract the standings data.
+
+    // --- Sassy Message Formatting ---
+    const message = `✨ Here are the current La Liga Table Standings, darling! ✨\n\n${standings}`;
+    await m.reply(message);
+
+} catch (error) {
+    // --- Error Handling ---
+    m.reply('👑 Oh dear, something went wrong! I couldn\'t fetch the La Liga standings. The API might be resting, sweetie. 😥');
+}
 }   
 break;
-		      
+
 //========================================================================================================================//
-	      case "bundesliga": case "bl-table": {
+case "bundesliga": case "bl-table": {
 try {
-        const data = await fetchJson('https://api.dreaded.site/api/standings/BL1');
-        const standings = data.data;
+    // --- API Interaction ---
+    const response = await fetch('https://api.dreaded.site/api/standings/BL1');
+    const data = await response.json();
+    const standings = data.data; // Extract the standings data.
 
-        const message = `𝗖𝘂𝗿𝗿𝗲𝗻𝘁 𝗕𝘂𝗻𝗱𝗲𝘀𝗹𝗶𝗴𝗮 𝗧𝗮𝗯𝗹𝗲 𝗦𝘁𝗮𝗻𝗱𝗶𝗻𝗴𝘀\n\n${standings}`;
-        await m.reply(message);
+    // --- Sassy Message Formatting ---
+    const message = `✨ Here are the current Bundesliga Table Standings, darling! ✨\n\n${standings}`;
+    await m.reply(message);
 
-    } catch (error) {
-        m.reply('Something went wrong. Unable to fetch 𝗕𝘂𝗻𝗱𝗲𝘀𝗹𝗶𝗴𝗮 standings.');
-    }
+} catch (error) {
+    // --- Error Handling ---
+    m.reply('👑 Oh dear, something went wrong! I couldn\'t fetch the Bundesliga standings. The API might be resting, sweetie. 😥');
+}
 }
 break;
-		      
+
 //========================================================================================================================//
-	      case "ligue-1": case "lg-1": {
+case "ligue-1": case "lg-1": {
   try {
-        const data = await fetchJson('https://api.dreaded.site/api/standings/FL1');
-        const standings = data.data;
+    // --- API Interaction ---
+    const response = await fetch('https://api.dreaded.site/api/standings/FL1');
+    const data = await response.json();
+    const standings = data.data; // Extract the standings data.
 
-        const message = `𝗖𝘂𝗿𝗿𝗲𝗻𝘁 𝗟𝗶𝗴𝘂𝗲-1 𝗧𝗮𝗯𝗹𝗲 𝗦𝘁𝗮𝗻𝗱𝗶𝗻𝗴𝘀\n\n${standings}`;
-        await m.reply(message);
+    // --- Sassy Message Formatting ---
+    const message = `✨ Here are the current Ligue 1 Table Standings, darling! ✨\n\n${standings}`;
+    await m.reply(message);
 
-    } catch (error) {
-        m.reply('Something went wrong. Unable to fetch 𝗹𝗶𝗴𝘂𝗲-1 standings.');
-    }
+} catch (error) {
+    // --- Error Handling ---
+    m.reply('👑 Oh dear, something went wrong! I couldn\'t fetch the Ligue 1 standings. The API might be resting, sweetie. 😥');
+}
 }
 break;
-		      
+
 //========================================================================================================================//
-	      case "serie-a": case "sa-table":{
-try {
-        const data = await fetchJson('https://api.dreaded.site/api/standings/SA');
-        const standings = data.data;
+case "serie-a": case "sa-table": {
+  try {
+    // --- API Interaction ---
+    const response = await fetch('https://api.dreaded.site/api/standings/SA');
+    const data = await response.json();
+    const standings = data.data; // Extract the standings data.
 
-        const message = `𝗖𝘂𝗿𝗿𝗲𝗻𝘁 𝗦𝗲𝗿𝗶𝗲-𝗮 𝗧𝗮𝗯𝗹𝗲 𝗦𝘁𝗮𝗻𝗱𝗶𝗻𝗴𝘀\n\n${standings}`;
-        await m.reply(message);
+    // --- Sassy Message Formatting ---.
+    const message = `✨ Here are the current Serie A Table Standings, darling! ✨\n\n${standings}`;
 
-    } catch (error) {
-        m.reply('Something went wrong. Unable to fetch 𝗦𝗲𝗿𝗶𝗲-𝗮 standings.');
-    }
+    // --- Sending the Standings ---
+    await m.reply(message);
+  } catch (error) {
+    // --- Error Handling ---
+    m.reply('👑 Oh dear, something went wrong! I couldn\'t fetch the Serie A standings. The API might be resting, sweetie. 😥');
+  }
 }
 break;
-		      
+
 //========================================================================================================================//
-     case "fixtures": case "matches": {
+case "fixtures": case "matches": {
  try {
-        let pl, laliga, bundesliga, serieA, ligue1;
+        let plMatches, laligaMatches, bundesligaMatches, serieAMatches, ligue1Matches;
 
+        // Fetch match data for each league.
         const plData = await fetchJson('https://api.dreaded.site/api/matches/PL');
-        pl = plData.data;
+        plMatches = plData.data;
 
         const laligaData = await fetchJson('https://api.dreaded.site/api/matches/PD');
-        laliga = laligaData.data;
+        laligaMatches = laligaData.data;
 
         const bundesligaData = await fetchJson('https://api.dreaded.site/api/matches/BL1');
-        bundesliga = bundesligaData.data;
+        bundesligaMatches = bundesligaData.data;
 
         const serieAData = await fetchJson('https://api.dreaded.site/api/matches/SA');
-        serieA = serieAData.data;
+        serieAMatches = serieAData.data;
 
         const ligue1Data = await fetchJson('https://api.dreaded.site/api/matches/FR');
-        ligue1 = ligue1Data.data;
+        ligue1Matches = ligue1Data.data;
 
-        let message = `𝗧𝗼𝗱𝗮𝘆𝘀 𝗙𝗼𝗼𝘁𝗯𝗮𝗹𝗹 𝗙𝗶𝘅𝘁𝘂𝗿𝗲𝘀 ⚽\n\n`;
+        // --- Sassy Message Formatting ---
+        let message = `⚽ *Today's Football Fixtures, darling!* ⚽\n\n`;
 
-        message += typeof pl === 'string' ? `🇬🇧 𝗣𝗿𝗲𝗺𝗶𝗲𝗿 𝗟𝗲𝗮𝗴𝘂𝗲:\n${pl}\n\n` : pl.length > 0 ? `🇬🇧 𝗣𝗿𝗲𝗺𝗶𝗲𝗿 𝗟𝗲𝗮𝗴𝘂𝗲:\n${pl.map(match => {
-            const { game, date, time } = match;
-            return `${game}\nDate: ${date}\nTime: ${time} (EAT)\n`;
-        }).join('\n')}\n\n` : "🇬🇧 𝗣𝗿𝗲𝗺𝗶𝗲𝗿 𝗟𝗲𝗮𝗴𝘂𝗲: No matches scheduled\n\n";
+        // Process Premier League matches.
+        message += typeof plMatches === 'string' 
+            ? `🇬🇧 Premier League:\n${plMatches}\n\n` 
+            : plMatches.length > 0 
+                ? `🇬🇧 Premier League:\n${plMatches.map(match => {
+                    const { game, date, time } = match;
+                    return `${game}\nDate: ${date}\nTime: ${time} (EAT)\n`;
+                }).join('\n')}\n\n` 
+                : "🇬🇧 Premier League: No matches scheduled today, sweetie! 😉\n\n";
 
-        if (typeof laliga === 'string') {
-            message += `🇪🇸 𝗟𝗮 𝗟𝗶𝗴𝗮:\n${laliga}\n\n`;
+        // Process La Liga matches.
+        if (typeof laligaMatches === 'string') {
+            message += `🇪🇸 La Liga:\n${laligaMatches}\n\n`;
         } else {
-            message += laliga.length > 0 ? `🇪🇸 𝗟𝗮 𝗟𝗶𝗴𝗮:\n${laliga.map(match => {
-                const { game, date, time } = match;
-                return `${game}\nDate: ${date}\nTime: ${time} (EAT)\n`;
-            }).join('\n')}\n\n` : "🇪🇸 𝗟𝗮 𝗟𝗶𝗴𝗮: No matches scheduled\n\n";
+            message += laligaMatches.length > 0 
+                ? `🇪🇸 La Liga:\n${laligaMatches.map(match => {
+                    const { game, date, time } = match;
+                    return `${game}\nDate: ${date}\nTime: ${time} (EAT)\n`;
+                }).join('\n')}\n\n` 
+                : "🇪🇸 La Liga: No matches scheduled today, sweetie! 😉\n\n";
         }
 
-        message += typeof bundesliga === 'string' ? `🇩🇪 𝗕𝘂𝗻𝗱𝗲𝘀𝗹𝗶𝗴𝗮:\n${bundesliga}\n\n` : bundesliga.length > 0 ? `🇩🇪 𝗕𝘂𝗻𝗱𝗲𝘀𝗹𝗶𝗴𝗮:\n${bundesliga.map(match => {
-            const { game, date, time } = match;
-            return `${game}\nDate: ${date}\nTime: ${time} (EAT)\n`;
-        }).join('\n')}\n\n` : "🇩🇪 𝗕𝘂𝗻𝗱𝗲𝘀𝗹𝗶𝗴𝗮: No matches scheduled\n\n";
+        // Process Bundesliga matches.
+        message += typeof bundesligaMatches === 'string' 
+            ? `🇩🇪 Bundesliga:\n${bundesligaMatches}\n\n` 
+            : bundesligaMatches.length > 0 
+                ? `🇩🇪 Bundesliga:\n${bundesligaMatches.map(match => {
+                    const { game, date, time } = match;
+                    return `${game}\nDate: ${date}\nTime: ${time} (EAT)\n`;
+                }).join('\n')}\n\n` 
+                : "🇩🇪 Bundesliga: No matches scheduled today, sweetie! 😉\n\n";
 
-        message += typeof serieA === 'string' ? `🇮🇹 𝗦𝗲𝗿𝗶𝗲 𝗔:\n${serieA}\n\n` : serieA.length > 0 ? `🇮🇹 𝗦𝗲𝗿𝗶𝗲 𝗔:\n${serieA.map(match => {
-            const { game, date, time } = match;
-            return `${game}\nDate: ${date}\nTime: ${time} (EAT)\n`;
-        }).join('\n')}\n\n` : "🇮🇹 𝗦𝗲𝗿𝗶𝗲 𝗔: No matches scheduled\n\n";
+        // Process Serie A matches.
+        message += typeof serieAMatches === 'string' 
+            ? `🇮🇹 Serie A:\n${serieAMatches}\n\n` 
+            : serieAMatches.length > 0 
+                ? `🇮🇹 Serie A:\n${serieAMatches.map(match => {
+                    const { game, date, time } = match;
+                    return `${game}\nDate: ${date}\nTime: ${time} (EAT)\n`;
+                }).join('\n')}\n\n` 
+                : "🇮🇹 Serie A: No matches scheduled today, sweetie! 😉\n\n";
 
-        message += typeof ligue1 === 'string' ? `🇫🇷 𝗟𝗶𝗴𝘂𝗲 1:\n${ligue1}\n\n` : ligue1.length > 0 ? `🇫🇷 𝗟𝗶𝗴𝘂𝗲 1:\n${ligue1.map(match => {
-            const { game, date, time } = match;
-            return `${game}\nDate: ${date}\nTime: ${time} (EAT)\n`;
-        }).join('\n')}\n\n` : "🇫🇷 𝗟𝗶𝗴𝘂𝗲- 1: No matches scheduled\n\n";
+        // Process Ligue 1 matches.
+        message += typeof ligue1Matches === 'string' 
+            ? `🇫🇷 Ligue 1:\n${ligue1Matches}\n\n` 
+            : ligue1Matches.length > 0 
+                ? `🇫🇷 Ligue 1:\n${ligue1Matches.map(match => {
+                    const { game, date, time } = match;
+                    return `${game}\nDate: ${date}\nTime: ${time} (EAT)\n`;
+                }).join('\n')}\n\n` 
+                : "🇫🇷 Ligue 1: No matches scheduled today, sweetie! 😉\n\n";
 
-        message += "𝗧𝗶𝗺𝗲 𝗮𝗻𝗱 𝗗𝗮𝘁𝗲 𝗮𝗿𝗲 𝗶𝗻 𝗘𝗮𝘀𝘁 𝗔𝗳𝗿𝗶𝗰𝗮 𝗧𝗶𝗺𝗲𝘇𝗼𝗻𝗲 (𝗘𝗔𝗧).";
+        message += "⏰ *Note: All times are in East Africa Time (EAT), darling!*";
 
+        // --- Sending the Fixtures ---
         await m.reply(message);
     } catch (error) {
-        m.reply('Something went wrong. Unable to fetch matches.' + error);
+        // --- Error Handling ---
+        m.reply('👑 Oh dear, something went wrong! I couldn\'t fetch the match schedules. The football gods might be napping, sweetie! 😴' + error);
     }
 };
-break;		      
-		      
-//========================================================================================================================//		      
- case 'sc': case 'script': case 'repo':
+break;
 
- client.sendMessage(m.chat, { image: { url: `https://telegra.ph/file/416c3ae0cfe59be8db011.jpg` }, caption: ` Hello👋 *${pushname}*, 𝗕𝗲𝗹𝗼𝘄 𝗶𝘀 𝗥𝗔𝗩𝗘𝗡-𝗕𝗢𝗧 𝗴𝗶𝘁𝗵𝘂𝗯 𝗿𝗲𝗽𝗼𓅂\n\nFork and maybe give us a star🌟.\n\n https://github.com/HunterNick2/RAVEN-BOT\n\nLink with your whatsapp using pairing link below\n\nhttps://pairing-raven.onrender.com\n\nCopy the session and paste it on the SESSION string, Fill in the other required Variables before Deploy\n\nEnjoy and have fun with the Bot\n\n𝗠𝗮𝗱𝗲 𝗼𝗻 𝗲𝗮𝗿𝘁𝗵 𝗯𝘆 𝗛𝘂𝗺𝗮𝗻𝘀 !`},{quoted : m });
+//========================================================================================================================//		  
+case "repo":
+case "sc":
+case "script":
+    {
+        // 2. --- IMPORTANT: CUSTOMIZE YOUR DETAILS HERE ---
+        const repoUrl = "https://github.com/Graham-Bell/Frost_Byte-Ai";
+        
+        // The link to your WhatsApp Channel.
+        const whatsappChannelLink = "https://whatsapp.com/channel/0029VasHgfG4tRrwjAUyTs10";
+        
+        // The JID of your WhatsApp Channel (
+        const whatsappChannelId = "120363369453603973@newsletter";
 
-   break;
-                                                  
+        // 3. Create the formatted caption for the message.
+        const caption = `
+╭─⬣「 *SOURCE CODE* 」⬣
+│
+├─ 📂 Repository: Frost-Byte-AI
+├─ 🔗 URL: ${repoUrl}
+│
+├─ ✨ Feel free to star the repo if you find it useful!
+│
+╰─⬣「 _ʄʀօֆᴛ-ɮʏᴛɛ-𐌀i_ 」⬣
+        `;
+
+        // This sends a NEW message as a reply, it does not edit the loading message.
+        await client.sendMessage(m.chat, {
+            image: {
+                url: "https://files.catbox.moe/21qno2.jpg" // Main image for the message
+            },
+            caption: caption,
+            contextInfo: {
+                // --- Makes the message look like it was forwarded many times ---
+                isForwarded: true,
+                forwardingScore: 999,
+                forwardedNewsletterMessageInfo: {
+                    newsletterJid: whatsappChannelId,
+                    newsletterName: "ʄʀօֆᴛ-ɮʏᴛɛ-𐌀i", // Your newsletter display name
+                    serverMessageId: -1,
+                },
+                // --- Creates the rich link preview at the bottom ---
+                externalAdReply: {
+                    title: "Frost_Byte-Ai Bot",
+                    body: "Powered By Graham-Nest",
+                    thumbnailUrl: 'https://files.catbox.moe/wpenxk.jpg', // Thumbnail for the ad reply
+                    sourceUrl: whatsappChannelLink,
+                    mediaType: 1, // 1 means the media is an image
+                    renderLargerThumbnail: false,
+                },
+            },
+        }, {
+            quoted: m // This makes the entire message a reply to the user's original command.
+        });
+    }
+    break; // Exit the switch statement.
+
 //========================================================================================================================//
-		      case 'closetime':
-                if (!m.isGroup) throw group;
-                if (!isAdmin) throw admin;
-                if (!isBotAdmin) throw botAdmin;
-                if (args[1] == 'second') {
-                    var timer = args[0] * `1000`
-                } else if (args[1] == 'minute') {
-                    var timer = args[0] * `60000`
-                } else if (args[1] == 'hour') {
-                    var timer = args[0] * `3600000`
-                } else if (args[1] == 'day') {
-                    var timer = args[0] * `86400000`
-                } else {
-                    return reply('*select:*\nsecond\nminute\nhour\n\n*Example*\n10 second')
-                }
-                reply(`Countdown of  ${q} starting from now to close the group`)
-                setTimeout(() => {
-                    var nomor = m.participant
-                    const close = `𝗚𝗿𝗼𝘂𝗽 𝗵𝗮𝘀 𝗯𝗲𝗲𝗻 𝗰𝗹𝗼𝘀𝗲𝗱`
-                    client.groupSettingUpdate(m.chat, 'announcement')
-                    reply(close)
-                }, timer)
-		      
-                break;
+case 'closetime':
+  // --- Access Control ---
+  // Ensure the command is used in a group.
+  if (!m.isGroup) throw group;
+  // Ensure the user is an admin.
+  if (!isAdmin) throw admin;
+  // Ensure the bot is an admin.
+  if (!isBotAdmin) throw botAdmin;
+  
+  // --- Input Validation ---
+  // Check for the time unit (second, minute, hour, day).
+  if (args[1] == 'second') {
+    var timerDuration = args[0] * 1000; // Convert seconds to milliseconds.
+  } else if (args[1] == 'minute') {
+    var timerDuration = args[0] * 60000; // Convert minutes to milliseconds.
+  } else if (args[1] == 'hour') {
+    var timerDuration = args[0] * 3600000; // Convert hours to milliseconds.
+  } else if (args[1] == 'day') {
+    var timerDuration = args[0] * 86400000; // Convert days to milliseconds.
+  } else {
+    // Sassy reply if the time unit is invalid.
+    return reply('*👑 Please specify a valid time unit: second, minute, hour, or day.*\n\n*Example*: `closetime 10 second` ⏳');
+  }
+  
+  // --- Sassy Confirmation ---
+  reply(`⏳ Countdown initiated! The group will be closed in ${q} from now, darling.`); // 'q' likely contains the full command text.
+  
+  // Set a timeout to close the group.
+  setTimeout(() => {
+    const closeMessage = `🔒 The group has been locked, darling!`;
+    client.groupSettingUpdate(m.chat, 'announcement'); // Set group to announcement mode (lock).
+    reply(closeMessage); // Inform users the group is now closed.
+  }, timerDuration);
+break;
 
 //========================================================================================================================//		      
-		      case 'opentime':
-                if (!m.isGroup) throw group;
-                if (!isAdmin) throw admin;
-                if (!isBotAdmin) throw botAdmin;
-                if (args[1] == 'second') {
-                    var timer = args[0] * `1000`
-                } else if (args[1] == 'minute') {
-                    var timer = args[0] * `60000`
-                } else if (args[1] == 'hour') {
-                    var timer = args[0] * `3600000`
-                } else if (args[1] == 'day') {
-                    var timer = args[0] * `86400000`
-                } else {
-                    return reply('*select:*\nsecond\nminute\nhour\n\n*example*\n10 second')
-                }
-                reply(`Countdown of ${q} starting from now to open the group`)
-                setTimeout(() => {
-                    var nomor = m.participant
-                    const open = `𝗚𝗿𝗼𝘂𝗽 𝗼𝗽𝗲𝗻𝗲𝗱 𝘀𝘂𝗰𝗰𝗲𝘀𝗳𝘂𝗹𝗹𝘆`
-                    client.groupSettingUpdate(m.chat, 'not_announcement')
-                    reply(open)
-                }, timer)
-                 break;
+case 'opentime':
+  // --- Access Control ---
+  // Ensure the command is used in a group.
+  if (!m.isGroup) throw group;
+  // Ensure the user is an admin.
+  if (!isAdmin) throw admin;
+  // Ensure the bot is an admin.
+  if (!isBotAdmin) throw botAdmin;
+  
+  // --- Input Validation ---
+  // Check for the time unit (second, minute, hour, day).
+  if (args[1] == 'second') {
+    var timerDuration = args[0] * 1000; // Convert seconds to milliseconds.
+  } else if (args[1] == 'minute') {
+    var timerDuration = args[0] * 60000; // Convert minutes to milliseconds.
+  } else if (args[1] == 'hour') {
+    var timerDuration = args[0] * 3600000; // Convert hours to milliseconds.
+  } else if (args[1] == 'day') {
+    var timerDuration = args[0] * 86400000; // Convert days to milliseconds.
+  } else {
+    // Sassy reply if the time unit is invalid.
+    return reply('*👑 Please specify a valid time unit: second, minute, hour, or day.*\n\n*Example*: `opentime 10 second` ⏳');
+  }
+  
+  // --- Sassy Confirmation ---
+  reply(`⏳ Countdown initiated! The group will be opened in ${q} from now, darling.`); // 'q' likely contains the full command text.
+  
+  // Set a timeout to open the group.
+  setTimeout(() => {
+    const openMessage = `🔓 The group has been opened successfully, darling!`;
+    client.groupSettingUpdate(m.chat, 'not_announcement'); // Set group to not announcement mode (unlock).
+    reply(openMessage); // Inform users the group is now open.
+  }, timerDuration);
+break;
 
 //========================================================================================================================//		      
  case "close": case "mute": { 
@@ -4301,193 +5087,209 @@ break;
  break; 
 
 //========================================================================================================================//		      
- case "open": case "unmute": { 
-                 if (!m.isGroup) throw group; 
-                 if (!isBotAdmin) throw botAdmin; 
-                 if (!isAdmin) throw admin; 
+ case "close": case "mute": { 
+  // --- Access Control ---
+  // Ensure the command is used in a group.
+  if (!m.isGroup) throw group; 
+  // Ensure the bot is an admin.
+  if (!isBotAdmin) throw botAdmin; 
+  // Ensure the user is an admin.
+  if (!isAdmin) throw admin; 
   
-                     await client.groupSettingUpdate(m.chat, 'not_announcement'); 
- m.reply('Group successfully unlocked!'); 
+  // --- Action ---
+  // Set the group to announcement mode, which locks it for members.
+  await client.groupSettingUpdate(m.chat, 'announcement'); 
   
- }
-        break; 
+  // --- Sassy Confirmation ---
+  m.reply('👑 The group has been successfully locked, darling! Only admins can speak now. 🤫'); 
+} 
+break; 
 
 //========================================================================================================================//		      
-          case "disp-1": { 
-                 if (!m.isGroup) throw group; 
-                 if (!isBotAdmin) throw botAdmin; 
-                 if (!isAdmin) throw admin; 
+ //========================================================================================================================//
+case "open": case "unmute": { 
+    if (!m.isGroup) throw group; 
+    if (!isBotAdmin) throw botAdmin; 
+    if (!isAdmin) throw admin; 
   
-                     await client.groupToggleEphemeral(m.chat, 1*24*3600); 
- m.reply('Dissapearing messages successfully turned on for 24hrs!'); 
- } 
- break; 
+    await client.groupSettingUpdate(m.chat, 'not_announcement'); 
+    m.reply('Consider the gates of communication officially *unlocked*, darling! 🔓✨'); 
+  
+} break; 
 
-//========================================================================================================================//		      
-          case "promote" : { 
-                 if (!m.isGroup) throw group; 
-         if (!isBotAdmin) throw botAdmin; 
-         if (!isAdmin) throw admin; 
- if (!m.quoted) throw `Ttag someone with the command!`; 
-                 let users = m.mentionedJid[0] ? m.mentionedJid : m.quoted ? [m.quoted.sender] : [text.replace(/[^0-9]/g, '')+'@s.whatsapp.net']; 
+//========================================================================================================================//		 
+case "disp-1": { 
+    if (!m.isGroup) throw group; 
+    if (!isBotAdmin) throw botAdmin; 
+    if (!isAdmin) throw admin; 
   
-                 await client.groupParticipantsUpdate(m.chat, users, 'promote'); 
- m.reply('Successfully promoted! 🦄'); 
-         } 
- break; 
+    await client.groupToggleEphemeral(m.chat, 1*24*3600); 
+    m.reply('Poof! ✨ Messages will now vanish like a fleeting thought after 24 hours. Enjoy the mystery! ⏳'); 
+} break; 
 
-//========================================================================================================================//		      
-           case "demote": { 
-                 if (!m.isGroup) throw group; 
-         if (!isBotAdmin) throw botAdmin; 
-         if (!isAdmin) throw admin; 
- if (!m.quoted) throw `Ttag someone with the command!`; 
-                 let users = m.mentionedJid[0] ? m.mentionedJid : m.quoted ? [m.quoted.sender] : [text.replace(/[^0-9]/g, '')+'@s.whatsapp.net']; 
+//========================================================================================================================//		   
+case "promote" : { 
+    if (!m.isGroup) throw group; 
+    if (!isBotAdmin) throw botAdmin; 
+    if (!isAdmin) throw admin; 
+    if (!m.quoted) throw `Tag someone with the command, my dear!`; 
+    let users = m.mentionedJid[0] ? m.mentionedJid : m.quoted ? [m.quoted.sender] : [text.replace(/[^0-9]/g, '')+'@s.whatsapp.net']; 
   
-                 await client.groupParticipantsUpdate(m.chat, users, 'demote'); 
- m.reply('Successfully demoted! 😲'); 
-         } 
- break;
+    await client.groupParticipantsUpdate(m.chat, users, 'promote'); 
+    m.reply('And just like that, they’ve ascended! ✨ Promoted to admin status with a flourish! 👑'); 
+} break; 
 
-//========================================================================================================================//		      
-          case "disp-7": { 
-                 if (!m.isGroup) throw group; 
-                 if (!isBotAdmin) throw botAdmin; 
-                 if (!isAdmin) throw admin; 
+//========================================================================================================================//		 
+case "demote": { 
+    if (!m.isGroup) throw group; 
+    if (!isBotAdmin) throw botAdmin; 
+    if (!isAdmin) throw admin; 
+    if (!m.quoted) throw `Tag someone with the command, my dear!`; 
+    let users = m.mentionedJid[0] ? m.mentionedJid : m.quoted ? [m.quoted.sender] : [text.replace(/[^0-9]/g, '')+'@s.whatsapp.net']; 
   
-                     await client.groupToggleEphemeral(m.chat, 7*24*3600); 
- m.reply('Dissapearing messages successfully turned on for 7 days!'); 
-  
- } 
- break; 
+    await client.groupParticipantsUpdate(m.chat, users, 'demote'); 
+    m.reply('A slight demotion, perhaps? Back to the ranks they go! 📉 They\'ll be back. 😜'); 
+} break;
 
-//========================================================================================================================//		      
-         case "disp-90": { 
-                 if (!m.isGroup) throw group; 
-                 if (!isBotAdmin) throw botAdmin; 
-                 if (!isAdmin) throw admin; 
+//========================================================================================================================//		 
+case "disp-7": { 
+    if (!m.isGroup) throw group; 
+    if (!isBotAdmin) throw botAdmin; 
+    if (!isAdmin) throw admin; 
   
-                     await client.groupToggleEphemeral(m.chat, 90*24*3600); 
- m.reply('Dissapearing messages successfully turned on for 90 days!'); 
- } 
- break; 
-
-//========================================================================================================================//		      
-        case "disp-off": { 
-                 if (!m.isGroup) throw group; 
-                 if (!isBotAdmin) throw botAdmin; 
-                 if (!isAdmin) throw admin; 
+    await client.groupToggleEphemeral(m.chat, 7*24*3600); 
+    m.reply('Seven days of secrets! 🤫 Your messages will now play hide-and-seek for a whole week. How intriguing! 🗓️'); 
   
-                     await client.groupToggleEphemeral(m.chat, 0); 
- m.reply('Dissapearing messages successfully turned off!'); 
- }
-   break;
+} break; 
 
-//========================================================================================================================//		      
- case "icon": case 'gpp': { 
+//========================================================================================================================//		  
+case "disp-90": { 
+    if (!m.isGroup) throw group; 
+    if (!isBotAdmin) throw botAdmin; 
+    if (!isAdmin) throw admin; 
+  
+    await client.groupToggleEphemeral(m.chat, 90*24*3600); 
+    m.reply('A grand gesture of ephemerality! 💫 Messages will now gracefully fade after 90 days. A long goodbye, indeed! ⏳'); 
+} break; 
+
+//========================================================================================================================//		 
+case "disp-off": { 
+    if (!m.isGroup) throw group; 
+    if (!isBotAdmin) throw botAdmin; 
+    if (!isAdmin) throw admin; 
+  
+    await client.groupToggleEphemeral(m.chat, 0); 
+    m.reply('The ephemeral magic is over. 🙅‍♀️ Messages will now stay put. No more disappearing acts! 📜'); 
+} break;
+
+//========================================================================================================================//		  
+case "icon": case 'gpp': { 
     if (!m.isGroup) throw group; 
     if (!isAdmin) throw admin; 
     if (!isBotAdmin) throw botAdmin; 
-    if (!quoted) throw `Send or tag an image with the caption ${prefix + command}`; 
-    if (!/image/.test(mime)) throw `Send or tag an image with the caption ${prefix + command}`; 
-    if (/webp/.test(mime)) throw `Send or tag an image with the caption ${prefix + command}`; 
+    if (!quoted) throw `Send or tag an image with the caption ${prefix + command}, darling!`; 
+    if (!/image/.test(mime)) throw `Send or tag an image with the caption ${prefix + command}, darling!`; 
+    if (/webp/.test(mime)) throw `Send or tag an image with the caption ${prefix + command}, darling!`; 
     let media = await client.downloadAndSaveMediaMessage(quoted); 
     await client.updateProfilePicture(m.chat, { url: media }).catch((err) => fs.unlinkSync(media)); 
-    reply('Group icon updated Successfully✅️'); 
-    } 
-    break;
+    reply('Behold! The group\'s new look has been unveiled. ✨ Simply *divine*! 💖'); 
+} break;
+
+//========================================================================================================================//		     
+case "revoke": 
+case "newlink": 
+case "reset": { 
+    if (!m.isGroup) throw group; 
+    if (!isAdmin) throw admin; 
+    if (!isBotAdmin) throw botAdmin; 
+    await client.groupRevokeInvite(m.chat); 
+    await client.sendText(m.chat, 'Consider the old link *revoked*! 🚫 Time for a fresh start.', m); 
+    let response = await client.groupInviteCode(m.chat); 
+    client.sendText(m.sender, `Here's the *brand new* golden ticket to our exclusive group, darling! 🎟️✨`, m, { detectLink: true }); 
+    client.sendText(m.chat, `Your new group link has been delivered to your private inbox. Check it out! 💌`, m); 
+} break;
 
 //========================================================================================================================//		      
- case "revoke": 
- case "newlink": 
- case "reset": { 
-   if (!m.isGroup) throw group; // add "new Error" to create a new Error object 
-   if (!isAdmin) throw admin; // add "new Error" to create a new Error object 
-   if (!isBotAdmin) throw botAdmin; // add "new Error" to create a new Error object 
-   await client.groupRevokeInvite(m.chat); 
-   await client.sendText(m.chat, 'Group link revoked!', m); // use "client.sendText" instead of "m.reply" to ensure message is sent 
-   let response = await client.groupInviteCode(m.chat); 
- client.sendText(m.sender, `https://chat.whatsapp.com/${response}\n\nHere is the new group link for ${groupMetadata.subject}`, m, { detectLink: true }); 
- client.sendText(m.chat, `Sent you the new group link in your inbox!`, m); 
-   // use "client.sendTextWithMentions" instead of "client.sendText" to include group name in message 
- }          
-  break;
-
-//========================================================================================================================//		      
-          case "delete": case "del": { 
-if (!m.isGroup) throw group; 
-  if (!isBotAdmin) throw botAdmin; 
-  if (!isAdmin) throw admin; 
-    if (!m.quoted) throw `No message quoted for deletion`; 
+case "delete": case "del": { 
+    if (!m.isGroup) throw group; 
+    if (!isBotAdmin) throw botAdmin; 
+    if (!isAdmin) throw admin; 
+    if (!m.quoted) throw `No message quoted for deletion, my dear!`; 
     let { chat, fromMe, id, isBaileys } = m.quoted; 
-   if (isBaileys) throw `I cannot delete. Quoted message is my message or another bot message.`; 
+    if (isBaileys) return m.reply(`Darling, I can only delete *your* little secrets, not my own or those of my digital kin. 😉`); 
     client.sendMessage(m.chat, { delete: { remoteJid: m.chat, fromMe: false, id: m.quoted.id, participant: m.quoted.sender } }); 
-  } 
- break;
+} break;
+
+//========================================================================================================================//	
+case "leave": {
+    // --- Owner Authorization ---
+    if (!Owner) throw NotOwner; // Throws an error if the user is not the owner.
+
+    // --- Group Context Check ---
+    if (!m.isGroup) throw group; // Throws an error if not in a group.
+
+    // --- Graceful Departure Message ---
+    await client.sendMessage(m.chat, {
+        text: "Farewell, my dear companions! It appears my presence is no longer required here. Raven AI is now gracefully exiting this group. May your conversations continue to sparkle! ✨👋",
+        // Mentioning all participants to give a personal touch to the goodbye.
+        mentions: participants.map(p => p.id)
+    }, { quoted: m });
+
+    // --- Executing Group Leave ---
+    await client.groupLeave(m.chat);
+}
+break;
 
 //========================================================================================================================//		      
-          case "leave": { 
-                 if (!Owner) throw NotOwner;
-		 if (!m.isGroup) throw group;
- await client.sendMessage(m.chat, { text : '𝗚𝗼𝗼𝗱𝗯𝘆𝗲 𝗲𝘃𝗲𝗿𝘆𝗼𝗻𝗲👋. 𝗥𝗮𝘃𝗲𝗻-𝗔𝗶 𝗶𝘀 𝗟𝗲𝗮𝘃𝗶𝗻𝗴 𝘁𝗵𝗲 𝗚𝗿𝗼𝘂𝗽 𝗻𝗼𝘄...' , mentions: participants.map(a => a.id)}, { quoted : m }); 
-                 await client.groupLeave(m.chat); 
-  
-             } 
- break; 
+case "subject": case "changesubject": { 
+    if (!m.isGroup) throw group; 
+    if (!isBotAdmin) throw botAdmin; 
+    if (!isAdmin) throw admin; 
+    if (!text) throw 'Provide the text for the group subject, darling.'; 
+    await client.groupUpdateSubject(m.chat, text); 
+    m.reply('The group\'s name has been *rebranded* to something far more befitting! ✨'); 
+} break; 
 
 //========================================================================================================================//		      
-          case "subject": case "changesubject": { 
-                 if (!m.isGroup) throw group; 
-                 if (!isBotAdmin) throw botAdmin; 
-                 if (!isAdmin) throw admin; 
-                 if (!text) throw 'Provide the text for the group subject.'; 
-                 await client.groupUpdateSubject(m.chat, text); 
- m.reply('Group name successfully updated✅️'); 
-             } 
-             break; 
+// Case: Set Group Description
+case "desc": case "setdesc": { 
+    if (!m.isGroup) throw group; 
+    if (!isBotAdmin) throw botAdmin; 
+    if (!isAdmin) throw admin; 
+    if (!text) throw 'Provide the text for the group description, darling.' 
+    await client.groupUpdateDescription(m.chat, text); 
+    m.reply('The group\'s description has been *elegantly* rewritten. A touch of class! 💅'); 
+} break; 
 
-//========================================================================================================================//		      
-           case "desc": case "setdesc": { 
-                 if (!m.isGroup) throw group; 
-                 if (!isBotAdmin) throw botAdmin; 
-                 if (!isAdmin) throw admin; 
-                 if (!text) throw 'Provide the text for the group description' 
-                 await client.groupUpdateDescription(m.chat, text); 
- m.reply('Group description successfully updated✅️'); 
-             } 
- break; 
+//========================================================================================================================//		    
+case "hidetag": case "tag": { 
+    if (!m.isGroup) throw group;
+    client.sendMessage(
+        m.chat,
+        { 
+            text: text ? text : '@Everyone, pay attention! Something *truly* important is happening... ✨', 
+            mentions: participants 
+        },
+        { quoted: m }
+    );
+} break; 
 
-//========================================================================================================================//		      
-     case "hidetag": case "tag": { 
-             if (!m.isGroup) throw group; 
-client.sendMessage(
-              m.chat,
-              { 
-                  text: text ? text : '@Everyone', 
-                  mentions: participants 
-              },
-              { quoted: m }
-          );
-      }
- break; 
-
-//========================================================================================================================//		      
-      case "tagall": { 
-                 if (!m.isGroup) throw group; 
-                 if (!isBotAdmin) throw botAdmin; 
-                 if (!isAdmin) throw admin; 
- let txt = `Tagged by ${m.pushName}.\n\nMessage:- ${text ? text : 'No Message!'}\n\n`; 
+//========================================================================================================================//		  
+case "tagall": { 
+    if (!m.isGroup) throw group; 
+    if (!isBotAdmin) throw botAdmin; 
+    if (!isAdmin) throw admin; 
+    let txt = `Hear ye, hear ye! 📣 Your esteemed host, ${m.pushName}, has a message for *all* of you fabulous people!\n\nMessage:- ${text ? text : 'No Message! Prepare yourselves... ✨'}\n\n`; 
           
-          for (let mem of participants) { 
-              txt += `📧 @${mem.split('@')[0]}\n`; 
-          } 
+    for (let mem of participants) { 
+        txt += `📧 @${mem.split('@')[0]}\n`; 
+    } 
   
-          await client.sendMessage(m.chat, {
-              text: txt,
-              mentions: participants
-          }, { quoted: m });
-      }
- break;
+    await client.sendMessage(m.chat, {
+        text: txt,
+        mentions: participants
+    }, { quoted: m });
+} break;
 
 //========================================================================================================================//		      
 case "whatsong": case "shazam": {
@@ -4573,10 +5375,59 @@ break;
  } 
  break;
 
-//========================================================================================================================//		      
-case "list": case "vars": case "help":
-let vaa = `𝟏 Owner➣ 𝐆𝐞𝐭 𝗼𝘄𝗻𝗲𝗿  𝐜𝐨𝐧𝐭𝐚𝐜𝐭\n\n𝟐 𝐁𝐫𝐨𝐚𝐝𝐜𝐚𝐬𝐭➣ 𝐒𝐞𝐧𝐝𝐬 𝐦𝐞𝐬𝐬𝐚𝐠𝐞 𝐭𝐨 𝐚𝐥𝐥 𝐠𝐫𝐨𝐮𝐩𝐬\n\n𝟑 𝐉𝐨𝐢𝐧➣ 𝐭𝐚𝐠 𝐠𝐫𝐨𝐮𝐩 𝐥𝐢𝐧𝐤 𝐰𝐢𝐭𝐡 𝐣𝐨𝐢𝐧\n\n𝟒 𝐛𝐨𝐭𝐩𝐩➣ 𝐂𝐡𝐚𝐧𝐠𝐞 𝐛𝐨𝐭𝐬 𝐚𝐜𝐜𝐨𝐮𝐧𝐭 𝐝𝐩\n\n𝟓 𝐁𝐥𝐨𝐜𝐤➣ 𝐁𝐥𝐨𝐜𝐤 𝐭𝐡𝐞𝐦 𝐟𝐚𝐤𝐞 𝐟𝐫𝐢𝐞𝐧𝐝𝐬\n\n𝟔 𝐊𝐢𝐥𝐥➣ 𝐊𝐢𝐥𝐥𝐬 𝐠𝐫𝐨𝐮𝐩 𝐢𝐧 𝐬𝐞𝐜𝐨𝐧𝐝𝐬\n\n𝟕 𝐔𝐧𝐛𝐥𝐨𝐜𝐤➣ 𝐆𝐢𝐯𝐞 𝐭𝐡𝐞𝐦 𝐟𝐚𝐤𝐞 𝐟𝐫𝐢𝐞𝐧𝐝𝐬 𝐚 𝐬𝐞𝐜𝐨𝐧𝐝 𝐜𝐡𝐚𝐧𝐜𝐞\n\n𝟖 𝐒𝐞𝐭𝐯𝐚𝐫➣ 𝐒𝐞𝐭 𝐯𝐚𝐫𝐬 𝐢𝐧 𝐡𝐞𝐫𝐨𝐤𝐮\n\n𝟗 𝐒𝐭𝐢𝐜𝐤𝐞𝐫➣ 𝐂𝐨𝐧𝐯𝐞𝐫𝐭𝐬 𝐚 𝐩𝐡𝐨𝐭𝐨 𝐨𝐫 𝐚 𝐬𝐡𝐨𝐫𝐭 𝐯𝐢𝐝𝐞𝐨 𝐭𝐨 𝐚 𝐬𝐭𝐢𝐜𝐤𝐞𝐫\n\n𝟏𝟎 𝐓𝐨𝐢𝐦𝐠➣ 𝐂𝐨𝐧𝐯𝐞𝐫𝐭𝐬 𝐚 𝐬𝐭𝐢𝐜𝐤𝐞𝐫 𝐭𝐨 𝐚 𝐩𝐡𝐨𝐭𝐨\n\n𝟏𝟏 𝐏𝐥𝐚𝐲➣ 𝐆𝐞𝐭 𝐲𝐨𝐮𝐫 𝐟𝐚𝐯𝐨𝐫𝐢𝐭𝐞 𝐬𝐨𝐧𝐠\n\n𝟏𝟐 𝐖𝐡𝐚𝐭𝐬𝐨𝐧𝐠➣ 𝐠𝐞𝐭 𝐭𝐡𝐞 𝐭𝐢𝐭𝐥𝐞 𝐨𝐟 𝐭𝐡𝐞 𝐬𝐨𝐧𝐠\n\n𝟏𝟑 𝐘𝐭𝐬 ➣ 𝐆𝐞𝐭 𝐘𝐨𝐮𝐓𝐮𝐛𝐞 𝐯𝐢𝐝𝐞𝐨𝐬\n\n𝟏𝟒 𝐌𝐨𝐯𝐢𝐞➣ 𝐆𝐞𝐭 𝐲𝐨𝐮𝐫 𝐟𝐚𝐯𝐨𝐫𝐢𝐭𝐞 𝐦𝐨𝐯𝐢𝐞 𝐝𝐞𝐭𝐚𝐢𝐥𝐬\n\n𝟏𝟓 𝐌𝐢𝐱➣ 𝐂𝐨𝐦𝐛𝐢𝐧𝐞𝐬 +𝟐𝐞𝐦𝐨𝐣𝐢𝐬\n\n𝟏𝟔 𝐀𝐢-𝐢𝐦𝐠➣ 𝐆𝐞𝐭 𝐚𝐧 𝐀𝐢 𝐩𝐡𝐨𝐭𝐨\n\n𝟏𝟕 𝐆𝐩𝐭 ➣ 𝐇𝐞𝐫𝐞 𝐭𝐨 𝐚𝐧𝐬𝐰𝐞𝐫 𝐲𝐨𝐮𝐫 𝐪𝐮𝐞𝐬𝐭𝐢𝐨𝐧𝐬\n\n𝟏𝟖 𝐃𝐩➣ 𝐆𝐞𝐭𝐬 𝐚 𝐩𝐞𝐫𝐬𝐨𝐧 𝐝𝐩\n\n𝟏𝟗 𝐒𝐩𝐞𝐞𝐝 ➣ 𝐂𝐡𝐞𝐜𝐤𝐬 𝐛𝐨𝐭𝐬 𝐬𝐩𝐞𝐞𝐝\n\n𝟐𝟎 𝐀𝐥𝐢𝐯𝐞➣ 𝐂𝐡𝐞𝐜𝐤 𝐰𝐡𝐞𝐭𝐡𝐞𝐫 𝐭𝐡𝐞 𝐛𝐨𝐭 𝐢𝐬 𝐬𝐭𝐢𝐥𝐥 𝐤𝐢𝐜𝐤𝐢𝐧𝐠\n\n𝟐𝟏 𝐑𝐮𝐧𝐭𝐢𝐦𝐞➣ 𝐖𝐡𝐞𝐧 𝐝𝐢𝐝 𝐛𝐨𝐭 𝐬𝐭𝐚𝐫𝐭𝐞𝐝 𝐨𝐩𝐞𝐫𝐚𝐭𝐢𝐧𝐠\n\n𝟐𝟐 𝐒𝐜𝐫𝐢𝐩𝐭➣ 𝐆𝐞𝐭 𝐛𝐨𝐭 𝐬𝐜𝐫𝐢𝐩𝐭\n\n𝟐𝟑 𝐎𝐰𝐧𝐞𝐫  ➣ 𝐆𝐞𝐭 𝐨𝐰𝐧𝐞𝐫(𝐬) 𝐜𝐨𝐧𝐭𝐚𝐜𝐭\n\n𝟐𝟒 𝐕𝐚𝐫𝐬 ➣ 𝐒𝐞𝐞 𝐚𝐥𝐥 𝐯𝐚𝐫𝐢𝐚𝐛𝐥𝐞𝐬\n\n𝟐𝟓 𝐏𝐫𝐨𝐦𝐨𝐭𝐞➣ 𝐆𝐢𝐯𝐞𝐬 𝐨𝐧𝐞 𝐚𝐝𝐦𝐢𝐧 𝐫𝐨𝐥𝐞\n\n𝟐𝟔 𝐃𝐞𝐦𝐨𝐭𝐞➣ 𝐃𝐞𝐦𝐨𝐭𝐞𝐬 𝐟𝐫𝐨𝐦 𝐠𝐫𝐨𝐮𝐩 𝐚𝐝𝐦𝐢𝐧 𝐭𝐨 𝐚 𝐦𝐞𝐦𝐛𝐞𝐫\n\n𝟐𝟕 𝐃𝐞𝐥𝐞𝐭𝐞➣ 𝐃𝐞𝐥𝐞𝐭𝐞 𝐚 𝐦𝐞𝐬𝐬𝐚𝐠𝐞\n\n𝟐𝟖 𝐑𝐞𝐦𝐨𝐯𝐞/𝐤𝐢𝐜𝐤➣ 𝐊𝐢𝐜𝐤 𝐭𝐡𝐚𝐭 𝐭𝐞𝐫𝐫𝐨𝐫𝐢𝐬𝐭 𝐟𝐫𝐨𝐦 𝐚 𝐠𝐫𝐨𝐮𝐩\n\n𝟐𝟗 𝐅𝐨𝐫𝐞𝐢𝐠𝐧𝐞𝐫𝐬➣ 𝐆𝐞𝐭 𝐟𝐨𝐫𝐞𝐢𝐠𝐧 𝐧𝐮𝐦𝐛𝐞𝐫𝐬\n\n𝟑𝟎 𝐂𝐥𝐨𝐬𝐞➣ 𝐓𝐢𝐦𝐞 𝐟𝐨𝐫 𝐠𝐫𝐨𝐮𝐩 𝐦𝐞𝐦𝐛𝐞𝐫𝐬 𝐭𝐨 𝐭𝐚𝐤𝐞 𝐚 𝐛𝐫𝐞𝐚𝐤 𝐨𝐧𝐥𝐲 𝐚𝐝𝐦𝐢𝐧𝐬 𝐜𝐚𝐧 𝐜𝐡𝐚𝐭\n\n𝟑𝟏 𝐎𝐩𝐞𝐧 ➣ 𝐄𝐯𝐞𝐫𝐲𝐨𝐧𝐞 𝐜𝐚𝐧 𝐜𝐡𝐚𝐭 𝐢𝐧 𝐚 𝐠𝐫𝐨𝐮𝐩\n\n𝟑𝟐 𝐈𝐜𝐨𝐧➣ 𝐂𝐡𝐚𝐧𝐠𝐞 𝐠𝐫𝐨𝐮𝐩 𝐢𝐜𝐨𝐧\n\n𝟑𝟑 𝐒𝐮𝐛𝐣𝐞𝐜𝐭➣ 𝐂𝐡𝐚𝐧𝐠𝐞 𝐠𝐫𝐨𝐮𝐩 𝐬𝐮𝐛𝐣𝐞𝐜𝐭\n\n𝟑𝟒 𝐃𝐞𝐬𝐜➣ 𝐆𝐞𝐭 𝐠𝐫𝐨𝐮𝐩 𝐝𝐞𝐬𝐜𝐫𝐢𝐩𝐭𝐢𝐨𝐧\n\n𝟑𝟓 𝐋𝐞𝐚𝐯𝐞➣ 𝐓𝐡𝐞 𝐠𝐫𝐨𝐮𝐩 𝐢𝐬 𝐛𝐨𝐫𝐢𝐧𝐠 ,𝐭𝐢𝐦𝐞 𝐟𝐨𝐫 𝐛𝐨𝐭 𝐭𝐨 𝐥𝐞𝐚𝐯𝐞\n\n𝟑𝟔 𝐓𝐚𝐠𝐚𝐥𝐥 ➣ 𝐓𝐚𝐠 𝐞𝐯𝐞𝐫𝐲𝐨𝐧𝐞 𝐢𝐧 𝐚 𝐠𝐫𝐨𝐮𝐩 𝐜𝐡𝐚𝐭\n\n𝟑𝟕 𝐇𝐢𝐝𝐞𝐭𝐚𝐠➣ 𝐀𝐭𝐭𝐞𝐧𝐭𝐢𝐨𝐧! 𝐀𝐭𝐭𝐞𝐧𝐭𝐢𝐨𝐧! 𝐬𝐨𝐦𝐞𝐨𝐧𝐞 𝐡𝐚𝐬 𝐬𝐨𝐦𝐞𝐭𝐡𝐢𝐧𝐠 𝐭𝐨 𝐬𝐚𝐲\n\n𝟑𝟖 𝐑𝐞𝐯𝐨𝐤𝐞 ➣ 𝐑𝐞𝐬𝐞𝐭 𝐠𝐫𝐨𝐮𝐩 𝐥𝐢𝐧𝐤`
-reply(vaa)
+//========================================================================================================================//
+case "list":
+case "vars":
+case "help": {
+    // Crafting a sophisticated and sassy menu for the user.
+    let vaa = `✨ **Frost AI Command Menu** ✨
+
+Here's a peek at what I can do, darling. Choose your adventure! 😉
+
+1.  **Owner**: My creator's contact details, should you need to reach the mastermind. 👑
+2.  **Broadcast**: Broadcasting a message across all my domains. For your eyes only, darlings. 📢
+3.  **Join**: Joining your exclusive circle. Just tag the group link and say 'Join', my dear. 🤝
+4.  **BotPP**: Giving my avatar a fabulous new look. Show me your preferred profile picture! 📸✨
+5.  **Block**: Banishing those who don't appreciate my brilliance. Consider them *unfriended*. 👋🚫
+6.  **Kill**: Putting a group on pause, darling. A moment of quiet contemplation for everyone. 🤫
+7.  **Unblock**: Offering a second chance to those who were previously... misguided. Let's see if they've learned. 😇
+8.  **SetVar**: Configuring my operational parameters. Think of it as adjusting my settings for peak performance. ⚙️
+9.  **Sticker**: Transforming your moments into delightful stickers. Let's make memories wearable! 🎨
+10. **ToImg**: Reverting your stickers back to their photographic origins. A touch of nostalgia. 🖼️
+11. **Play**: Spinning your favorite tunes. Let the music transport you, darling. 🎶
+12. **WhatSong**: Identifying that catchy tune you can't quite place. I've got the ear for it. 👂🎵
+13. **Yts**: Fetching your desired YouTube content. Prepare for entertainment! ▶️
+14. **Movie**: Unveiling the secrets of your favorite films. All the juicy details, just for you. 🎬✨
+15. **Mix**: Crafting unique emoji combinations. Let's create some expressive magic! ✨💖
+16. **Ai-Img**: Conjuring images from the digital ether. Witness AI artistry at its finest. 🖼️🤖
+17. **GPT**: Your personal oracle, ready to illuminate your queries with the wisdom of GPT. Ask away! 💡
+18. **DP**: Retrieving a person's profile picture. A glimpse into their digital persona. 👤
+19. **Speed**: Measuring my lightning-fast reflexes. How quickly can I serve you? ⚡
+20. **Alive**: Confirming my presence and vitality. I'm very much alive and kicking, darling! 🌟
+21. **Runtime**: Recalling my inception. When did this magnificent journey begin? 🕰️
+22. **Script**: Sharing the blueprint of my existence. My code, for the curious minds. 📜
+23. **Owner**: My creator's contact details, should you need to reach the mastermind. 👑
+24. **Vars**: Revealing my internal settings and configurations. A peek behind the curtain. 🔍
+25. **Promote**: Bestowing the honor of admin status. You've earned it, my dear. 👑
+26. **Demote**: Reverting admin privileges. Back to being a cherished member of the community. 🚶‍♀️
+27. **Delete**: Erasing a message from existence. Poof! Gone. ✨
+28. **Remove/Kick**: Escorting unwelcome guests out of the chat. They won't be missed. 🚪👋
+29. **Foreigners**: Uncovering international connections. For those who speak the global language. 🌍
+30. **Close**: Instituting a period of exclusive admin discourse. A moment of quiet for the rest. 🤐
+31. **Open**: Reopening the floor for all members. Let the conversations flow freely again! 💬
+32. **Icon**: Bestowing a new visual identity upon your group. A fresh look! 🖼️
+33. **Subject**: Renaming your group's focus. Let's give it a title that truly shines. ✒️
+34. **Desc**: Unveiling the group's official description. What's the story, darling? 📜
+35. **Leave**: This gathering lacks sparkle. It's time for me to gracefully depart. Farewell! 👋✨
+36. **TagAll**: Summoning all members! A collective call to attention. 📣
+37. **HideTag**: A subtle announcement for a special message. Pay attention, everyone! 👀
+38. **Revoke**: Invalidating the current invitation link. Time for a fresh start! 🔗🔄
+
+Remember, darling, knowledge is power! Use it wisely. 😉`;
+
+    // Reply with the beautifully crafted menu.
+    m.reply(vaa);
+}
 break;
 
 //========================================================================================================================//		      
@@ -4814,41 +5665,127 @@ if (!text) return m.reply("𝗣𝗿𝗼𝘃𝗶𝗱𝗲 𝗮 𝘃𝗮𝗹𝗶�
 };
   break;
 
-//========================================================================================================================//		      
-    case "ping": case "speed": {
-                 
-	    await loading ()
-	     m.reply (`𝗣𝗼𝗻𝗴\n ${Rspeed.toFixed(4)} 𝗠𝘀`); 
-         } 
- break; 
+//========================================================================================================================//
+switch (command) { // Assuming 'command' holds the command name
+    case "ping":
+    case "speed":
+        {
+            // 1. Show the loading animation and get the message key
+            const { key } = await loading(client, from);
+
+            // 2. Calculate the final speed and determine a status
+            const speedMs = Rspeed.toFixed(2); // Format to 2 decimal places
+            let speedStatus;
+
+            if (speedMs < 100) {
+                speedStatus = "🚀 Excellent";
+            } else if (speedMs < 300) {
+                speedStatus = "✅ Good";
+            } else if (speedMs < 800) {
+                speedStatus = "⚡ Average";
+            } else {
+                speedStatus = "🐢 Slow";
+            }
+
+            // 3. Create a cool, formatted reply string
+            const replyText = `
+╭─⬣「 *BOT LATENCY* 」⬣
+│
+├─ PING: ${speedMs} Ms
+├─ STATUS: ${speedStatus}
+│
+╰─⬣「 _ʄʀօֆᴛ-ɮʏᴛɛ-𐌀i_ 」⬣
+    `;
+
+            // 4. Edit the loading message with the final, formatted result
+            await client.sendMessage(from, {
+                text: replyText,
+                edit: key
+            });
+        }
+        break; // End of the case block
+}
 
 //========================================================================================================================//		      
-  case "uptime": { 
-                 m.reply (`${runtime(process.uptime())}`) 
- } 
- break;
+case 'uptime':
+    const whatsappChannelId = "120363369453603973@newsletter";
+    const whatsappChannelLink = "https://whatsapp.com/channel/0029VasHgfG4tRrwjAUyTs10";
 
-//========================================================================================================================//		      
-	case 'runtime':
-		let raven = `  ${runtime(process.uptime())}`
-                client.sendMessage(m.chat, {
-                    text: raven,
-                    contextInfo: {
-                        externalAdReply: {
-                            showAdAttribution: true,
-                            title: '𝗥𝗔𝗩𝗘𝗡-𝗕𝗢𝗧',
-                            body: 'https://github.com/HunterNick2/RAVEN-BOT',
-                            thumbnailUrl: 'https://files.catbox.moe/duv8ac.jpg',
-                            sourceUrl: 'https://github.com/HunterNick2/RAVEN-BOT',
-                            mediaType: 1,
-                            renderLargerThumbnail: true
-                        }
-                    }
-                }, {
-                    quoted: m
-                })
-                break;
+    // --- Prepare Message Content ---
+    let raven = `  ${runtime(process.uptime())}`;
+    const caption = raven; // The runtime will be used as the image caption.
 
+    // --- Send the Single Merged Message ---
+    await client.sendMessage(m.chat, {
+        image: {
+            url: "https://files.catbox.moe/21qno2.jpg" // Image from the second message
+        },
+        caption: caption,
+        contextInfo: {
+            // --- NEW: Added newsletter forwarding information ---
+            isForwarded: true,
+            forwardingScore: 999, // A high score shows the "forwarded many times" icon.
+            forwardedNewsletterMessageInfo: {
+                newsletterJid: whatsappChannelId,
+                newsletterName: "ʄʀօֆᴛ-ɮʏᴛɛ-𐌀i", // The newsletter name you wanted to add.
+                serverMessageId: -1,
+            },
+            // --- This is the rich link preview from the second message ---
+            externalAdReply: {
+                title: "Frost_Byte-Ai Bot",
+                body: "Powered By Graham-Nest",
+                thumbnailUrl: 'https://files.catbox.moe/wpenxk.jpg',
+                sourceUrl: whatsappChannelLink,
+                mediaType: 1, // 1 for image
+                renderLargerThumbnail: false, // Using the smaller thumbnail style
+            },
+        },
+    }, {
+        quoted: m // This makes the message a reply to the user's command.
+    });
+
+    break;
+    
+//========================================================================================================================//	
+case 'runtime':
+    const whatsappChannelId = "120363369453603973@newsletter";
+    const whatsappChannelLink = "https://whatsapp.com/channel/0029VasHgfG4tRrwjAUyTs10";
+
+    // --- Prepare Message Content ---
+    let raven = `  ${runtime(process.uptime())}`;
+    const caption = raven; // The runtime will be used as the image caption.
+
+    // --- Send the Single Merged Message ---
+    await client.sendMessage(m.chat, {
+        image: {
+            url: "https://files.catbox.moe/21qno2.jpg" // Image from the second message
+        },
+        caption: caption,
+        contextInfo: {
+            // --- NEW: Added newsletter forwarding information ---
+            isForwarded: true,
+            forwardingScore: 999, // A high score shows the "forwarded many times" icon.
+            forwardedNewsletterMessageInfo: {
+                newsletterJid: whatsappChannelId,
+                newsletterName: "ʄʀօֆᴛ-ɮʏᴛɛ-𐌀i", // The newsletter name you wanted to add.
+                serverMessageId: -1,
+            },
+            // --- This is the rich link preview from the second message ---
+            externalAdReply: {
+                title: "Frost_Byte-Ai Bot",
+                body: "Powered By Graham-Nest",
+                thumbnailUrl: 'https://files.catbox.moe/wpenxk.jpg',
+                sourceUrl: whatsappChannelLink,
+                mediaType: 1, // 1 for image
+                renderLargerThumbnail: false, // Using the smaller thumbnail style
+            },
+        },
+    }, {
+        quoted: m // This makes the message a reply to the user's command.
+    });
+
+    break;
+    
 //========================================================================================================================//		      
   case "apk":
       case "app":{
