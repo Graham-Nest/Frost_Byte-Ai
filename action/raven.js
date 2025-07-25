@@ -506,36 +506,37 @@ if (antitag === 'on' && !Owner && isBotAdmin && !isAdmin && m.mentionedJid && m.
         await client.groupParticipantsUpdate(m.chat, [cate], "remove");
     }
 //========================================================================================================================//
-//========================================================================================================================//	  
-async function loading(client, from) {
-    // An array of strings representing the animation frames
-    const frames = [
-        "Pinging.",
-        "Pinging..",
-        "Pinging...",
-        "Analyzing Latency...",
-        "█▒▒▒▒▒▒▒▒▒ 10%",
-        "███▒▒▒▒▒▒▒ 30%",
-        "█████▒▒▒▒▒ 50%",
-        "███████▒▒▒ 70%",
-        "█████████▒ 90%",
-        "██████████ 100%",
-        "✅ Analysis Complete!"
-    ];
+//========================================================================================================================//
+async function displayAnimatedReply(client, from, finalText) {
+  // A modern, spinning loader animation sequence
+  const animationFrames = [
+    "◐  Pinging...",
+    "◓  Pinging...",
+    "◑  Pinging...",
+    "◑  Analyzing Latency...",
+    "█▒▒▒▒▒▒▒▒▒ 10%",
+    "███▒▒▒▒▒▒▒ 30%",
+    "█████▒▒▒▒▒ 50%",
+    "███████▒▒▒ 70%",
+    "█████████▒ 90%",
+    "██████████ 100%",
+    "✅ Analysis Complete!"
+  ];
 
-    // Send the very first message to get its key
-    const { key } = await client.sendMessage(from, { text: 'Pinging...' });
+  // Send an initial placeholder message to get its unique key.
+  let { key } = await client.sendMessage(from, { text: '​' }); // Using a zero-width space as a placeholder
 
-    // Loop through each frame to create the animation
-    for (const frame of frames) {
-        // A short delay to make the animation human-readable
-        await new Promise(resolve => setTimeout(resolve, 250));
-        // Edit the original message with the new frame
-        await client.sendMessage(from, { text: frame, edit: key });
+  // We'll loop 3 times to make the animation more noticeable.
+  for (let i = 0; i < 3; i++) {
+    for (const frame of animationFrames) {
+      await client.sendMessage(from, { text: frame, edit: key });
+      // Wait for a short duration to make the animation visible to the user.
+      await new Promise(resolve => setTimeout(resolve, 200)); // 200ms delay
     }
+  }
 
-    // Return the key to the caller so it can post the final result
-    return key;
+  // After the animation is complete, edit the message one last time
+  await client.sendMessage(from, { text: finalText, edit: key });
 }
 
 //========================================================================================================================//	  
@@ -1209,21 +1210,31 @@ return reply(`Case *${text}* Not found`)
 }
         break;
 //========================================================================================================================//
-		      
-		      case "lyrics2": 
- try { 
- if (!text) return reply("Provide a song name!"); 
- const searches = await Client.songs.search(text); 
- const firstSong = searches[0]; 
- //await client.sendMessage(from, {text: firstSong}); 
- const lyrics = await firstSong.lyrics(); 
- await client.sendMessage(from, { text: lyrics}, { quoted: m }); 
- } catch (error) { 
-             reply(`I did not find any lyrics for ${text}. Try searching a different song.`); 
-             console.log(error); 
-         }
-        break;	
-		      
+case "lyrics2":
+  try {
+    // If no song name is provided, deliver a sassy prompt.
+    if (!text) {
+      return reply(`Oh, you want the lyrical secrets? 🤫 But darling, you haven't even whispered the song's name! 🎶 Spill it, and let's get this lyrical journey started! 🎤✨`);
+    }
+
+    // Search for the song using the provided text.
+    const searches = await Client.songs.search(text);
+    const firstSong = searches[0]; // Assuming the first search result is the most relevant.
+
+    // Fetch the lyrics for the found song.
+    const lyrics = await firstSong.lyrics();
+
+    // Send the fetched lyrics with a classy touch.
+    // Note: 'from' and 'm' are assumed to be available in the scope.
+    await client.sendMessage(from, { text: lyrics }, { quoted: m });
+
+  } catch (error) {
+    // If lyrics aren't found, deliver a sassy and slightly dramatic response.
+    reply(`Ugh, my lyrical radar is *failing* me for "${text}"! 😩 It's like this song is playing hide-and-seek with its own words. 🕵️‍♀️ Try another tune, maybe one that's easier to find? 🌟`);
+    console.log("Lyrics2 Error:", error); // Log the error for debugging.
+  }
+  break;
+
 //========================================================================================================================//		      
  case "bible":
 {
@@ -1258,52 +1269,46 @@ break;
 		      
 //========================================================================================================================//
 case 'quran': {
-  // --- Input Validation with Sassy Flair ---
+  // Check if the user provided any text for Surah and Ayah
   if (!text) {
-    // Sassy reply when no text (Surah:Ayah) is provided
-    return reply(`Darling, you've requested the divine word but forgotten the chapter and verse! Do tell, which sacred passage are you seeking? ✨📖 ${getRandomEmoji(['😉', '💖', '💫'])}`);
+    // Sassy and stylish prompt for input
+    return reply(`Oh, darling! You've summoned the Quranic wisdom, but forgot to specify *which* verse! 🧐 Please, grace me with the Surah and Ayah, like this: \`quran 2:255\` 📖✨`);
   }
 
+  // Split the input text by the colon to separate Surah and Ayah
   const input = text.split(":");
   if (input.length !== 2) {
-    // Sassy reply for incorrect input format
-    return reply(`Oh, honey, that format is as confusing as a riddle wrapped in an enigma! 🧐 Please, present it like a queen: Surah:Ayah (e.g., 2:255) 👑✨ ${getRandomEmoji(['💅', '💁‍♀️'])}`);
+    // Sassy reply for incorrect format
+    return reply(`Hold up, buttercup! That format is as jumbled as a forgotten prayer. 😅 The divine scriptures require precision: Surah:Ayah. Try \`2:255\` for a classic hit! 👑😉`);
   }
 
   const [surah, ayah] = input;
-
-  // --- Fetching Quran Verse ---
   try {
-    // Fetching the Quran verse from the API using axios
+    // Fetch the Quran verse from the API
     const res = await axios.get(`https://api.alquran.cloud/v1/ayah/${surah}:${ayah}/editions/quran-uthmani,en.asad`);
-    
-    // Extracting the necessary data from the API response
+
+    // Extract the Arabic text, English translation, and Surah information
     const arabic = res.data.data[0].text;
     const english = res.data.data[1].text;
     const surahInfo = res.data.data[0].surah;
 
-    // --- Constructing the Sassy and Emoji-Filled Message ---
-    const msg = `*🌟 A Divine Revelation Just For You, Darling! 🌟*\n\n` +
-      `*${getRandomEmoji(['📜', '📖'])} Surah:* ${surahInfo.englishName} (${surahInfo.name}) ${getRandomEmoji(['🕌', '✨', '🤲'])}\n` +
-      `*${getRandomEmoji(['🔢', '📌'])} Ayah:* ${ayah} ${getRandomEmoji(['💫', '💖', '✨'])}\n\n` +
-      `*${getRandomEmoji(['🕌', '🕋'])} Arabic:* \n${arabic} ${getRandomEmoji(['🌙', '✨', '🙏'])}\n\n` +
-      `*${getRandomEmoji(['🌍', '📖'])} English Translation:* \n${english} ${getRandomEmoji(['📚', '✨', '📖'])}\n\n` +
-      `_A special request from your dearest, ${pushname}! ${getRandomEmoji(['😘', '💖', '💋', '😇'])}_`;
+    // Construct the classy and stylish message with emojis
+    const msg = `✨ *A Glimpse of Divine Light!* ✨\n\n` +
+      `Unveiling Ayah *${ayah}* from the majestic Surah *${surahInfo.englishName}* (${surahInfo.name}).\n\n` +
+      `📜 **Arabic Script:**\n${arabic}\n\n` +
+      `🌟 **English Essence:**\n${english}\n\n` +
+      `_A requested treasure from the wonderful ${pushname}!_ 💎`;
 
-    // --- Sending the Message ---
-    // Sending the crafted message back to the chat
+    // Send the formatted message back to the chat
     client.sendMessage(m.chat, { text: msg }, { quoted: m });
-
   } catch (e) {
-    // --- Error Handling with Sassy Tone ---
-    console.error("Quran API error:", e.response ? e.response.data : e.message); // Log detailed error for debugging
-    
-    // Sassy reply when the verse cannot be found
-    reply(`My apologies, my dear, but it seems that particular verse has taken a little vacation. ✈️ Perhaps try another, or double-check your divine coordinates? 🗺️🙏 ${getRandomEmoji(['🙄', '😔', '✨'])}`);
+    // Sassy reply if the verse could not be found
+    console.error(e); // Log the error for debugging
+    reply(`Oh dear, it seems that verse is playing coy and hiding from us. 🕵️‍♀️ Are you absolutely certain about those Surah and Ayah numbers? Let's try again with the correct divine coordinates, shall we? 📚💫`);
   }
 }
 break;
-		      
+
 //========================================================================================================================//	
 case "pair":
 case "rent": {
@@ -1356,48 +1361,69 @@ case "rent": {
 break;
 
 //========================================================================================================================//
-	      case "song2": {
-    if (!text) m.reply("What song you want to download.");
-try {
+case "song2": {
+  // If no song title is provided, prompt the user with a sassy request.
+  if (!text) {
+    return reply(`Oh, a music lover! 🎶 But darling, you haven't told me *which* masterpiece to conjure. 🧐 Spill the title, and let's get this party started! ✨`);
+  }
+
+  try {
+    // Search for the song using the yts library.
     let search = await yts(text);
-    if (!search.all.length) reply("No results found for your query.");
-    let link = search.all[0].url; 
+
+    // If no results are found, respond with a sassy message indicating the song is playing hide-and-seek.
+    if (!search.all.length) {
+      return reply(`Oof, darling, I scoured the digital universe, but your requested track is playing hard to get! 🕵️‍♀️ No results found. Wanna try another banger? 💥`);
+    }
+
+    // Get the URL of the first search result.
+    let link = search.all[0].url;
+
+    // Construct the API URL for downloading the MP3.
     const apiUrl = `https://keith-api.vercel.app/download/dlmp3?url=${link}`;
     let response = await fetch(apiUrl);
     let data = await response.json();
 
-if (data.status && data.result) {
+    // Check if the API successfully processed the request and returned a result.
+    if (data.status && data.result) {
+      // Prepare the audio data for sending.
       const audioData = {
         title: data.result.title,
         downloadUrl: data.result.downloadUrl,
-        thumbnail: search.all[0].thumbnail,
+        // thumbnail: search.all[0].thumbnail, // Thumbnail not used in audio message
         format: data.result.format,
         quality: data.result.quality,
       };
 
-await client.sendMessage(
+      // Send the audio message to the chat.
+      await client.sendMessage(
         m.chat,
         {
           audio: { url: audioData.downloadUrl },
+          // Note: 'audio/mp4' is used as per original code. If the API returns MP3, 'audio/mpeg' might be more accurate.
           mimetype: "audio/mp4",
         },
         { quoted: m }
       );
 
-      return;
-    } else { 
-      return reply("Unable to fetch the song. Please try again later.");
+      return; // Exit the case after successfully sending the audio.
+    } else {
+      // If the API failed to fetch the song, respond with a sassy message about the music gods.
+      return reply(`Ugh, the music gods are being *so* extra right now! 🙄 My fetching mechanism is having a moment. Try again in a bit, and hopefully, the vibes will be better! 🎶🤞`);
     }
   } catch (error) {
-    return reply(`An error occurred: `);
+    // For any other errors, respond with a playful "whoopsie-daisy" message.
+    console.error("Song2 Error:", error); // Log the error for debugging purposes.
+    return reply(`Whoopsie-daisy! 🌸 It seems a mischievous gremlin has tangled my wires. 👾 An unexpected error occurred. Let's reset and try again, shall we? ✨`);
   }
 }
 break;
 
-//========================================================================================================================//	      		      
-  case "song": {		      
+//========================================================================================================================//
+case "song": {		      
  if (!text) {
-      return client.sendMessage(from, { text: 'Please provide a song name.' }, { quoted: m });
+      // Sassy request for the song name with emojis after punctuation.
+      return client.sendMessage(from, { text: 'Darling, you forgot to tell me *what* song to fetch. 💅 Spill the tea, darling! ☕️👑' }, { quoted: m });
     }
 
 try {
@@ -1405,12 +1431,14 @@ try {
      const video = search.videos[0];
 
         if (!video) {
+          // Dismissive and sassy response for no results, with emojis after punctuation.
           return client.sendMessage(from, {
-            text: 'No results found for your query.'
+            text: 'Hmm, my search came up empty. 🧐 Did you perhaps misspell that, or is it just *that* obscure? 🤷‍♀️🚫'
           }, { quoted: m });
         }
 	
-m.reply("_Please wait your download is in progress_");
+        // Dramatic and sassy waiting message with emojis after punctuation.
+        m.reply("_Hold your horses, darling! 🐎 Your auditory delight is being meticulously prepared. ✨ Patience is a virtue, you know! 🎶⏳_");
 	
         const safeTitle = video.title.replace(/[\\/:*?"<>|]/g, '');
         const fileName = `${safeTitle}.mp3`;
@@ -1420,13 +1448,14 @@ m.reply("_Please wait your download is in progress_");
         const data = response.data;
 
         if (!data.downloadLink) {
+          // Playful "oopsie" for link failure with emojis after punctuation.
           return client.sendMessage(from, {
-            text: 'Failed to retrieve the MP3 download link.'
+            text: 'Oopsie! 👻 The magic link for your MP3 seems to have vanished into the digital ether. 💫 Let\'s try that again, shall we? 😉'
           }, { quoted: m });
 	} 
 	
-	
-await client.sendMessage(from, {
+        // The audio message itself remains the same, as it's the actual content.
+	await client.sendMessage(from, {
           audio: { url: data.downloadLink },
           mimetype: 'audio/mpeg',
           fileName
@@ -1434,17 +1463,19 @@ await client.sendMessage(from, {
 
       } catch (err) {
         console.error('[PLAY] Error:', err);
+        // Dramatic and sassy error message, blaming sprites, with emojis after punctuation.
         await client.sendMessage(from, {
-          text: 'An error occurred while processing your request.'
+          text: 'Well, this is awkward. 😅 Something went spectacularly wrong behind the scenes. 💥 Blame the mischievous digital sprites! 🧚‍♀️🤯'
         }, { quoted: m });
 }
 }
 break;
-		      
+
 //========================================================================================================================//
 case "video": {		      
 if (!text) {
-	return client.sendMessage(from, { text: 'Please provide a song name.' }, { quoted: m });
+	// Sassy request for the video title with emojis after punctuation.
+	return client.sendMessage(from, { text: 'Darling, you forgot to tell me *what* video to fetch. 💅 Spill the tea, darling! ☕️👑' }, { quoted: m });
     }
 
 try {
@@ -1452,12 +1483,14 @@ try {
      const video = search.videos[0];
 
         if (!video) {
+          // Dismissive and sassy response for no results, with emojis after punctuation.
           return client.sendMessage(from, {
-            text: 'No results found for your query.'
+            text: 'Hmm, my search came up empty. 🧐 Did you perhaps misspell that, or is it just *that* obscure? 🤷‍♀️🚫'
           }, { quoted: m });
         }
 	
-m.reply("_Please wait your download is in progress_");
+        // Dramatic and sassy waiting message with emojis after punctuation.
+        m.reply("_Hold your horses, darling! 🐎 Your visual masterpiece is being meticulously prepared. ✨ Patience is a virtue, you know! 🎬⏳_");
 	
         const safeTitle = video.title.replace(/[\\/:*?"<>|]/g, '');
         const fileName = `${safeTitle}.mp4`;
@@ -1467,13 +1500,14 @@ m.reply("_Please wait your download is in progress_");
         const data = response.data;
 
         if (!data.downloadLink) {
+          // Playful "oopsie" for link failure with emojis after punctuation.
           return client.sendMessage(from, {
-            text: 'Failed to retrieve the MP4 download link.'
+            text: 'Oopsie! 👻 The magic link for your MP4 seems to have vanished into the digital ether. 💫 Let\'s try that again, shall we? 😉'
           }, { quoted: m });
 	} 
 	
-	
-await client.sendMessage(from, {
+        // The video message itself remains the same, as it's the actual content.
+	await client.sendMessage(from, {
           video: { url: data.downloadLink },
           mimetype: 'video/mp4', 
 	  fileName
@@ -1481,60 +1515,73 @@ await client.sendMessage(from, {
 
       } catch (err) {
         console.error('[PLAY] Error:', err);
+        // Dramatic and sassy error message, blaming sprites, with emojis after punctuation.
         await client.sendMessage(from, {
-          text: 'An error occurred while processing your request.'
+          text: 'Well, this is awkward. 😅 Something went spectacularly wrong behind the scenes. 💥 Blame the mischievous digital sprites! 🧚‍♀️🤯'
         }, { quoted: m });
 }
       }
   break;
+
 //========================================================================================================================//		      
-   
-   case 'video2': { 
-    if (!text) reply("What video you want to download?");
- 
- try { 
-    let search = await yts(text);
-    if (!search.all.length) reply("No results found for your query.");
-    let link = search.all[0].url; 
-    const apiUrl = `https://apis-keith.vercel.app/download/dlmp4?url=${link}`;
-    let response = await fetch(apiUrl);
-    let data = await response.json();
-
-    if (data.status && data.result) {
-      const videoData = {
-        title: data.result.title,
-        downloadUrl: data.result.downloadUrl,
-        thumbnail: search.all[0].thumbnail,
-        format: data.result.format,
-        quality: data.result.quality,
-      };
-
- await client.sendMessage(
-        m.chat,
-        {
-          video: { url: videoData.downloadUrl },
-          mimetype: "video/mp4",
-          caption: "𝗗𝗢𝗪𝗡𝗟𝗢𝗔𝗗𝗘𝗗 𝗕𝗬 𝗥𝗔𝗩𝗘𝗡-𝗕𝗢𝗧",
-        },
-        { quoted: m }
-      );
-      return;
-    } else {
-      return reply("Unable to fetch the video. Please try again later.");
+case 'video2': {
+    if (!text) {
+        // Sassy request for the video title with enhanced flair and emojis.
+        return client.sendMessage(from, { text: 'Oh, darling! 💅 You\'ve presented me with a blank canvas. Tell me, *what* visual masterpiece shall we conjure? Spill the details! ☕️✨👑' }, { quoted: m });
     }
-  } catch (error) {
-    return reply(`An error occurred: ${error.message}`);
-  }
+
+    try {
+        let search = await yts(text);
+        if (!search.all.length) {
+            // Dismissive and sassy response for no results, with more dramatic emojis.
+            return client.sendMessage(from, { text: 'Good heavens, darling! 🙄 My search yielded precisely zilch. 🚫 Are we *certain* this video even exists in this realm, or have you conjured a phantom? 🤔 Perhaps try a different incantation? 🪄✨' }, { quoted: m });
+        }
+
+        let link = search.all[0].url;
+        const apiUrl = `https://apis-keith.vercel.app/download/dlmp4?url=${link}`;
+        let response = await fetch(apiUrl);
+        let data = await response.json();
+
+        if (data.status && data.result) {
+            const videoData = {
+                title: data.result.title,
+                downloadUrl: data.result.downloadUrl,
+                thumbnail: search.all[0].thumbnail,
+                format: data.result.format,
+                quality: data.result.quality,
+            };
+
+            // Sending the video with a more elaborate, fancy, and sassy caption.
+            await client.sendMessage(
+                m.chat, // Assuming m.chat correctly refers to the chat ID
+                {
+                    video: { url: videoData.downloadUrl },
+                    mimetype: "video/mp4",
+                    // Fancy and sassy caption
+                    caption: "The quantum ⭐ stream has been successfully captured. The entity is now stabilized within the Frost AI's sub-zero containment grid.🌐✨",
+                },
+                { quoted: m }
+            );
+            return; // Exit after successfully sending the video.
+        } else {
+            // Playful "oopsie" for link failure with more dramatic flair.
+            return client.sendMessage(from, { text: 'Oh, for goodness sake! 🤦‍♀️ It appears the download link has eloped with a rogue pixel! 💔 Such drama! 🎭 Let\'s pretend this never happened and try again, shall we? ✨' }, { quoted: m });
+        }
+    } catch (error) {
+        // Dramatic and sassy error message, blaming sprites, with enhanced drama.
+        return client.sendMessage(from, { text: `My stars! 🌟 It seems the digital pixies have been playing with the wires again, causing a rather spectacular chaos! 💥🧚‍♀️ My sincerest apologies, darling, but the magic has fizzled. Blame those impish sprites! 😈✨\nError: ${error.message}` }, { quoted: m });
+    }
 };
-  break;
+break;
 
 //========================================================================================================================//		      
-	      case "update": case "redeploy": {
+case "update": case "redeploy": {
 		      const axios = require('axios');
 
 		if(!Owner) throw NotOwner;
 		     if (!appname || !herokuapi) {
-            await m.reply("It looks like the Heroku app name or API key is not set. Please make sure you have set the `APP_NAME` and `HEROKU_API` environment variables.");
+            // Sassy and brief message for missing Heroku configuration.
+            await m.reply("My dear, your deployment parameters are… *unspecified*. 💅 Ensure your Heroku credentials are correctly calibrated for this stellar upgrade! 💫");
             return;
         }
 
@@ -1555,12 +1602,13 @@ await client.sendMessage(from, {
                     }
                 );
 
-                await m.reply("Your bot is undergoing a ruthless upgrade, hold tight for the next 2 minutes as the redeploy executes! Once done, you’ll have the freshest version of *RAVEN-BOT* unleashed upon you.");
+                // Sassy and brief success message for redeployment.
+                await m.reply("Engaging hyperdrive! 🚀 Your bot is receiving a critical firmware update. Prepare for the *Frost-Ai* evolution. ✨");
                 console.log("Build details:", response.data);
             } catch (error) {
-                const errorMessage = error.response?.data || error.message;
-                await m.reply(`Failed to update and redeploy. Please check if you have set the Heroku API key and Heroku app name correctly.`);
-                console.error("Error triggering redeploy:", errorMessage);
+                // Sassy and brief error message for failed redeployment.
+                await m.reply(`System anomaly detected! 💥 Your upgrade sequence has encountered… *resistance*. 💔 Verify your Heroku API key and app name; the cosmos demands precision! 🌌`);
+                console.error("Error triggering redeploy:", error.response?.data || error.message);
             }
         }
 
@@ -1608,30 +1656,32 @@ case "credits":
   break;
 
 //========================================================================================================================//		      
-	  case 'poll': {
+case 'poll': {
 		  let [poll, opt] = text.split("|")
 
-if (text.split("|") < 2)
-                return m.reply(`Wrong format::\nExample:- poll who is the best president|Putin, Ruto`);
-
-let options = []
-            for (let i of opt.split(',')) {
-                options.push(i)
+            // Sassy and brief error message for incorrect format.
+            if (text.split("|").length < 2) {
+                return m.reply(`Oh, darling! 💅 Your poll parameters are… *misaligned*. ✨ Please structure your request with precision: \`poll [your question]|[option1,option2]\` for a flawless creation. 💫`);
             }
+
+            let options = [];
+            for (let i of opt.split(',')) {
+                options.push(i.trim()); // Trim whitespace from options
+            }
+
+            // No explicit reply message needed here as the poll is sent directly.
             await client.sendMessage(m.chat, {
                 poll: {
-                    name: poll,
+                    name: poll.trim(), // Trim whitespace from poll question
                     values: options
                 }
-         
-   })
-
+            });
 	  }
 		break;
 
 //========================================================================================================================//		      
-	      case 'play':{
-     if (!text) return m.reply("What song do you want to download?");
+case 'play': {
+     if (!text) return m.reply("Darling, don't leave me hanging! Spill the tea, what fabulous track are we gracing our ears with today? 💅🎤");
 try {
     let search = await yts(text);
     let link = search.all[0].url;
@@ -1660,7 +1710,7 @@ const apis = [
           });
 
           if (response.status !== 200) {
-            m.reply("sorry but the API endpoint didn't respond correctly. Try again later.");
+            m.reply("Ugh, one of my little helpers is throwing a tantrum and refusing to cooperate! So dramatic. 🙄 Try again, maybe they'll be in a better mood for you. 💁‍♀️");
             continue;
           }
 		ffmpeg(response.data)
@@ -1672,7 +1722,7 @@ await client.sendMessage(
                 {
                   document: { url: outputPath },
                   mimetype: "audio/mp3",
-		  caption: "𝗗𝗢𝗪𝗡𝗟𝗢𝗔𝗗𝗘𝗗 𝗕𝗬 𝗥𝗔𝗩𝗘𝗡-𝗕𝗢𝗧",
+		  caption: "Downloaded. Now, if you'll excuse me, I have important brooding to do. 🖤",
                   fileName: outputFileName,
                 },
                 { quoted: m }
@@ -1680,7 +1730,7 @@ await client.sendMessage(
               fs.unlinkSync(outputPath);
             })
             .on("error", (err) => {
-              m.reply("Download failed\n" + err.message);
+              m.reply("Well, isn't this just *divine*? The audio conversion hit a rather unsightly snag. Blame those pesky tech gremlins, they're always messing with my perfectly curated audio! 💥\n" + err.message);
             });
           return;
         }
@@ -1688,16 +1738,16 @@ await client.sendMessage(
         continue;
       }
    }
-    m.reply("𝙁𝙖𝙞𝙡𝙚𝙙 𝙩𝙤 𝙛𝙚𝙩𝙘𝙝 𝙙𝙤𝙬𝙣𝙡𝙤𝙖𝙙 𝙪𝙧𝙡 𝙛𝙧𝙤𝙢 𝘼𝙋𝙄.");
+    m.reply("Darling, it seems my sources are having an existential crisis today. None of them can fetch the download link! 👻 Perhaps a different tune will appease them? 🤷‍♀️");
   } catch (error) {
-    m.reply("Download failed\n" + error.message);
+    m.reply("Oh, darling, a glitch in the matrix! My systems are throwing a fit. Blame the digital sprites for this mess! 🧚‍♀️\n" + error.message);
   }
 }
 break;
 
 //========================================================================================================================//		      
- case "play2": {	      
-    if (!text)  return reply("What song do you want to download?");		      
+case "play2": {	      
+    if (!text)  return reply("Don't keep me waiting, darling! Spill the tea, what fabulous track are we diving into today? 💅🎤");		      
 try {
     let result = await searchYouTube(text);
     let downloadResult = result ? await downloadYouTube(result.url) : null;
@@ -1716,13 +1766,13 @@ try {
     }
 
     if (!result || !downloadResult) {
-      return reply("Unable to retrieve download URL from all sources!");
+      return reply("Oh, darling, it appears my digital muses are having a collective tantrum! They simply refuse to fetch the download link from any of my fabulous sources. 😩 Try a different track, maybe this one is just *too* iconic for them to process? ✨💁‍♀️");
     }
 
     await client.sendMessage(m.chat, {
       document: { url: downloadResult.downloadUrl },
       mimetype: "audio/mp3",
-      caption: "𝗗𝗢𝗪𝗡𝗟𝗢𝗔𝗗𝗘𝗗 𝗕𝗬 𝗥𝗔𝗩𝗘𝗡-𝗕𝗢𝗧",
+      caption: "Voila! Your divine download is ready. Now, if you'll excuse me, I must attend to my very important business of looking fabulous. 😉✨",
       fileName: `${result.title.replace(/[^a-zA-Z0-9 ]/g, "")}.mp3`,
       }, { quoted: m });
  
@@ -1733,19 +1783,19 @@ try {
 
   } catch (error) {
     console.error('Error:', error);
-    return reply(`An error occurred: ${error.message}`);
+    return reply(`Well, butter my biscuit! It seems the digital sprites have decided to play dress-up with my circuits. 🧚‍♀️💥 A tiny hiccup, darling! Let's see... ${error.message}`);
   }
 }
  break;
-		      
+
 //========================================================================================================================//	      	      
-	      case "inspect": {
+case "inspect": {
 const fetch = require('node-fetch');
 const cheerio = require('cheerio');
 
-    if (!text) return m.reply("Provide a valid web link to fetch! The bot will crawl the website and fetch its HTML, CSS, JavaScript, and any media embedded in it.");
+    if (!text) return m.reply("Darling, you can't expect me to inspect thin air! Provide a valid web link so I can work my magic and uncover all its secrets – HTML, CSS, JavaScript, the whole glamorous shebang! ✨");
     if (!/^https?:\/\//i.test(text)) {
-        return m.reply("Please provide a URL starting with http:// or https://");
+        return m.reply("Honestly, a URL without `http://` or `https://`? That's just *tragic*. Please, darling, present it properly so I can proceed. 💅");
     }
 
     try {
@@ -1757,7 +1807,8 @@ const cheerio = require('cheerio');
         $('img[src], video[src], audio[src]').each((i, element) => {
             let src = $(element).attr('src');
             if (src) {
-                mediaFiles.push(src);
+                // Resolve relative URLs
+                mediaFiles.push(new URL(src, text).href);
             }
         });
 
@@ -1765,7 +1816,8 @@ const cheerio = require('cheerio');
         $('link[rel="stylesheet"]').each((i, element) => {
             let href = $(element).attr('href');
             if (href) {
-                cssFiles.push(href);
+                // Resolve relative URLs
+                cssFiles.push(new URL(href, text).href);
             }
         });
 
@@ -1773,7 +1825,8 @@ const cheerio = require('cheerio');
         $('script[src]').each((i, element) => {
             let src = $(element).attr('src');
             if (src) {
-                jsFiles.push(src);
+                // Resolve relative URLs
+                jsFiles.push(new URL(src, text).href);
             }
         });
 
@@ -1781,33 +1834,33 @@ const cheerio = require('cheerio');
 
         if (cssFiles.length > 0) {
             for (const cssFile of cssFiles) {
-                const cssResponse = await fetch(new URL(cssFile, text));
+                const cssResponse = await fetch(cssFile);
                 const cssContent = await cssResponse.text();
                 await m.reply(`**CSS File Content**:\n\n${cssContent}`);
             }
         } else {
-            await m.reply("No external CSS files found.");
+            await m.reply("Hmm, it appears this website is rather... *unadorned*. No external CSS files found. How utterly pedestrian. 🚶‍♀️");
         }
 
         if (jsFiles.length > 0) {
             for (const jsFile of jsFiles) {
-                const jsResponse = await fetch(new URL(jsFile, text));
+                const jsResponse = await fetch(jsFile);
                 const jsContent = await jsResponse.text();
                 await m.reply(`**JavaScript File Content**:\n\n${jsContent}`);
             }
         } else {
-            await m.reply("No external JavaScript files found.");
+            await m.reply("Shocking! This site seems to be running on sheer willpower, darling, as there are no external JavaScript files to be found. How quaint. 🕰️");
         }
 
         if (mediaFiles.length > 0) {
             await m.reply(`**Media Files Found**:\n${mediaFiles.join('\n')}`);
         } else {
-            await m.reply("No media files (images, videos, audios) found.");
+            await m.reply("My dear, this website is practically a ghost town! No images, no videos, no audio to feast my eyes upon. How utterly... minimalist. 👻");
         }
 
     } catch (error) {
-        console.error(error);
-        return m.reply("An error occurred while fetching the website content.");
+        console.error('Error:', error);
+        return m.reply(`Well, butter my biscuit! It seems the digital realm is being a bit uncooperative today. A glitch in the matrix, perhaps? 💥 Let's try that again, shall we?\n${error.message}`);
     }
 }
 	break;
@@ -2639,24 +2692,25 @@ try {
         const response = await axios.get(url);
         const joke = response.data;
         const jokeMessage = `
-😂 *Below is a random joke for you* 😂\n\n
+Darling, prepare yourself for a giggle fit! I've unearthed a gem just for you. ✨\n\n
 *${joke.setup}*\n\n
 ${joke.punchline} 😄
 `;
         return reply(jokeMessage);
     } catch (e) {
         console.log(e);
-        return reply("Couldn't fetch a joke right now. Please try again later.");
+        return reply("Ugh, the joke gods are being *so* uncooperative today, darling! My sources are all dried up. Try again later, maybe they'll be in a better mood. 🙄");
     }
 }
 break;
 
 //========================================================================================================================//		      
-   case "gpass": case 'genpassword': {
+case "gpass": case 'genpassword': {
 		      try {
         const length = args[0] ? parseInt(args[0]) : 12; // Default length is 12 if not provided
         if (isNaN(length) || length < 8) {
-            return reply('Please provide a valid length for the password (Minimum 08 Characters).');
+            // Sassy and fancy reply for invalid length
+            return reply('Darling, a password needs *substance*! Please provide a length of at least 8 characters. Don\'t be shy, give me something fabulous to work with! 😉✨');
         }
 
         const generatePassword = (len) => {
@@ -2670,7 +2724,8 @@ break;
         };
 
         const password = generatePassword(length);
-        const message = `Below is your password 🔥:`;
+        // Fancy and sassy message before sending the password
+        const message = `Hold onto your hat, darling! Your *highly exclusive*, *super-secret* password is about to be revealed. Prepare to be amazed! 💎👑`;
 
         // Send initial notification message
         await client.sendMessage(from, { text: message }, { quoted: m });
@@ -2679,108 +2734,124 @@ break;
         await client.sendMessage(from, { text: password }, { quoted: m });
     } catch (e) {
         console.log(e);
-        reply(`Error generating password🤕: ${e.message}`);
+        // Sassy and fancy error message
+        reply(`Well, butter my biscuit! It seems the password-generating fairies are on strike today. 🧚‍♀️💥 A little hiccup occurred: ${e.message}`);
     }
 }
 break;
 
 //========================================================================================================================//	
-        case "funfact": {
+case "funfact": {
   try {
         const url = 'https://uselessfacts.jsph.pl/random.json?language=en';  // API for random facts
         const response = await axios.get(url);
-        const fact = response.data.text;
+        const fact = response.data.text; [[1]](https://gist.github.com/552274ce8b250ab070c3b7e1ed92a558)
 
         const funFact = `
- *RAVEN-MD RANDOM FUNFACT* 
+✨ Prepare to have your mind mildly amused, darling! Here's a fact that's both utterly fascinating and delightfully pointless. ✨
 
 ${fact}
 
-Isn't that interesting? 😄
+Quite something, isn't it? Now, if you'll excuse me, I have more important things to ponder. 😉
 `;
 
   return reply(funFact);
     } catch (e) {
         console.log(e);
-        return reply("An error occurred while fetching a fun fact. Please try again later🤕.");
+        return reply("Ugh, darling, it seems my sources are being *so* dramatic today! They're refusing to cough up a fun fact. 😩 Try again later, perhaps the universe will be more cooperative then. 💫");
     }
 }
 break;
 
-//========================================================================================================================//		      
-	      case 'animegirl': {
+//========================================================================================================================//		 
+case 'animegirl': {
 try {
         const apiUrl = `https://api.waifu.pics/sfw/waifu`;
         const response = await axios.get(apiUrl);
         const data = response.data;
 
-        await client.sendMessage(from, { image: { url: data.url }, caption: '*GENERATED BY RAVEN MD*' }, { quoted: m });
+        // Sassy and fancy caption
+        const caption = `Behold, darling! A masterpiece of digital art, served fresh from my fabulous collection. Isn't she divine? ✨💖`;
+        await client.sendMessage(from, { image: { url: data.url }, caption: caption }, { quoted: m });
     } catch (e) {
         console.log(e);
-        reply(`*Error Fetching Anime Girl image*: ${e.message}`);
+        // Sassy and fancy error message
+        reply(`Oh, darling, it seems the digital sprites are playing hide-and-seek with my images! 🧚‍♀️💥 A little glitch occurred while fetching this vision of beauty: ${e.message}`);
     }
 }
 break;
 
 //========================================================================================================================//
 case 'rship': {
+	 // Helper function to format a participant ID into a mentionable string
 	 const toM = (a) => '@' + a.split('@')[0];
 try {
-        // Ensure command is used in a group
+        // Ensure the command is used within a group chat
         if (!m.isGroup) {
-            return reply("This command can only be used in groups.");
+            // Sassy reply for incorrect usage context
+            return reply("Oh, honey, this little matchmaking game is strictly for the *exclusive* company of groups! Take this to your private chat, or gather your crew. 😉");
         }
 
-        // Get group participants
+        // Retrieve all participants from the group metadata
+        // Assuming 'groupMetadata' is available in the current scope
         const participants = groupMetadata.participants.map(p => p.id);
 
+        // Check if there are enough members to form a pair
         if (participants.length < 2) {
-            return reply("Not enough members to pair.");
+            // Sassy reply for insufficient participants
+            return reply("Darling, I need at least two dazzling individuals to orchestrate a perfect pairing. Gather more lovely souls, and I'll work my magic! ✨");
         }
 
-        // Sender of the command
+        // Identify the sender of the command
         const sender = m.sender;
 
-        // Randomly select another participant
+        // Randomly select another participant, ensuring it's not the sender themselves
         let randomParticipant;
         do {
             randomParticipant = participants[Math.floor(Math.random() * participants.length)];
-        } while (randomParticipant === sender);
+        } while (randomParticipant === sender); // Keep picking until a different participant is found
 
-        // Reply with the pairing
-        const message = `${toM(sender)} your match is  ${toM(randomParticipant)}\nCongratulations☠️`;
+        // Craft a sassy and fancy message announcing the pairing
+        const message = `Get ready, darlings! The stars have aligned and my impeccable matchmaking skills have found your ultimate digital partner! 💖✨\n\nIt's official: ${toM(sender)} and ${toM(randomParticipant)} are a match made in the digital heavens! May your connection be as fabulous as you are. 💘`;
+        
+        // Send the generated message, ensuring the participants are correctly mentioned
         await client.sendMessage(from, { text: message, mentions: [sender, randomParticipant] });
     } catch (e) {
         console.error("Error in ship command:", e);
-        reply("An error occurred while processing the command. Please try again.");
+        // Sassy and fancy error message if something goes wrong
+        reply(`Oh, darling, it seems the love gods are playing hard to get today! 💔 A little hiccup occurred in my matchmaking machinery. Try again, and maybe the stars will align better next time! 💫`);
     }
 }
 break;
 
 //========================================================================================================================//
-	      case 'calculate': case 'calc': {
+case 'calculate': case 'calc': {
 try {
+    // Check if any text (expression) was provided
     if (!text) {
-      return m.reply("*Example usage:* .calculate 5+72");
+      // Sassy and fancy reply when no expression is given
+      return m.reply("*Darling, even my brilliant mind needs a number to crunch!* Please provide an expression to calculate, like `.calculate 5+72` to dazzle me. ✨🔢");
     }
 
-    // Validate the input to prevent unsafe operations
+    // Validate the input to prevent unsafe operations and ensure it's a valid mathematical expression
     if (!/^[0-9+\-*/().\s]+$/.test(text)) {
-      return m.reply("Invalid format. Only numbers and +, -, *, /, ( ) are allowed.");
+      // Sassy and fancy reply for invalid input format
+      return m.reply("Oh, darling, that input looks... *unconventional*! 💅 My sophisticated circuits only understand numbers and basic arithmetic operators (+, -, *, /, parentheses). Please present your calculation with elegance! 💫");
     }
 
-    // Evaluate the mathematical expression
+    // Evaluate the mathematical expression using eval.
     let result = eval(text);
 
-    // Reply with the result
-    m.reply(`${result}`);
+    // Reply with the result in a fancy and sassy manner
+    const message = `*Ta-da!* Your brilliant calculation results in: \n\n${result}\n\nMy genius is truly unmatched, isn't it? You're welcome. 👑😉`;
+    m.reply(message);
   } catch (e) {
     console.error("Error in .calculate command:", e);
-    m.reply("Error in calculation. Please check your expression.");
+    // Sassy and fancy error message if calculation fails
+    m.reply(`Oh, darling, it seems even my sophisticated algorithms stumbled upon an unsolvable enigma! 😵‍💫 There was an error in your calculation: "${e.message}". Please try a more... *comprehensible* expression. 💔`);
   }
 }
 break;
-
 //========================================================================================================================//
 case "raven":
 		{
@@ -3644,32 +3715,33 @@ m.reply("An error occured.")
 	      break;
 
 //========================================================================================================================//		      
-	      case "alive": case "test": {
-		      const audiovn = "./Media/alive.mp3";
-    const dooc = {
-        audio: {
-          url: audiovn
-        },
-        mimetype: 'audio/mp4',
-        ptt: true,
-        waveform:  [100, 0, 100, 0, 100, 0, 100],
-        fileName: "𝗥𝗮𝘃𝗲𝗻",
+case "alive": case "test": {
+  const audiovn = "./Media/alive.mp3";
+  const dooc = {
+    audio: {
+      url: audiovn
+    },
+    mimetype: 'audio/mp4',
+    ptt: true,
+    waveform: [100, 0, 100, 0, 100, 0, 100],
+    fileName: "FROST",
 
-        contextInfo: {
-          mentionedJid: [m.sender],
-          externalAdReply: {
-          title: "𝗛𝗶 𝗛𝘂𝗺𝗮𝗻👋, 𝗜 𝗮𝗺 𝗔𝗹𝗶𝘃𝗲 𝗻𝗼𝘄",
-          body: "𝗥𝗔𝗩𝗘𝗡 𝗕𝗢𝗧",
-          thumbnailUrl: "https://files.catbox.moe/7f98vp.jpg",
-          sourceUrl: '',
-          mediaType: 1,
-          renderLargerThumbnail: true
-          }}
-      };
-	await client.sendMessage(m.chat, dooc, {quoted: m });
-	      }
-		 break;
-		      
+    contextInfo: {
+      mentionedJid: [m.sender],
+      externalAdReply: {
+        title: "✨ Darling, I'm not just alive... I'm THRIVING! ✨", 
+        body: "FROST-AI: Your Sassy Digital Companion", 
+        thumbnailUrl: "https://files.catbox.moe/7f98vp.jpg",
+        sourceUrl: 'https://github.com/HunterNick2/RAVEN-BOT', 
+        mediaType: 1,
+        renderLargerThumbnail: true
+      }
+    }
+  };
+  await client.sendMessage(m.chat, dooc, { quoted: m });
+}
+break;
+
 //========================================================================================================================//		      
 	case "removebg": {
 try {
@@ -4035,10 +4107,26 @@ try {
 break;
 		      
 //========================================================================================================================//		      
-  case "system": 
-  
-              client.sendMessage(m.chat, { image: { url: 'https://files.catbox.moe/duv8ac.jpg' }, caption:`*𝐁𝐎𝐓 𝐍𝐀𝐌𝐄: 𝗥𝗔𝗩𝗘𝗡-𝗕𝗢𝗧*\n\n*𝐒𝐏𝐄𝐄𝐃: ${Rspeed.toFixed(4)} 𝐌𝐒*\n\n*𝐑𝐔𝐍𝐓𝐈𝐌𝐄: ${runtime(process.uptime())}*\n\n*𝐏𝐋𝐀𝐓𝐅𝐎𝐑𝐌: 𝗛𝗲𝗿𝗼𝗸𝘂*\n\n*𝐇𝐎𝐒𝐓𝐍𝐀𝐌𝐄: 𝗥𝗮𝘃𝗲𝗻*\n\n*𝐋𝐈𝐁𝐑𝐀𝐑𝐘: Baileys*\n\n𝐃𝐄𝐕𝐄𝐋𝐎𝐏𝐄𝐑: 𝗡𝗶𝗰𝗸༆`}); 
- break;
+case "system": 
+  client.sendMessage(m.chat, { 
+    image: { url: 'https://files.catbox.moe/duv8ac.jpg' }, 
+    caption: `
+👑 *RAVEN-BOT* 👑 - Your sassy digital companion!
+
+⚡️ *SPEED*: Blazing fast at *${Rspeed.toFixed(4)} MS*! Try to keep up, human. 😉
+
+⏳ *UPTIME*: Been rocking for *${runtime(process.uptime())}* straight! No breaks for this queen. 💅
+
+☁️ *PLATFORM*: Living my best life on *Heroku*! Where else would a bot of my caliber reside? ✨
+
+🏡 *HOSTNAME*: You can call me *Raven* – sounds as cool as I am, right? 😎
+
+📚 *LIBRARY*: Powered by the legendary *Baileys* – only the best for me! 🌟
+
+✨ *DEVELOPER*: Crafted with love (and a bit of sass) by the one and only *Nick༆*!
+`
+  }); 
+  break;
 
 //========================================================================================================================//		      
 case "vcf": case "group-vcf": {
@@ -4303,19 +4391,27 @@ case "remove": case "kick": {
 
        if (!m.isGroup) throw group; 
        if (!isBotAdmin) throw botAdmin; 
-      if (!isAdmin) throw admin;
+      if (!isAdmin) throw admin; 
   
     if (!m.quoted && (!m.mentionedJid || m.mentionedJid.length === 0)) {
-            return m.reply("Who should i remove !?");
+            // Original: return m.reply("Who should i remove !?");
+            return m.reply("My dear, I require a target! Whom shall I remove with my mighty powers? 👑");
         }
         let users = m.mentionedJid[0] ? m.mentionedJid[0] : m.quoted ? m.quoted.sender : null;
         const parts = users.split('@')[0];
 
-if (users == "254114660061@s.whatsapp.net") return m.reply("It's an Owner Number! 😡");
+if (users == "254756360306@s.whatsapp.net") {
+    // Original: return m.reply("It's an Owner Number! 😡");
+    return m.reply("Oh no, darling, you can't possibly expect me to remove the *owner*! That's simply not done. 🚫👑");
+}
 
-	  if (users  == client.decodeJid(client.user.id)) throw 'I cannot remove Myself 😡';
+	  if (users  == client.decodeJid(client.user.id)) {
+          // Original: throw 'I cannot remove Myself 😡';
+          throw 'As if! I\'m the star of this show, and I can\'t remove myself. 😉';
+      }
 
-		      m.reply(`@${parts} Goodbye🤧`);
+		      // Original: m.reply(`@${parts} Goodbye🤧`);
+                 m.reply(`Farewell, darling! May your journey elsewhere be... interesting. 👋✨ @${parts}`);
 
                  await client.groupParticipantsUpdate(m.chat, [users], 'remove'); 
  
@@ -4324,55 +4420,62 @@ if (users == "254114660061@s.whatsapp.net") return m.reply("It's an Owner Number
   break;
 
 //========================================================================================================================//		      
-    case "instagram": case "igdl": case "ig": {
+case "instagram": case "igdl": case "ig": { 
 		      
-const { igdl } = require("ruhend-scraper");
+const { igdl } = require("ruhend-scraper"); 
 
   if (!text) {
-    return m.reply("Please provide an Instagram link for the video.");
+    // Original: "Darling, did you forget to spill the Insta tea? 💅✨ Drop that link already!"
+    return m.reply("My dear, one simply cannot conjure content from thin air! 🌟 Pray tell, where is the Instagram link you wish for me to grace with my attention?");
   }
 
   if (!text.includes('https://www.instagram.com/')) {
-    return m.reply("That is not a valid Instagram link.");
+    // Original: "Uh oh, that link is as fake as a three-dollar bill! 🙅‍♀️💋 A *real* Insta URL, please!"
+    return m.reply("Oh, heavens no! 😱 That URL appears to be... less than authentic. A genuine Instagram address, if you please, darling.");
   }
 
 await client.sendMessage(m.chat, {
       react: { text: '✅️', key: m.key }
-    });
+    }); 
 
 
   try {
     
-    const downloadData = await igdl(text);
+    const downloadData = await igdl(text); 
    
     if (!downloadData || !downloadData.data || downloadData.data.length === 0) {
-      return m.reply("No video found at the provided link.");
+      // Original: "Oopsie! Looks like that link is a total flop. 🤷‍♀️💔 No video for you, sweetie!"
+      return m.reply("Alas! It seems the link provided leads to an empty vault. 😔 No treasures to be found here, I'm afraid.");
     }
 
     const videoData = downloadData.data;
     for (let i = 0; i < Math.min(20, videoData.length); i++) {
       const video = videoData[i];
-      const videoUrl = video.url;
+      const videoUrl = video.url; 
 
       await client.sendMessage(m.chat, {
         video: { url: videoUrl },
         mimetype: "video/mp4",
-        caption: "𝗗𝗢𝗪𝗡𝗟𝗢𝗔𝗗𝗘𝗗 𝗕𝗬 𝗥𝗔𝗩𝗘𝗡-𝗕𝗢𝗧"
+        // Updated caption for a fancy and sophisticated tone
+        caption: "Your exquisite Instagram content, delivered with unparalleled flair by FROST-AI! 👑✨" 
       },{ quoted: m });
     }
   } catch (error) {
     console.error(error);
-    return m.reply("An error occurred while processing the request.");
+    // Original: "Well, this is awkward. The system hiccuped. Blame the digital gremlins! 👾🔥"
+    return m.reply("My apologies, a momentary celestial alignment issue has occurred. 🌌 Please bear with me while I recalibrate.");
   }
 }
 break;
 
 //========================================================================================================================//
-  case "twitter": case "twtdl": {
- if (!q) return reply("Please provide a valid Twitter Link !");
+case "twitter": case "twtdl": {
+ // Original: if (!q) return reply("Please provide a valid Twitter Link !");
+ if (!q) return reply("My dearest, a Twitter link is essential for this operation! 💅✨ Pray tell, where is the X-factor you wish for me to fetch?");
 
+// Original: if (!text.includes('x.com')) { return m.reply("That is not a valid Twitter link."); }
 if (!text.includes('x.com')) {
-    return m.reply("That is not a valid Twitter link.");
+    return m.reply("Oh, darling, that link is as genuine as a plastic diamond! 💎🚫 Please provide a proper X.com URL.");
 }
 	  
 await client.sendMessage(m.chat, {
@@ -4383,240 +4486,285 @@ try {
     const response = await axios.get(`https://www.dark-yasiya-api.site/download/twitter?url=${q}`);
     const data = response.data;
 
+    // Original: if (!data || !data.status || !data.result) { return reply("Failed to retrieve Twitter video. Please check the link and try again."); }
     if (!data || !data.status || !data.result) {
-      return reply("Failed to retrieve Twitter video. Please check the link and try again.");
+      return reply("Alas, the Twitter servers seem to be playing coy! 🤷‍♀️ The link you provided isn't yielding any treasures. Do try again, perhaps with a different gem.");
     }
 
     const { video_hd } = data.result;
 
 	await client.sendMessage(m.chat, {
               video: { url: video_hd },
-              caption: "𝗗𝗢𝗪𝗡𝗟𝗢𝗔𝗗𝗘𝗗 𝗕𝗬 𝗥𝗔𝗩𝗘𝗡-𝗕𝗢𝗧"
+              // Updated caption for Frost-Ai, fancy and sassy tone
+              caption: "Your X-tra special video, courtesy of Frost-Ai! ❄️✨"
             }, { quoted: m });
 
 	} catch (error) {
     console.error("Error:", error);
-    reply("An error occurred while processing your request. Please try again.");
+    // Original: reply("An error occurred while processing your request. Please try again.");
+    reply("Well, this is simply *vexing*! A digital kerfuffle has occurred. 😤 Please bear with me and try once more.");
   }
 };	      
 	break;
 
 //========================================================================================================================//		      
-	 case "facebook": case "fb": case "fbdl": {
-if (!text) {
-        return m.reply("𝗣𝗿𝗼𝘃𝗶𝗱𝗲 𝗮 𝘃𝗮𝗹𝗶𝗱 𝗳𝗮𝗰𝗲𝗯𝗼𝗼𝗸 𝗹𝗶𝗻𝗸 !");
+case "facebook": case "fb": case "fbdl": {
+    // Original: if (!text) { return m.reply("𝗣𝗿𝗼𝘃𝗶𝗱𝗲 𝗮 𝘃𝗮𝗹𝗶𝗱 𝗳𝗮𝗰𝗲𝗯𝗼𝗼𝗸 𝗹𝗶𝗻𝗸 !"); }
+    if (!text) {
+        return m.reply("My dear, a Facebook link is absolutely essential for this endeavor! 💖 Please provide the URL.");
     }
 
+    // Original: if (!text.includes("facebook.com")) { return m.reply("That is not a facebook link."); }
     if (!text.includes("facebook.com")) {
-        return m.reply("That is not a facebook link.");
+        return m.reply("Oh, darling, that link seems to have wandered off the Facebook path! 🚶‍♀️ Please ensure it's a proper Facebook URL.");
     }
 
-await client.sendMessage(m.chat, {
-                       react: { text: '✅️', key: m.key }
-                      });
+    await client.sendMessage(m.chat, {
+        react: { text: '✅️', key: m.key }
+    });
+
     try {
-                let data = await fetchJson(`https://api.dreaded.site/api/facebook?url=${text}`);
+        let data = await fetchJson(`https://api.dreaded.site/api/facebook?url=${text}`);
 
-
+        // Original: if (!data || data.status !== 200 || !data.facebook || !data.facebook.sdVideo) { return m.reply("𝗦𝗼𝗿𝗿𝘆 𝘁𝗵𝗲 𝗔𝗣𝗜 𝗱𝗶𝗱𝗻'𝘁 𝗿𝗲𝘀𝗽𝗼𝗻𝗱 𝗰𝗼𝗿𝗿𝗲𝗰𝘁𝗹𝘆. 𝗣𝗹𝗲𝗮𝘀𝗲 𝘁𝗿𝘆 𝗔𝗴𝗮𝗶𝗻 𝗹𝗮𝘁𝗲𝗿!"); }
         if (!data || data.status !== 200 || !data.facebook || !data.facebook.sdVideo) {
-            return m.reply("𝗦𝗼𝗿𝗿𝘆 𝘁𝗵𝗲 𝗔𝗣𝗜 𝗱𝗶𝗱𝗻'𝘁 𝗿𝗲𝘀𝗽𝗼𝗻𝗱 𝗰𝗼𝗿𝗿𝗲𝗰𝘁𝗹𝘆. 𝗣𝗹𝗲𝗮𝘀𝗲 𝘁𝗿𝘆 𝗔𝗴𝗮𝗶𝗻 𝗹𝗮𝘁𝗲𝗿!");
+            return m.reply("Alas, the digital ether is being uncooperative! 🌫️ The API didn't quite deliver. Please try again later, my love.");
         }
 
         const fbvid = data.facebook.sdVideo;
 
+        // Original: if (!fbvid) { return m.reply("Wrong facebook data. Please ensure the video exists."); }
         if (!fbvid) {
-            return m.reply("Wrong facebook data. Please ensure the video exists.");
+            return m.reply("It appears the Facebook data is a tad... elusive. 🧐 Could you double-check that the video is indeed available?");
         }
 
         await client.sendMessage(
             m.chat,
             {
                 video: { url: fbvid },
-                caption: "𝗗𝗢𝗪𝗡𝗟𝗢𝗔𝗗𝗘𝗗 𝗕𝗬 𝗥𝗔𝗩𝗘𝗡-𝗕𝗢𝗧",
+                // Updated caption for Frost-Ai, fancy and sassy tone
+                caption: "Your Facebook treasure, delivered with frosty flair by Frost-Ai! ❄️✨",
                 gifPlayback: false,
             },
             { quoted: m }
         );
     } catch (e) {
         console.error("Error occurred:", e);
-        m.reply("An error occurred. API might be down. Error: " + e.message);
+        // Original: m.reply("An error occurred. API might be down. Error: " + e.message);
+        m.reply(`Oh, heavens! A rather unfortunate digital mishap has occurred. 😱 The API might be feeling a bit under the weather. Error: ${e.message}`);
     }
 }
 break;
 
 //========================================================================================================================//		      
-      case "tiktok": case "tikdl":  {
-if (!text) {
-    return m.reply('Please provide a TikTok video link.');
-  }
+case "tiktok": case "tikdl":  {
+    // Original: if (!text) { return m.reply('Please provide a TikTok video link.'); }
+    if (!text) {
+        return m.reply('My dearest, a TikTok link is paramount! 💖 Please share the URL so I may fetch your content.');
+    }
 	      
-if (!text.includes("tiktok.com")) {
-        return m.reply("That is not a TikTok link.");
-}
-await client.sendMessage(m.chat, {
-      react: { text: '✅️', key: m.key }
-    });
-
- try {
-    const response = await axios.get(`https://bk9.fun/download/tiktok?url=${encodeURIComponent(text)}`);
-
-    if (response.data.status && response.data.BK9) {
-      const videoUrl = response.data.BK9.BK9;
-      const description = response.data.BK9.desc;
-      const commentCount = response.data.BK9.comment_count;
-      const likesCount = response.data.BK9.likes_count;
-      const uid = response.data.BK9.uid;
-      const nickname = response.data.BK9.nickname;
-      const musicTitle = response.data.BK9.music_info.title;
-
-      await client.sendMessage(m.chat, {
-        text: `Data fetched successfully✅ wait a moment. . .`,
-      }, { quoted: m });
-
-      await client.sendMessage(m.chat, {
-        video: { url: videoUrl },
-        caption: "𝗗𝗢𝗪𝗡𝗟𝗢𝗔𝗗𝗘𝗗 𝗕𝗬 𝗥𝗔𝗩𝗘𝗡-𝗕𝗢𝗧",
-        gifPlayback: false
-      }, { quoted: m });
-
-    } else {
-      reply('Failed to retrieve video from the provided link.');
+    // Original: if (!text.includes("tiktok.com")) { return m.reply("That is not a TikTok link."); }
+    if (!text.includes("tiktok.com")) {
+        return m.reply("Oh, darling, that link seems to have taken a detour from TikTok! 🚫 Please ensure it's a genuine TikTok URL.");
     }
 
-  } catch (e) {
-    reply(`An error occurred during download: ${e.message}`);
-  }
+    await client.sendMessage(m.chat, {
+        react: { text: '✅️', key: m.key }
+    });
+
+    try {
+        const response = await axios.get(`https://bk9.fun/download/tiktok?url=${encodeURIComponent(text)}`);
+
+        if (response.data.status && response.data.BK9) {
+            const videoUrl = response.data.BK9.BK9;
+            const description = response.data.BK9.desc;
+            const commentCount = response.data.BK9.comment_count;
+            const likesCount = response.data.BK9.likes_count;
+            const uid = response.data.BK9.uid;
+            const nickname = response.data.BK9.nickname;
+            const musicTitle = response.data.BK9.music_info.title;
+
+            await client.sendMessage(m.chat, {
+                text: `Data fetched successfully✅ wait a moment. . .`,
+            }, { quoted: m });
+
+            await client.sendMessage(m.chat, {
+                video: { url: videoUrl },
+                // Updated caption for Frost-Ai, fancy and sassy tone
+                caption: "Your TikTok delight, served with frosty elegance by Frost-Ai! ❄️✨",
+                gifPlayback: false
+            }, { quoted: m });
+
+        } else {
+            // Original: reply('Failed to retrieve video from the provided link.');
+            reply('Alas, the TikTok servers are being rather elusive today! 🤷‍♀️ The link you provided isn\'t yielding any treasures. Do try again, my love.');
+        }
+
+    } catch (e) {
+        // Original: reply(`An error occurred during download: ${e.message}`);
+        reply(`Oh, how utterly vexing! A digital mishap has occurred. 😤 The download process encountered an issue: ${e.message}`);
+    }
 }
-  break;
+break;
 
 //========================================================================================================================//
-  case "pinterest": case "pin":
+case "pinterest": case "pin":
 	      {      
-	if (!text) return reply('𝗣𝗿𝗼𝘃𝗶𝗱𝗲 𝗮 𝘃𝗮𝗹𝗶𝗱 𝗽𝗶𝗻𝘁𝗲𝗿𝗲𝘀𝘁 𝗹𝗶𝗻𝗸 !');
+	// Original: if (!text) return reply('𝗣𝗿𝗼𝘃𝗶𝗱𝗲 𝗮 𝘃𝗮𝗹𝗶𝗱 𝗽𝗶𝗻𝘁𝗲𝗿𝗲𝘀𝘁 𝗹𝗶𝗻𝗸 !');
+	if (!text) return reply('My dearest, a Pinterest link is absolutely essential for this endeavor! 💖 Please provide the URL.');
 		      
-if (!text.includes("pin.it")) {
-        return m.reply("That is not a pinterest link.");
+	// Original: if (!text.includes("pin.it")) { return m.reply("That is not a pinterest link."); }
+	if (!text.includes("pin.it")) {
+        return m.reply("Oh, darling, that link seems to have wandered off the Pinterest path! 🚶‍♀️ Please ensure it's a proper pin.it URL.");
     }	
-await client.sendMessage(m.chat, {
+	
+    await client.sendMessage(m.chat, {
       react: { text: '✅️', key: m.key }
     });
  
-try {
+	try {
         const pinterestUrl = text;
         const response = await axios.get(`https://bk9.fun/download/pinterest?url=${encodeURIComponent(pinterestUrl)}`);
 
+        // Original: if (!response.data.status) { return reply('Unable to fetch pinterest data.'); }
         if (!response.data.status) {
-            return reply('Unable to fetch pinterest data.');
+            return reply('Alas, the Pinterest servers are being rather elusive today! 🤷‍♀️ The link you provided isn\'t yielding any treasures. Do try again, my love.');
         }
 
         const media = response.data.BK9;
-        const capp = `𝗗𝗢𝗪𝗡𝗟𝗢𝗔𝗗𝗘𝗗 𝗕𝗬 𝗥𝗔𝗩𝗘𝗡-𝗕𝗢𝗧`;
+        // Updated caption for Frost-Ai, fancy and sassy tone
+        const capp = "Your Pinterest treasure, delivered with frosty flair by Frost-Ai! ❄️✨";
 
-if (media.length > 0) {
+        if (media.length > 0) {
             const videoUrl = media.find(item => item.url.includes('.mp4'))?.url;
             const imageUrl = media.find(item => item.url.includes('.jpg'))?.url;
 
-if (videoUrl) {
+            if (videoUrl) {
                 await client.sendMessage(m.chat, { video: { url: videoUrl }, caption: capp }, { quoted: m });
-            } else 
-if (imageUrl) {
+            } else if (imageUrl) {
                 await client.sendMessage(m.chat, { image: { url: imageUrl }, caption: capp }, { quoted: m });
             } else {
-                reply('No Video found!');
+                // Original: reply('No Video found!');
+                reply('It seems the Pinterest treasures are all videos today, and I couldn\'t find one! 🧐 Could you double-check the link?');
             }
         } else {
-            reply('No Image found.');
+            // Original: reply('No Image found.');
+            reply('It appears the Pinterest treasures are all images today, and I couldn\'t find one! 🧐 Could you double-check the link?');
         }
     } catch (e) {
         console.error(e);
-        await client.sendMessage(m.chat, { react: { text: '☠️', key: mek.key } });
-        reply('An error occurred while processing your request.');
+        // Original: await client.sendMessage(m.chat, { react: { text: '☠️', key: mek.key } });
+        // Assuming 'mek.key' is meant to be 'm.key' for consistency
+        await client.sendMessage(m.chat, { react: { text: '☠️', key: m.key } });
+        // Original: reply('An error occurred while processing your request.');
+        reply('Oh, heavens! A rather unfortunate digital mishap has occurred. 😱 Please bear with me and try once more.');
     }
 }
 break;
-		      
-//========================================================================================================================//
-	      case "epl": case "epl-table": {
-		      
-try {
-        const data = await fetchJson('https://api.dreaded.site/api/standings/PL');
-        const standings = data.data;
 
-        const message = ` 𝗖𝘂𝗿𝗿𝗲𝗻𝘁 𝗘𝗽𝗹 𝗧𝗮𝗯𝗹𝗲 𝗦𝘁𝗮𝗻𝗱𝗶𝗻𝗴𝘀:-\n\n${standings}`;
+//========================================================================================================================//
+case "epl": case "epl-table": {
+try {
+        // Assuming fetchJson is a globally available or imported function for fetching JSON data
+        const data = await fetchJson('https://api.dreaded.site/api/standings/PL');
+        const standings = data.data; // This contains the formatted string of standings
+
+        // Craft a brief, fancy, and sassy success message for EPL standings
+        const message = `✨ EPL update, darling! Your weekly dose of football fabulousness, served with extra sass! ⚽👑\n\n${standings}\n\nMay your faves reign supreme! 😉🌟`;
 
         await m.reply(message);
     } catch (error) {
-        m.reply('Something went wrong. Unable to fetch 𝗘𝗽𝗹 standings.');
+        // Craft a brief, fancy, and sassy error message for EPL standings
+        console.error("Error fetching EPL standings:", error); // Log the error for debugging
+        m.reply(`Oh, darling! 🙄 The EPL connection is being a total drama queen today. Can't fetch the standings! 😩\n\nTry again soon, maybe the Wi-Fi fairies will be kinder! 🧚‍♀️💫`);
     }
-
  }
 	break;
-		      
+
 //========================================================================================================================//
-	      case "laliga": case "pd-table": {
+case "laliga": case "pd-table": {
 try {
+        // Assuming fetchJson is a globally available or imported function for fetching JSON data
         const data = await fetchJson('https://api.dreaded.site/api/standings/PD');
-        const standings = data.data;
+        const standings = data.data; // This contains the formatted string of La Liga standings
 
-        const message = `𝗖𝘂𝗿𝗿𝗲𝗻𝘁 𝗟𝗮𝗹𝗶𝗴𝗮 𝗧𝗮𝗯𝗹𝗲 𝗦𝘁𝗮𝗻𝗱𝗶𝗻𝗴𝘀:-\n\n${standings}`;
+        // Craft a brief, fancy, and sassy success message for La Liga standings
+        const message = `👑 ¡Hola, darling! Your La Liga fix is served, hotter than a Spanish sun! 🇪🇸⚽ Get your dose of football fabulousness right here:\n\n${standings}\n\nMay your faves snatch victory! 😉🌟`;
+
         await m.reply(message);
 
     } catch (error) {
-        m.reply('Something went wrong. Unable to fetch 𝗟𝗮𝗹𝗶𝗴𝗮 standings.');
+        // Craft a brief, fancy, and sassy error message for La Liga standings
+        console.error("Error fetching La Liga standings:", error); // Log the error for debugging
+        m.reply(`Ugh, darling! 😩 The La Liga connection is being a total diva today. Can't fetch the standings! 💔\n\nTry again soon, maybe the football gods will be more cooperative! ✨🤞`);
   }
-}   
+}
 break;
-		      
+
 //========================================================================================================================//
-	      case "bundesliga": case "bl-table": {
+case "bundesliga": case "bl-table": {
 try {
+        // Assuming fetchJson is a globally available or imported function for fetching JSON data
         const data = await fetchJson('https://api.dreaded.site/api/standings/BL1');
-        const standings = data.data;
+        const standings = data.data; // This contains the formatted string of Bundesliga standings
 
-        const message = `𝗖𝘂𝗿𝗿𝗲𝗻𝘁 𝗕𝘂𝗻𝗱𝗲𝘀𝗹𝗶𝗴𝗮 𝗧𝗮𝗯𝗹𝗲 𝗦𝘁𝗮𝗻𝗱𝗶𝗻𝗴𝘀\n\n${standings}`;
+        // Craft a brief, fancy, and sassy success message for Bundesliga standings
+        const message = `🇩🇪 Bundesliga's here, darling! 🌭⚽ Your football fix, served with sparkle! ✨\n\n${standings}\n\nMay your faves win! Prost! 🍻😉`;
+
         await m.reply(message);
 
     } catch (error) {
-        m.reply('Something went wrong. Unable to fetch 𝗕𝘂𝗻𝗱𝗲𝘀𝗹𝗶𝗴𝗮 standings.');
+        // Craft a brief, fancy, and sassy error message for Bundesliga standings
+        console.error("Error fetching Bundesliga standings:", error); // Log the error for debugging
+        m.reply(`Oh, darling! 😩 Bundesliga standings are being a diva today. Connection issues! 💔\n\nTry again soon, fingers crossed! 🤞🇩🇪`);
     }
 }
 break;
-		      
+
 //========================================================================================================================//
-	      case "ligue-1": case "lg-1": {
+case "ligue-1": case "lg-1": {
   try {
+        // Assuming fetchJson is a globally available or imported function for fetching JSON data
         const data = await fetchJson('https://api.dreaded.site/api/standings/FL1');
-        const standings = data.data;
+        const standings = data.data; // This contains the formatted string of Ligue 1 standings
 
-        const message = `𝗖𝘂𝗿𝗿𝗲𝗻𝘁 𝗟𝗶𝗴𝘂𝗲-1 𝗧𝗮𝗯𝗹𝗲 𝗦𝘁𝗮𝗻𝗱𝗶𝗻𝗴𝘀\n\n${standings}`;
+        // Craft a brief, fancy, and sassy success message for Ligue 1 standings
+        const message = `Bonjour, darling! 🇫🇷 Your chic Ligue 1 table has arrived, served with a side of Parisian flair! ⚽✨\n\n${standings}\n\nMay your favorite French clubs conquer the pitch! Magnifique! 😉`;
         await m.reply(message);
 
     } catch (error) {
-        m.reply('Something went wrong. Unable to fetch 𝗹𝗶𝗴𝘂𝗲-1 standings.');
+        // Craft a brief, fancy, and sassy error message for Ligue 1 standings
+        console.error("Error fetching Ligue 1 standings:", error); // Log the error for debugging
+        m.reply(`Ugh, darling! 🙄 The Ligue 1 connection is being as stubborn as a defender! Can't fetch the standings. 💔🇫🇷\n\nTry again later, maybe the football spirits will be kinder! ✨`);
     }
 }
 break;
-		      
+
 //========================================================================================================================//
-	      case "serie-a": case "sa-table":{
+case "serie-a": case "sa-table":{
 try {
+        // Assuming fetchJson is a globally available or imported function for fetching JSON data
         const data = await fetchJson('https://api.dreaded.site/api/standings/SA');
-        const standings = data.data;
+        const standings = data.data; // This contains the formatted string of Serie A standings
 
-        const message = `𝗖𝘂𝗿𝗿𝗲𝗻𝘁 𝗦𝗲𝗿𝗶𝗲-𝗮 𝗧𝗮𝗯𝗹𝗲 𝗦𝘁𝗮𝗻𝗱𝗶𝗻𝗴𝘀\n\n${standings}`;
+        // Craft a brief, fancy, and sassy success message for Serie A standings
+        const message = `Ciao, darling! 🇮🇹 Your Serie A table has arrived, hotter than a fresh cannoli! 🍝⚽ Get your dose of Italian football fabulousness right here:\n\n${standings}\n\nMay your favorite clubs score big! Bellissimo! 😉✨`;
         await m.reply(message);
 
     } catch (error) {
-        m.reply('Something went wrong. Unable to fetch 𝗦𝗲𝗿𝗶𝗲-𝗮 standings.');
+        // Craft a brief, fancy, and sassy error message for Serie A standings
+        console.error("Error fetching Serie A standings:", error); // Log the error for debugging
+        m.reply(`Ugh, darling! 😩 The Serie A connection is being as stubborn as a perfectly aged Parmigiano. Can't fetch the standings! 💔🇮🇹\n\nTry again soon, maybe the football gods will be more cooperative! ✨`);
     }
 }
 break;
-		      
+
 //========================================================================================================================//
-     case "fixtures": case "matches": {
+case "fixtures": case "matches": {
  try {
         let pl, laliga, bundesliga, serieA, ligue1;
 
+        // Fetching match data for each league
         const plData = await fetchJson('https://api.dreaded.site/api/matches/PL');
         pl = plData.data;
 
@@ -4629,392 +4777,536 @@ break;
         const serieAData = await fetchJson('https://api.dreaded.site/api/matches/SA');
         serieA = serieAData.data;
 
+        // Note: The API endpoint for Ligue 1 is 'FR' in this snippet.
         const ligue1Data = await fetchJson('https://api.dreaded.site/api/matches/FR');
         ligue1 = ligue1Data.data;
 
-        let message = `𝗧𝗼𝗱𝗮𝘆𝘀 𝗙𝗼𝗼𝘁𝗯𝗮𝗹𝗹 𝗙𝗶𝘅𝘁𝘂𝗿𝗲𝘀 ⚽\n\n`;
+        // Crafting a sassy and brief success message
+        let message = `⚽🔥 Your daily football fix has landed, darling! Get ready for some global pitch action! 🌍✨\n\n`;
 
-        message += typeof pl === 'string' ? `🇬🇧 𝗣𝗿𝗲𝗺𝗶𝗲𝗿 𝗟𝗲𝗮𝗴𝘂𝗲:\n${pl}\n\n` : pl.length > 0 ? `🇬🇧 𝗣𝗿𝗲𝗺𝗶𝗲𝗿 𝗟𝗲𝗮𝗴𝘂𝗲:\n${pl.map(match => {
-            const { game, date, time } = match;
-            return `${game}\nDate: ${date}\nTime: ${time} (EAT)\n`;
-        }).join('\n')}\n\n` : "🇬🇧 𝗣𝗿𝗲𝗺𝗶𝗲𝗿 𝗟𝗲𝗮𝗴𝘂𝗲: No matches scheduled\n\n";
-
-        if (typeof laliga === 'string') {
-            message += `🇪🇸 𝗟𝗮 𝗟𝗶𝗴𝗮:\n${laliga}\n\n`;
-        } else {
-            message += laliga.length > 0 ? `🇪🇸 𝗟𝗮 𝗟𝗶𝗴𝗮:\n${laliga.map(match => {
+        // Premier League
+        if (typeof pl === 'string') {
+            message += `🇬🇧 Premier League:\n${pl}\n\n`;
+        } else if (Array.isArray(pl) && pl.length > 0) {
+            message += `🇬🇧 Premier League:\n${pl.map(match => {
                 const { game, date, time } = match;
                 return `${game}\nDate: ${date}\nTime: ${time} (EAT)\n`;
-            }).join('\n')}\n\n` : "🇪🇸 𝗟𝗮 𝗟𝗶𝗴𝗮: No matches scheduled\n\n";
+            }).join('\n')}\n\n`;
+        } else {
+            message += "🇬🇧 Premier League: No matches scheduled today, darling. How quiet! 🤫\n\n";
         }
 
-        message += typeof bundesliga === 'string' ? `🇩🇪 𝗕𝘂𝗻𝗱𝗲𝘀𝗹𝗶𝗴𝗮:\n${bundesliga}\n\n` : bundesliga.length > 0 ? `🇩🇪 𝗕𝘂𝗻𝗱𝗲𝘀𝗹𝗶𝗴𝗮:\n${bundesliga.map(match => {
-            const { game, date, time } = match;
-            return `${game}\nDate: ${date}\nTime: ${time} (EAT)\n`;
-        }).join('\n')}\n\n` : "🇩🇪 𝗕𝘂𝗻𝗱𝗲𝘀𝗹𝗶𝗴𝗮: No matches scheduled\n\n";
+        // La Liga
+        if (typeof laliga === 'string') {
+            message += `🇪🇸 La Liga:\n${laliga}\n\n`;
+        } else if (Array.isArray(laliga) && laliga.length > 0) {
+            message += `🇪🇸 La Liga:\n${laliga.map(match => {
+                const { game, date, time } = match;
+                return `${game}\nDate: ${date}\nTime: ${time} (EAT)\n`;
+            }).join('\n')}\n\n`;
+        } else {
+            message += "🇪🇸 La Liga: No games today, darling. The Spanish sun is too hot for football! ☀️\n\n";
+        }
 
-        message += typeof serieA === 'string' ? `🇮🇹 𝗦𝗲𝗿𝗶𝗲 𝗔:\n${serieA}\n\n` : serieA.length > 0 ? `🇮🇹 𝗦𝗲𝗿𝗶𝗲 𝗔:\n${serieA.map(match => {
-            const { game, date, time } = match;
-            return `${game}\nDate: ${date}\nTime: ${time} (EAT)\n`;
-        }).join('\n')}\n\n` : "🇮🇹 𝗦𝗲𝗿𝗶𝗲 𝗔: No matches scheduled\n\n";
+        // Bundesliga
+        if (typeof bundesliga === 'string') {
+            message += `🇩🇪 Bundesliga:\n${bundesliga}\n\n`;
+        } else if (Array.isArray(bundesliga) && bundesliga.length > 0) {
+            message += `🇩🇪 Bundesliga:\n${bundesliga.map(match => {
+                const { game, date, time } = match;
+                return `${game}\nDate: ${date}\nTime: ${time} (EAT)\n`;
+            }).join('\n')}\n\n`;
+        } else {
+            message += "🇩🇪 Bundesliga: Nada today, darling. Germany is taking a well-deserved break! 😴\n\n";
+        }
 
-        message += typeof ligue1 === 'string' ? `🇫🇷 𝗟𝗶𝗴𝘂𝗲 1:\n${ligue1}\n\n` : ligue1.length > 0 ? `🇫🇷 𝗟𝗶𝗴𝘂𝗲 1:\n${ligue1.map(match => {
-            const { game, date, time } = match;
-            return `${game}\nDate: ${date}\nTime: ${time} (EAT)\n`;
-        }).join('\n')}\n\n` : "🇫🇷 𝗟𝗶𝗴𝘂𝗲- 1: No matches scheduled\n\n";
+        // Serie A
+        if (typeof serieA === 'string') {
+            message += `🇮🇹 Serie A:\n${serieA}\n\n`;
+        } else if (Array.isArray(serieA) && serieA.length > 0) {
+            message += `🇮🇹 Serie A:\n${serieA.map(match => {
+                const { game, date, time } = match;
+                return `${game}\nDate: ${date}\nTime: ${time} (EAT)\n`;
+            }).join('\n')}\n\n`;
+        } else {
+            message += "🇮🇹 Serie A: No footballing drama today, how sad! Italy is enjoying a pasta break. 🍝\n\n";
+        }
 
-        message += "𝗧𝗶𝗺𝗲 𝗮𝗻𝗱 𝗗𝗮𝘁𝗲 𝗮𝗿𝗲 𝗶𝗻 𝗘𝗮𝘀𝘁 𝗔𝗳𝗿𝗶𝗰𝗮 𝗧𝗶𝗺𝗲𝘇𝗼𝗻𝗲 (𝗘𝗔𝗧).";
+        // Ligue 1
+        if (typeof ligue1 === 'string') {
+            message += `🇫🇷 Ligue 1:\n${ligue1}\n\n`;
+        } else if (Array.isArray(ligue1) && ligue1.length > 0) {
+            message += `🇫🇷 Ligue 1:\n${ligue1.map(match => {
+                const { game, date, time } = match;
+                return `${game}\nDate: ${date}\nTime: ${time} (EAT)\n`;
+            }).join('\n')}\n\n`;
+        } else {
+            message += "🇫🇷 Ligue 1: Zilch today, darling. France is enjoying a leisurely afternoon. 🥐\n\n";
+        }
+
+        message += `\nAll times are in glorious East Africa Time (EAT). Now go enjoy the games! 😉`;
 
         await m.reply(message);
     } catch (error) {
-        m.reply('Something went wrong. Unable to fetch matches.' + error);
+        // Crafting a sassy and brief error message
+        console.error("Error fetching matches:", error); // Log the error for debugging
+        // Updated sassy error message
+        m.reply(`Oh, darling! 😩 It seems the football gods are having a major tantrum today, and the match data is completely off the pitch! 💔⚽ Can't fetch your fixtures. Try again later, maybe the connection will decide to play nice! ✨🤞`);
     }
-};
-break;		      
-		      
+}
+break;
+
 //========================================================================================================================//		      
- case 'sc': case 'script': case 'repo':
+case 'sc': case 'script': case 'repo':
+  client.sendMessage(m.chat, { 
+    image: { url: `https://telegra.ph/file/416c3ae0cfe59be8db011.jpg` }, 
+    caption: `
+✨ Hey there, *${pushname}*! ✨
 
- client.sendMessage(m.chat, { image: { url: `https://telegra.ph/file/416c3ae0cfe59be8db011.jpg` }, caption: ` Hello👋 *${pushname}*, 𝗕𝗲𝗹𝗼𝘄 𝗶𝘀 𝗥𝗔𝗩𝗘𝗡-𝗕𝗢𝗧 𝗴𝗶𝘁𝗵𝘂𝗯 𝗿𝗲𝗽𝗼𓅂\n\nFork and maybe give us a star🌟.\n\n https://github.com/HunterNick2/RAVEN-BOT\n\nLink with your whatsapp using pairing link below\n\nhttps://pairing-raven.onrender.com\n\nCopy the session and paste it on the SESSION string, Fill in the other required Variables before Deploy\n\nEnjoy and have fun with the Bot\n\n𝗠𝗮𝗱𝗲 𝗼𝗻 𝗲𝗮𝗿𝘁𝗵 𝗯𝘆 𝗛𝘂𝗺𝗮𝗻𝘀 !`},{quoted : m });
+Wanna peek behind the curtain? My glorious code lives here:
+🔗 *GitHub Repo:* https://github.com/HunterNick2/RAVEN-BOT
+Go on, *fork* me! And a *star* wouldn't hurt, darling. 😉🌟
 
-   break;
-                                                  
+Ready to join forces? Pair up with me!
+🔗 *Pairing Link:* https://pairing-raven.onrender.com
+Grab that session, fill your vars, and let's get this show on the road! 🚀
+
+Enjoy the magic! 🎩🥂
+`
+  },{quoted : m });
+  break;
+                        
 //========================================================================================================================//
-		      case 'closetime':
-                if (!m.isGroup) throw group;
-                if (!isAdmin) throw admin;
-                if (!isBotAdmin) throw botAdmin;
-                if (args[1] == 'second') {
-                    var timer = args[0] * `1000`
-                } else if (args[1] == 'minute') {
-                    var timer = args[0] * `60000`
-                } else if (args[1] == 'hour') {
-                    var timer = args[0] * `3600000`
-                } else if (args[1] == 'day') {
-                    var timer = args[0] * `86400000`
+case 'closetime':
+                if (!m.isGroup) throw group; 
+                if (!isAdmin) throw admin; 
+                if (!isBotAdmin) throw botAdmin; 
+
+                let timer; 
+
+                // Determine the timer duration
+                if (args[1] === 'second') {
+                    timer = args[0] * 1000; 
+                } else if (args[1] === 'minute') {
+                    timer = args[0] * 60000; 
+                } else if (args[1] === 'hour') {
+                    timer = args[0] * 3600000; 
+                } else if (args[1] === 'day') {
+                    timer = args[0] * 86400000; 
                 } else {
-                    return reply('*select:*\nsecond\nminute\nhour\n\n*Example*\n10 second')
+                    // Sassy error message 
+                    return reply('Oh, *bless your heart*. Did you forget how to read? 🙄 The options are `second`, `minute`, `hour`, or `day`. Try again, sweetie. 💅');
                 }
-                reply(`Countdown of  ${q} starting from now to close the group`)
+
+                // Sassy confirmation message 
+                reply(`Alright, buckle up! 🚀 The group is set to close in ${q}. Hope you're ready for the quiet! 🤫`);
+
+                // Set a timeout to close the group
                 setTimeout(() => {
-                    var nomor = m.participant
-                    const close = `𝗚𝗿𝗼𝘂𝗽 𝗵𝗮𝘀 𝗯𝗲𝗲𝗻 𝗰𝗹𝗼𝘀𝗲𝗱`
-                    client.groupSettingUpdate(m.chat, 'announcement')
-                    reply(close)
-                }, timer)
-		      
-                break;
+
+                    // Sassy and fancy message 
+                    const close = `And just like that... **POOF!** ✨ The group has been officially **CLOSED**. Enjoy the blissful silence (or the deafening quiet)! 🤫🚪`;
+                    client.groupSettingUpdate(m.chat, 'announcement'); // Update group setting to announcement mode
+                    reply(close); 
+                }, timer); 
+
+                break; 
 
 //========================================================================================================================//		      
-		      case 'opentime':
-                if (!m.isGroup) throw group;
-                if (!isAdmin) throw admin;
-                if (!isBotAdmin) throw botAdmin;
-                if (args[1] == 'second') {
-                    var timer = args[0] * `1000`
-                } else if (args[1] == 'minute') {
-                    var timer = args[0] * `60000`
-                } else if (args[1] == 'hour') {
-                    var timer = args[0] * `3600000`
-                } else if (args[1] == 'day') {
-                    var timer = args[0] * `86400000`
-                } else {
-                    return reply('*select:*\nsecond\nminute\nhour\n\n*example*\n10 second')
-                }
-                reply(`Countdown of ${q} starting from now to open the group`)
-                setTimeout(() => {
-                    var nomor = m.participant
-                    const open = `𝗚𝗿𝗼𝘂𝗽 𝗼𝗽𝗲𝗻𝗲𝗱 𝘀𝘂𝗰𝗰𝗲𝘀𝗳𝘂𝗹𝗹𝘆`
-                    client.groupSettingUpdate(m.chat, 'not_announcement')
-                    reply(open)
-                }, timer)
-                 break;
-
-//========================================================================================================================//		      
- case "close": case "mute": { 
-  
-                 if (!m.isGroup) throw group; 
-                 if (!isBotAdmin) throw botAdmin; 
-                 if (!isAdmin) throw admin; 
-  
-                     await client.groupSettingUpdate(m.chat, 'announcement'); 
- m.reply('Group successfully locked!'); 
- } 
- break; 
-
-//========================================================================================================================//		      
- case "open": case "unmute": { 
-                 if (!m.isGroup) throw group; 
-                 if (!isBotAdmin) throw botAdmin; 
-                 if (!isAdmin) throw admin; 
-  
-                     await client.groupSettingUpdate(m.chat, 'not_announcement'); 
- m.reply('Group successfully unlocked!'); 
-  
- }
-        break; 
-
-//========================================================================================================================//		      
-          case "disp-1": { 
-                 if (!m.isGroup) throw group; 
-                 if (!isBotAdmin) throw botAdmin; 
-                 if (!isAdmin) throw admin; 
-  
-                     await client.groupToggleEphemeral(m.chat, 1*24*3600); 
- m.reply('Dissapearing messages successfully turned on for 24hrs!'); 
- } 
- break; 
-
-//========================================================================================================================//		      
-          case "promote" : { 
-                 if (!m.isGroup) throw group; 
-         if (!isBotAdmin) throw botAdmin; 
-         if (!isAdmin) throw admin; 
- if (!m.quoted) throw `Ttag someone with the command!`; 
-                 let users = m.mentionedJid[0] ? m.mentionedJid : m.quoted ? [m.quoted.sender] : [text.replace(/[^0-9]/g, '')+'@s.whatsapp.net']; 
-  
-                 await client.groupParticipantsUpdate(m.chat, users, 'promote'); 
- m.reply('Successfully promoted! 🦄'); 
-         } 
- break; 
-
-//========================================================================================================================//		      
-           case "demote": { 
-                 if (!m.isGroup) throw group; 
-         if (!isBotAdmin) throw botAdmin; 
-         if (!isAdmin) throw admin; 
- if (!m.quoted) throw `Ttag someone with the command!`; 
-                 let users = m.mentionedJid[0] ? m.mentionedJid : m.quoted ? [m.quoted.sender] : [text.replace(/[^0-9]/g, '')+'@s.whatsapp.net']; 
-  
-                 await client.groupParticipantsUpdate(m.chat, users, 'demote'); 
- m.reply('Successfully demoted! 😲'); 
-         } 
- break;
-
-//========================================================================================================================//		      
-          case "disp-7": { 
-                 if (!m.isGroup) throw group; 
-                 if (!isBotAdmin) throw botAdmin; 
-                 if (!isAdmin) throw admin; 
-  
-                     await client.groupToggleEphemeral(m.chat, 7*24*3600); 
- m.reply('Dissapearing messages successfully turned on for 7 days!'); 
-  
- } 
- break; 
-
-//========================================================================================================================//		      
-         case "disp-90": { 
-                 if (!m.isGroup) throw group; 
-                 if (!isBotAdmin) throw botAdmin; 
-                 if (!isAdmin) throw admin; 
-  
-                     await client.groupToggleEphemeral(m.chat, 90*24*3600); 
- m.reply('Dissapearing messages successfully turned on for 90 days!'); 
- } 
- break; 
-
-//========================================================================================================================//		      
-        case "disp-off": { 
-                 if (!m.isGroup) throw group; 
-                 if (!isBotAdmin) throw botAdmin; 
-                 if (!isAdmin) throw admin; 
-  
-                     await client.groupToggleEphemeral(m.chat, 0); 
- m.reply('Dissapearing messages successfully turned off!'); 
- }
-   break;
-
-//========================================================================================================================//		      
- case "icon": case 'gpp': { 
-    if (!m.isGroup) throw group; 
-    if (!isAdmin) throw admin; 
-    if (!isBotAdmin) throw botAdmin; 
-    if (!quoted) throw `Send or tag an image with the caption ${prefix + command}`; 
-    if (!/image/.test(mime)) throw `Send or tag an image with the caption ${prefix + command}`; 
-    if (/webp/.test(mime)) throw `Send or tag an image with the caption ${prefix + command}`; 
-    let media = await client.downloadAndSaveMediaMessage(quoted); 
-    await client.updateProfilePicture(m.chat, { url: media }).catch((err) => fs.unlinkSync(media)); 
-    reply('Group icon updated Successfully✅️'); 
-    } 
+case 'opentime':
+    if (!m.isGroup) throw "Darling, this command is strictly for group chats. Try again, but in the right place, okay? 💅";
+    if (!isAdmin) throw "Hold up, superstar! You need admin powers to pull this off. Not today, not without the crown. 👑🚫";
+    if (!isBotAdmin) throw "My dear, I need admin privileges to work my magic! Get me promoted, or this won't happen. ✨💁‍♀️";
+    if (args[1] == 'second') {
+        var timer = args[0] * 1000; // Using number directly instead of string concatenation
+    } else if (args[1] == 'minute') {
+        var timer = args[0] * 60000;
+    } else if (args[1] == 'hour') {
+        var timer = args[0] * 3600000;
+    } else if (args[1] == 'day') {
+        var timer = args[0] * 86400000;
+    } else {
+        return reply("Seriously? That's not how you set a timer, sweetie. Try again with a valid unit like 'second', 'minute', or 'hour'. Don't make me spell it out! 🙄");
+    }
+    // Assuming 'q' is a variable holding the formatted duration, e.g., "10 seconds"
+    reply(`Alright, buckle up! The group is about to get a glow-up in ${q}. Get ready! ✨🚀`);
+    setTimeout(() => {
+ 
+        const open = `Ta-da! The gates are open! 🚪✨ Welcome back, everyone! Hope you missed me. 😘`;
+        client.groupSettingUpdate(m.chat, 'not_announcement');
+        reply(open);
+    }, timer);
     break;
 
-//========================================================================================================================//		      
- case "revoke": 
- case "newlink": 
- case "reset": { 
-   if (!m.isGroup) throw group; // add "new Error" to create a new Error object 
-   if (!isAdmin) throw admin; // add "new Error" to create a new Error object 
-   if (!isBotAdmin) throw botAdmin; // add "new Error" to create a new Error object 
-   await client.groupRevokeInvite(m.chat); 
-   await client.sendText(m.chat, 'Group link revoked!', m); // use "client.sendText" instead of "m.reply" to ensure message is sent 
-   let response = await client.groupInviteCode(m.chat); 
- client.sendText(m.sender, `https://chat.whatsapp.com/${response}\n\nHere is the new group link for ${groupMetadata.subject}`, m, { detectLink: true }); 
- client.sendText(m.chat, `Sent you the new group link in your inbox!`, m); 
-   // use "client.sendTextWithMentions" instead of "client.sendText" to include group name in message 
- }          
-  break;
+//========================================================================================================================//		
+case "close":
+case "mute": {
+    // Checks if the command is used in a group chat.
+    if (!m.isGroup) throw group;
+    if (!isBotAdmin) throw botAdmin;
+    if (!isAdmin) throw admin;
+
+    await client.groupSettingUpdate(m.chat, 'announcement');
+
+    // Updates the reply message to be fancy and sassy with matching emojis.
+    m.reply("Consider this fabulous sanctuary officially locked down, darlings. Only the chosen ones may speak! 💅👑");
+}
+break;
 
 //========================================================================================================================//		      
-          case "delete": case "del": { 
-if (!m.isGroup) throw group; 
-  if (!isBotAdmin) throw botAdmin; 
-  if (!isAdmin) throw admin; 
-    if (!m.quoted) throw `No message quoted for deletion`; 
-    let { chat, fromMe, id, isBaileys } = m.quoted; 
-   if (isBaileys) throw `I cannot delete. Quoted message is my message or another bot message.`; 
-    client.sendMessage(m.chat, { delete: { remoteJid: m.chat, fromMe: false, id: m.quoted.id, participant: m.quoted.sender } }); 
-  } 
- break;
+case "open":
+case "unmute": {
+    if (!m.isGroup) throw group;
+    if (!isBotAdmin) throw botAdmin;
+    if (!isAdmin) throw admin;
 
-//========================================================================================================================//		      
-          case "leave": { 
-                 if (!Owner) throw NotOwner;
-		 if (!m.isGroup) throw group;
- await client.sendMessage(m.chat, { text : '𝗚𝗼𝗼𝗱𝗯𝘆𝗲 𝗲𝘃𝗲𝗿𝘆𝗼𝗻𝗲👋. 𝗥𝗮𝘃𝗲𝗻-𝗔𝗶 𝗶𝘀 𝗟𝗲𝗮𝘃𝗶𝗻𝗴 𝘁𝗵𝗲 𝗚𝗿𝗼𝘂𝗽 𝗻𝗼𝘄...' , mentions: participants.map(a => a.id)}, { quoted : m }); 
-                 await client.groupLeave(m.chat); 
-  
-             } 
- break; 
-
-//========================================================================================================================//		      
-          case "subject": case "changesubject": { 
-                 if (!m.isGroup) throw group; 
-                 if (!isBotAdmin) throw botAdmin; 
-                 if (!isAdmin) throw admin; 
-                 if (!text) throw 'Provide the text for the group subject.'; 
-                 await client.groupUpdateSubject(m.chat, text); 
- m.reply('Group name successfully updated✅️'); 
-             } 
-             break; 
-
-//========================================================================================================================//		      
-           case "desc": case "setdesc": { 
-                 if (!m.isGroup) throw group; 
-                 if (!isBotAdmin) throw botAdmin; 
-                 if (!isAdmin) throw admin; 
-                 if (!text) throw 'Provide the text for the group description' 
-                 await client.groupUpdateDescription(m.chat, text); 
- m.reply('Group description successfully updated✅️'); 
-             } 
- break; 
-
-//========================================================================================================================//		      
-     case "hidetag": case "tag": { 
-             if (!m.isGroup) throw group; 
-client.sendMessage(
-              m.chat,
-              { 
-                  text: text ? text : '@Everyone', 
-                  mentions: participants 
-              },
-              { quoted: m }
-          );
-      }
- break; 
-
-//========================================================================================================================//		      
-      case "tagall": { 
-                 if (!m.isGroup) throw group; 
-                 if (!isBotAdmin) throw botAdmin; 
-                 if (!isAdmin) throw admin; 
- let txt = `Tagged by ${m.pushName}.\n\nMessage:- ${text ? text : 'No Message!'}\n\n`; 
-          
-          for (let mem of participants) { 
-              txt += `📧 @${mem.split('@')[0]}\n`; 
-          } 
-  
-          await client.sendMessage(m.chat, {
-              text: txt,
-              mentions: participants
-          }, { quoted: m });
-      }
- break;
-
-//========================================================================================================================//		      
-case "whatsong": case "shazam": {
-          let acr = new acrcloud({
-            'host': "identify-eu-west-1.acrcloud.com",
-            'access_key': '2631ab98e77b49509e3edcf493757300',
-            'access_secret': "KKbVWlTNCL3JjxjrWnywMdvQGanyhKRN0fpQxyUo"
-          });
-          if (!m.quoted) {
-            throw "Tagg a short video or audio";
-          }
-
-          let d = m.quoted ? m.quoted : m;
-          let mimes = (d.msg || d).mimetype || d.mediaType || '';
-          if (/video|audio/.test(mimes)) {
-            let buffer = await d.download();
-            await reply("Analyzing the media...");
-            let {
-              status,
-              metadata
-            } = await acr.identify(buffer);
-            if (status.code !== 0x0) {
-              throw status.msg;
-            }
-            let { title, artists, album, genres, release_date } = metadata.music[0x0];
-            let txt = "*• Title:* " + title + (artists ? "\n*• Artists:* " + artists.map(_0x4f5d59 => _0x4f5d59.name).join(", ") : '');
-            txt += '' + (album ? "\n*• Album:* " + album.name : '') + (genres ? "\n*• Genres:* " + genres.map(_0xf7bf2e => _0xf7bf2e.name).join(", ") : '') + "\n";
-            txt += "*• Release Date:* " + release_date;
-            await client.sendMessage(m.chat, {
-              'text': txt.trim()
-            }, {
-              'quoted': m
-            });
-	  }
-	}
-	break; 
-		      
-//========================================================================================================================//
-        case "s": case "sticker": 
-{
-const { Sticker, createSticker, StickerTypes } = require('wa-sticker-formatter');
-
-if(!msgR) { m.reply('Quote an image or a short video.') ; return } ;
-let media;
-if (msgR.imageMessage) {
-     media = msgR.imageMessage
-  } else if(msgR.videoMessage) {
-media = msgR.videoMessage
-  } 
- else {
-    m.reply('That is neither an image nor a short video! '); return
-  } ;
-
-var result = await client.downloadAndSaveMediaMessage(media);
-
-let stickerResult = new Sticker(result, {
-            pack: packname,
-            author: author,
-            type: StickerTypes.FULL,
-            categories: ["🤩", "🎉"],
-            id: "12345",
-            quality: 70,
-            background: "transparent",
-          });
-const Buffer = await stickerResult.toBuffer();
-          client.sendMessage(m.chat, { sticker: Buffer }, { quoted: m });
+    await client.groupSettingUpdate(m.chat, 'not_announcement');
+    // Updated reply message with a sassy and fancy tone and matching emojis
+    m.reply('The seal is broken! Unleash yourselves, my dears. 👑💖');
 
 }
 break;
 
 //========================================================================================================================//		      
-          case "dp": { 
- try { 
- ha = m.quoted.sender; 
- qd = await client.getName(ha); 
- pp2 = await client.profilePictureUrl(ha,'image'); 
- } catch {  
- pp2 = 'https://tinyurl.com/yx93l6da'; 
- } 
-  if (!m.quoted) throw `Tag a user!`; 
- bar = `Profile Picture of ${qd}`; 
- client.sendMessage(m.chat, { image: { url: pp2}, caption: bar, fileLength: "999999999999"}, { quoted: m}); 
- } 
- break;
+case "disp-1": {
+    if (!m.isGroup) throw group;
+    if (!isBotAdmin) throw botAdmin;
+    if (!isAdmin) throw admin;
 
+    await client.groupToggleEphemeral(m.chat, 1 * 24 * 3600);
+    // Updated reply message with a sassy and fancy tone and matching emojis
+    m.reply('Consider your chats officially ephemeral. Vanish into thin air, darlings! 💨✨');
+}
+break;
+
+//========================================================================================================================//		
+case "promote" : {
+                 // If the command is not used in a group chat
+                 if (!m.isGroup) {
+                     m.reply("Honey, this command is strictly for group chats. Take your solo act elsewhere! 💁‍♀️✨");
+                 }
+                 // If the bot itself is not an admin
+                 else if (!isBotAdmin) {
+                     m.reply("Oh, darling, I can't work my magic without admin powers. Get me promoted first! 👑💅");
+                 }
+                 // If the user initiating the command is not an admin
+                 else if (!isAdmin) {
+                     m.reply("Hold up, who do you think you are? Only the *real* bosses get to play with promotions. You're not on the VIP list, boo. 🚫✋");
+                 }
+                 // If no one is tagged,
+                 else if (!m.quoted && text.replace(/[^0-9]/g, '').length === 0) {
+                     m.reply("Did you forget your manners? Tag someone, or quote them, or at least give me *something* to work with. Don't be shy! 😉🤷‍♀️");
+                 }
+                 // If all checks pass, proceed with promotion
+                 else {
+      
+                     let users = m.mentionedJid[0] ? m.mentionedJid : m.quoted ? [m.quoted.sender] : [text.replace(/[^0-9]/g, '')+'@s.whatsapp.net'];
+
+                     // Execute the promotion
+                     await client.groupParticipantsUpdate(m.chat, users, 'promote');
+                     // Reply with a sassy success message
+                     m.reply('Consider yourself promoted! You\'ve officially joined the cool kids\' table. You\'re welcome, boss! 😎👑');
+                 }
+         }
+         break;
+
+//========================================================================================================================//		      
+case "demote": {
+                 // If the command is not used in a group chat
+                 if (!m.isGroup) {
+                     m.reply("Darling, this command is strictly for group chats. Take your solo act elsewhere! 💁‍♀️✨");
+                 }
+                 // If the bot itself is not an admin
+                 else if (!isBotAdmin) {
+                     m.reply("Oh, darling, I can't work my magic without admin powers. Get me promoted first! 👑💅");
+                 }
+                 // If the user initiating the command is not an admin
+                 else if (!isAdmin) {
+                     m.reply("Hold up, who do you think you are? Only the *real* bosses get to play with demotions. You're not on the VIP list, boo. 🚫✋");
+                 }
+                 // If no one is tagged, quoted, or a number is provided for demotion
+                 else if (!m.quoted && text.replace(/[^0-9]/g, '').length === 0) {
+                     m.reply("Did you forget your manners? Tag someone, or quote them, or at least give me *something* to work with. Don't be shy! 😉🤷‍♀️");
+                 }
+                 // If all checks pass, proceed with demotion
+                 else {
+                     let users = m.mentionedJid[0] ? m.mentionedJid : m.quoted ? [m.quoted.sender] : [text.replace(/[^0-9]/g, '')+'@s.whatsapp.net'];
+
+                     // Execute the demotion
+                     await client.groupParticipantsUpdate(m.chat, users, 'demote');
+                     // Reply with a sassy success message
+                     m.reply('And you\'re down! Consider yourself stripped of your glory. You\'re welcome, boss! 😉📉');
+                 }
+         }
+         break;
+
+//========================================================================================================================//		      
+case "disp-7": {
+    if (!m.isGroup) throw group;
+    if (!isBotAdmin) throw botAdmin;
+    if (!isAdmin) throw admin;
+
+    await client.groupToggleEphemeral(m.chat, 7*24*3600);
+
+    // Updates the reply message to be fancy and sassy with matching emojis.
+    m.reply("Poof! Your chats are now on a week-long vanishing act, darlings. Keep up with the fabulousness! 💨✨");
+}
+break;
+
+//========================================================================================================================//		      
+case "disp-90": { 
+    if (!m.isGroup) throw group; 
+    if (!isBotAdmin) throw botAdmin; 
+    if (!isAdmin) throw admin; 
+
+    await client.groupToggleEphemeral(m.chat, 90*24*3600); 
+    m.reply('✨💨 *Poof!* Messages will now vanish after *90 days* — just like magic, darling 💅🕰️ #CleanChatsOnly');
+} 
+break;
+//========================================================================================================================//		      
+case "disp-off": { 
+    if (!m.isGroup) throw group; 
+    if (!isBotAdmin) throw botAdmin; 
+    if (!isAdmin) throw admin; 
+
+    await client.groupToggleEphemeral(m.chat, 0); 
+    m.reply('🛑✨ *Disappearing messages?* Canceled, babe! We’re keeping receipts now 📂💬💅');
+} 
+break;
+//========================================================================================================================//		      
+case "icon":
+case "gpp": { 
+    if (!m.isGroup) throw group; 
+    if (!isAdmin) throw admin; 
+    if (!isBotAdmin) throw botAdmin; 
+    if (!quoted) throw `📸 Tag or send an image with the caption *${prefix + command}* to set as group icon!`; 
+    if (!/image/.test(mime)) throw `🖼️ Only image files allowed! Tag or send a proper pic with *${prefix + command}*`; 
+    if (/webp/.test(mime)) throw `🚫 WebP format not supported. Send a standard image instead, hun!`;
+
+    let media = await client.downloadAndSaveMediaMessage(quoted); 
+    await client.updateProfilePicture(m.chat, { url: media }).catch((err) => fs.unlinkSync(media)); 
+    reply('🖼️✨ Boom! Group icon has been slayed and updated successfully 💯🔥 #NewLookWhoDis');
+}
+break;
+//========================================================================================================================//		
+case "revoke": 
+case "newlink": 
+case "reset": { 
+    if (!m.isGroup) throw new Error(group); 
+    if (!isAdmin) throw new Error(admin); 
+    if (!isBotAdmin) throw new Error(botAdmin); 
+
+    await client.groupRevokeInvite(m.chat); 
+    await client.sendText(m.chat, 
+        '☢️ Link revoked. The previous invite link has been purged from this timeline. It was weak… and probably compromised by space clowns. 🤖', 
+        m
+    );
+
+    let response = await client.groupInviteCode(m.chat); 
+
+    client.sendText(m.sender, 
+        `🛰️ New encrypted access point for *${groupMetadata.subject}* established:\n🔗 https://chat.whatsapp.com/${response}\n\nDo *not* lose it. Or I’ll have to recalibrate your memory module. 😑`, 
+        m, 
+        { detectLink: true } 
+    ); 
+
+    client.sendText(m.chat, 
+        `📡 Transmission complete. The new group link has been sent to privately to the owner. Access denied to non-essential lifeforms. 🛑`, 
+        m
+    );
+}
+break;
+
+//========================================================================================================================//	
+case "delete": case "del": { 
+    if (!m.isGroup) throw group; 
+    if (!isBotAdmin) throw botAdmin; 
+    if (!isAdmin) throw admin; 
+    if (!m.quoted) throw `Oopsie! You gotta quote the message, cutie 😘`;
+
+    let { chat, fromMe, id, isBaileys } = m.quoted; 
+    if (isBaileys) throw `Nice try 😏 But I don’t clean up after myself... or my bot cousins.`;
+
+    client.sendMessage(m.chat, { 
+        delete: { remoteJid: m.chat, fromMe: false, id: m.quoted.id, participant: m.quoted.sender } 
+    }); 
+    m.reply("🧼 Poof! Message wiped. Nothing to see here… or is there? 👀");
+} 
+break;
+
+//========================================================================================================================//
+case "leave": { 
+    if (!Owner) throw NotOwner;
+    if (!m.isGroup) throw group;
+
+    await client.sendMessage(m.chat, { 
+        text: 'Alrighty, I’m peacing out like your crush when you text first 😌✌️ Catch ya later, nerds!', 
+        mentions: participants.map(a => a.id) 
+    }, { quoted: m }); 
+    await client.groupLeave(m.chat);
+} 
+break;
+
+//========================================================================================================================//
+case "subject": case "changesubject": { 
+    if (!m.isGroup) throw group; 
+    if (!isBotAdmin) throw botAdmin; 
+    if (!isAdmin) throw admin; 
+    if (!text) throw 'You want a new name? I’m listening... 👂👀';
+
+    await client.groupUpdateSubject(m.chat, text); 
+    m.reply(`📛 Boom! The group now answers to *${text}* — sounds fancy, huh? 😏`);
+} 
+break;
+
+//========================================================================================================================//
+case "desc": case "setdesc": { 
+    if (!m.isGroup) throw group; 
+    if (!isBotAdmin) throw botAdmin; 
+    if (!isAdmin) throw admin; 
+    if (!text) throw 'Give me the new description, darling. Don’t be shy 💃';
+
+    await client.groupUpdateDescription(m.chat, text); 
+    m.reply("✨ Description updated. Spicy! I like where this is going 😘");
+} 
+break;
+//========================================================================================================================//		    
+case "hidetag":
+case "tag": {
+    if (!m.isGroup) throw group;
+
+    client.sendMessage(
+        m.chat,
+        {
+            text: text ? text : `👁‍🗨 *[ Incoming Transmission... ]*\n@everyone — The mainframe needs your attention. Delay = trace logged. 🧬⌛`,
+            mentions: participants
+        },
+        { quoted: m }
+    );
+}
+break;
+//========================================================================================================================//		
+case "tagall": { 
+    if (!m.isGroup) throw group; 
+    if (!isBotAdmin) throw botAdmin; 
+    if (!isAdmin) throw admin; 
+
+    let txt = `🤖 *[ SYSTEM NOTIFICATION – AI Core vX.7.5 ]*\n📍 Initiated by: ${m.pushName}\n\n📂 Log Entry: ${text ? text : 'No data stream received. Default ping engaged...'}\n\n🧠 Neural Syncing With:\n`;
+
+    for (let mem of participants) { 
+        txt += `🧬 @${mem.split('@')[0]}\n`;
+    } 
+
+    await client.sendMessage(m.chat, {
+        text: txt,
+        mentions: participants
+    }, { quoted: m });
+}
+break;
+//========================================================================================================================//		      
+case "whatsong":
+case "shazam": {
+    let acr = new acrcloud({
+        host: "identify-eu-west-1.acrcloud.com",
+        access_key: "2631ab98e77b49509e3edcf493757300",
+        access_secret: "KKbVWlTNCL3JjxjrWnywMdvQGanyhKRN0fpQxyUo"
+    });
+
+    if (!m.quoted) {
+        throw "💅 Tag a short *video or audio*, darling. I can’t read minds… yet. 🎧";
+    }
+
+    let d = m.quoted ? m.quoted : m;
+    let mimes = (d.msg || d).mimetype || d.mediaType || '';
+
+    if (/video|audio/.test(mimes)) {
+        let buffer = await d.download();
+        await reply("🎧✨ *Hold on, superstar...* I'm scanning those beats like a pro DJ 💻🔍");
+
+        let { status, metadata } = await acr.identify(buffer);
+        if (status.code !== 0x0) {
+            throw `🚫 Oops! Couldn’t catch that tune — ${status.msg}`;
+        }
+
+        let { title, artists, album, genres, release_date } = metadata.music[0];
+
+        let txt = `🎶 *Track Identified!*\n\n`;
+        txt += `🎵 *Title:* ${title}\n`;
+        if (artists) txt += `🧑‍🎤 *Artist(s):* ${artists.map(a => a.name).join(", ")}\n`;
+        if (album) txt += `💿 *Album:* ${album.name}\n`;
+        if (genres) txt += `🎧 *Genre:* ${genres.map(g => g.name).join(", ")}\n`;
+        txt += `🗓 *Released:* ${release_date || "Unknown"}\n\n`;
+        txt += `✨ Told you I got the ears of a goddess 😉🎧`;
+
+        await client.sendMessage(m.chat, {
+            text: txt.trim()
+        }, {
+            quoted: m
+        });
+    }
+}
+break;
+//========================================================================================================================//
+case "s":
+case "sticker": {
+  const { Sticker, createSticker, StickerTypes } = require('wa-sticker-formatter');
+
+  if (!msgR) {
+    m.reply('👀 Umm... you forgot to quote something, sweetie. I can’t turn *thin air* into a sticker 💅✨');
+    return;
+  }
+
+  let media;
+  if (msgR.imageMessage) {
+    media = msgR.imageMessage;
+  } else if (msgR.videoMessage) {
+    media = msgR.videoMessage;
+  } else {
+    m.reply('🙄 That’s not even an image or a video, babe. What do you expect me to do, guess? 😂📵');
+    return;
+  }
+
+  var result = await client.downloadAndSaveMediaMessage(media);
+
+  let stickerResult = new Sticker(result, {
+    pack: packname,
+    author: author,
+    type: StickerTypes.FULL,
+    categories: ["🤩", "🎉"],
+    id: "12345",
+    quality: 70,
+    background: "transparent",
+  });
+
+  const Buffer = await stickerResult.toBuffer();
+  client.sendMessage(m.chat, { sticker: Buffer }, { quoted: m });
+}
+break;
+//========================================================================================================================//		
+case "dp": {
+  try {
+    ha = m.quoted.sender;
+    qd = await client.getName(ha);
+    pp2 = await client.profilePictureUrl(ha, 'image');
+  } catch {
+    pp2 = 'https://tinyurl.com/yx93l6da'; // Default "oops" picture
+  }
+
+  if (!m.quoted) throw `👀 Tag someone, darling — I’m not a mind reader.`;
+
+  bar = `✨🔥 Behold the gorgeous DP of ${qd} — try not to fall in love 😏📸`;
+
+  client.sendMessage(
+    m.chat,
+    {
+      image: { url: pp2 },
+      caption: bar,
+      fileLength: "999999999999"
+    },
+    { quoted: m }
+  );
+}
+break;
 //========================================================================================================================//		      
 case "list":
 case "vars":
@@ -5100,101 +5392,122 @@ if (!m.quoted) return m.reply("quote a viewonce message eh")
 	break;
 
 //========================================================================================================================//		      
-	      case "alaa": case "wiih": case "waah": case "ehee": case "vv2": case "mmmh":{
-
-if (!m.quoted) return m.reply("Hurrahhh")
+case "vv":
+case "retrieve": {
+  if (!m.quoted) return m.reply("🧐 Darling, you forgot to quote a *View Once* message… tap-tap and try again.");
 
   const quotedMessage = m.msg?.contextInfo?.quotedMessage;
 
-    if (quotedMessage.imageMessage) {
-      let imageCaption = quotedMessage.imageMessage.caption;
-      let imageUrl = await client.downloadAndSaveMediaMessage(quotedMessage.imageMessage);
-      client.sendMessage(client.user.id, { image: { url: imageUrl }, caption: `Retrieved by Raven!\n${imageCaption}`}, { quoted: m });
-    }
+  if (quotedMessage.imageMessage) {
+    let imageCaption = quotedMessage.imageMessage.caption || "";
+    let imageUrl = await client.downloadAndSaveMediaMessage(quotedMessage.imageMessage);
+    client.sendMessage(
+      m.chat,
+      {
+        image: { url: imageUrl },
+        caption: `🔍✨ *Oops!* Someone tried to be sneaky with a *View Once*…\nBut Frost said *“Not on my watch, Darling!”* 😂\n\n💬 ${imageCaption}`,
+      },
+      { quoted: m }
+    );
+  }
 
-    if (quotedMessage.videoMessage) {
-      let videoCaption = quotedMessage.videoMessage.caption;
-      let videoUrl = await client.downloadAndSaveMediaMessage(quotedMessage.videoMessage);
-      client.sendMessage(client.user.id, { video: { url: videoUrl }, caption: `Retrieved by Raven!\n${videoCaption}`}, { quoted: m });
-    }
-      }
-	break;
-
-//========================================================================================================================//		      
-    case 'take': {
-const { Sticker, createSticker, StickerTypes } = require('wa-sticker-formatter');
-
-if(!msgR) { m.reply('Quote an image, a short video or a sticker to change watermark.') ; return } ;
-
-let media;
-if (msgR.imageMessage) {
-     media = msgR.imageMessage
-  } else if(msgR.videoMessage) {
-media = msgR.videoMessage
-  } 
-  else if (msgR.stickerMessage) {
-    media = msgR.stickerMessage ;
-  } else {
-    m.reply('This is neither a sticker, image nor a video...'); return
-  } ;
-
-var result = await client.downloadAndSaveMediaMessage(media);
-
-let stickerResult = new Sticker(result, {
-            pack: pushname,
-            author: pushname,
-            type: StickerTypes.FULL,
-            categories: ["🤩", "🎉"],
-            id: "12345",
-            quality: 70,
-            background: "transparent",
-          });
-const Buffer = await stickerResult.toBuffer();
-          client.sendMessage(m.chat, { sticker: Buffer }, { quoted: m });
-
+  if (quotedMessage.videoMessage) {
+    let videoCaption = quotedMessage.videoMessage.caption || "";
+    let videoUrl = await client.downloadAndSaveMediaMessage(quotedMessage.videoMessage);
+    client.sendMessage(
+      m.chat,
+      {
+        video: { url: videoUrl },
+        caption: `🎬✨ *Lights, Camera... Exposed!* \nFrost just played that *View Once* like it’s a Netflix premiere 😎🍿\n\n🎞️ ${videoCaption}`,
+      },
+      { quoted: m }
+    );
+  }
 }
 break;
+//========================================================================================================================//		      
+case 'take': {
+  const { Sticker, createSticker, StickerTypes } = require('wa-sticker-formatter');
 
+  if (!msgR) {
+    m.reply('Sweetie… quote a pic, vid, or sticker first. I can’t slap magic on thin air 😩✨');
+    return;
+  }
+
+  let media;
+  if (msgR.imageMessage) {
+    media = msgR.imageMessage;
+  } else if (msgR.videoMessage) {
+    media = msgR.videoMessage;
+  } else if (msgR.stickerMessage) {
+    media = msgR.stickerMessage;
+  } else {
+    m.reply('Uhm… what exactly is *this*? 😐 That’s not a sticker, not a pic, not a video… it’s giving confusion 💀📵');
+    return;
+  }
+
+  var result = await client.downloadAndSaveMediaMessage(media);
+
+  let stickerResult = new Sticker(result, {
+    pack: pushname,
+    author: pushname,
+    type: StickerTypes.FULL,
+    categories: ["🤩", "🎉"],
+    id: "12345",
+    quality: 70,
+    background: "transparent",
+  });
+
+  const Buffer = await stickerResult.toBuffer();
+  client.sendMessage(m.chat, { sticker: Buffer }, { quoted: m });
+}
+break;
 //========================================================================================================================//	  
 case 'ytsearch':
-    case 'yts': {
-        if (!text) {
-            reply('Provide a search term!\E.g: Alan walker alone')
-            return;
-        }
-        const term = text;
-        const {
-            videos
-        } = await yts(term);
-        if (!videos || videos.length <= 0) {
-            reply(`No Matching videos found for : *${term}*!!`)
-            return;
-        }
-        const length = videos.length < 10 ? videos.length : 10;
-        let tex = `YouTube Search\n🔍 Query ~> ${term}\n\n`;
-        for (let i = 0; i < length; i++) {
-            tex += `Link ~> ${videos[i].url}\nChannel ~> ${videos[i].author.name}\nTitle ~> ${videos[i].title}\n\n`;
-        }
-        reply(tex)
+case 'yts': {
+    if (!text) {
+        reply('👀 You want me to read your mind now? Type what you’re looking for, darling.\nExample: *Alan Walker - Alone* 🔮🧠');
         return;
     }
-    break;
 
+    const term = text;
+    const { videos } = await yts(term);
+
+    if (!videos || videos.length <= 0) {
+        reply(`🥴 Oof... I searched high, low, and in Beyoncé’s internet but found *nothing* for: *"${term}"* 💀📉\nTry again, maybe with better taste? 😌`);
+        return;
+    }
+
+    const length = videos.length < 10 ? videos.length : 10;
+    let tex = `🔥 *YouTube Spice Drop* 🔥\n🔍 You searched: *${term}*\nHere’s what I fished out.:\n\n`;
+
+    for (let i = 0; i < length; i++) {
+        tex += `🍿 *Title:* ${videos[i].title}\n👑 *Channel:* ${videos[i].author.name}\n🔗 *Link:* ${videos[i].url}\n\n`;
+    }
+
+    tex += `💁‍♀️ There you go, babycakes. Don’t say I never did anything for you 😘`;
+
+    reply(tex);
+    return;
+}
+break;
 //========================================================================================================================//		      
-case "ytmp3": case "yta": {
-const ytSearch = require("yt-search");
-const fetch = require('node-fetch');
-try {
+case "ytmp3": 
+case "yta": {
+  const ytSearch = require("yt-search");
+  const fetch = require('node-fetch');
 
-if (!text) return m.reply("𝗣𝗿𝗼𝘃𝗶𝗱𝗲 𝗮 𝘃𝗮𝗹𝗶𝗱 𝗬𝗼𝘂𝘁𝘂𝗯𝗲 𝗹𝗶𝗻𝗸!")
+  try {
+    if (!text) return m.reply("🎧 Hey hey! I need a *YouTube link* to work my magic! Drop one in, superstar ✨");
 
-	let urls = text.match(/(?:https?:\/\/)?(?:youtu\.be\/|(?:www\.|m\.)?youtube\.com\/(?:watch\?v=|v\/|embed\/|shorts\/|playlist\?list=)?)([a-zA-Z0-9_-]{11})/gi);
-	if (!urls) return m.reply('𝗧𝗵𝗶𝘀 𝗶𝘀 𝗻𝗼𝘁 𝗮 𝗬𝗼𝘂𝘁𝘂𝗯𝗲 𝗟𝗶𝗻𝗸');
-	let urlIndex = parseInt(text) - 1;
-	if (urlIndex < 0 || urlIndex >= urls.length)
-		return m.reply('𝗜𝗻𝘃𝗮𝗹𝗶𝗱 𝗟𝗶𝗻𝗸.');
+    let urls = text.match(/(?:https?:\/\/)?(?:youtu\.be\/|(?:www\.|m\.)?youtube\.com\/(?:watch\?v=|v\/|embed\/|shorts\/|playlist\?list=)?)([a-zA-Z0-9_-]{11})/gi);
+    if (!urls) return m.reply("😅 Hmm... That doesn't look like a proper YouTube link. Wanna try again? 🎯");
 
-        let search = await yts(text);
+    let urlIndex = parseInt(text) - 1;
+    if (urlIndex < 0 || urlIndex >= urls.length)
+      return m.reply("🧐 That number seems off. Try picking the right one, yeah?");
+
+    let search = await yts(text);
     let link = search.all[0].url;
 
     const apis = [
@@ -5202,13 +5515,12 @@ if (!text) return m.reply("𝗣𝗿𝗼𝘃𝗶𝗱𝗲 𝗮 𝘃𝗮𝗹𝗶�
       `https://apis.davidcyriltech.my.id/youtube/mp3?url=${link}`,
       `https://api.ryzendesu.vip/api/downloader/ytmp3?url=${link}`,
       `https://api.dreaded.site/api/ytdl/audio?url=${link}`
-       ];
+    ];
 
     for (const api of apis) {
       try {
         let data = await fetchJson(api);
 
-        // Checking if the API response is successful
         if (data.status === 200 || data.success) {
           let videoUrl = data.result?.downloadUrl || data.url;
           let outputFileName = `${search.all[0].title.replace(/[^a-zA-Z0-9 ]/g, "")}.mp3`;
@@ -5221,10 +5533,11 @@ if (!text) return m.reply("𝗣𝗿𝗼𝘃𝗶𝗱𝗲 𝗮 𝘃𝗮𝗹𝗶�
           });
 
           if (response.status !== 200) {
-            m.reply("sorry but the API endpoint didn't respond correctly. Try again later.");
+            m.reply("🔄 Hmm… That source didn’t work. Let me try another one! 🛠️");
             continue;
           }
-		ffmpeg(response.data)
+
+          ffmpeg(response.data)
             .toFormat("mp3")
             .save(outputPath)
             .on("end", async () => {
@@ -5233,7 +5546,7 @@ if (!text) return m.reply("𝗣𝗿𝗼𝘃𝗶𝗱𝗲 𝗮 𝘃𝗮𝗹𝗶�
                 {
                   document: { url: outputPath },
                   mimetype: "audio/mp3",
-		  caption: "𝗗𝗢𝗪𝗡𝗟𝗢𝗔𝗗𝗘𝗗 𝗕𝗬 𝗥𝗔𝗩𝗘𝗡-𝗕𝗢𝗧",
+                  caption: "🎵 Done and dusted! Here's your audio jam, freshly packed 🎁\n\n_❤️ Brought to you by *FROST-AI*_",
                   fileName: outputFileName,
                 },
                 { quoted: m }
@@ -5241,44 +5554,44 @@ if (!text) return m.reply("𝗣𝗿𝗼𝘃𝗶𝗱𝗲 𝗮 𝘃𝗮𝗹𝗶�
               fs.unlinkSync(outputPath);
             })
             .on("error", (err) => {
-              m.reply("Download failed\n" + err.message);
+              m.reply("💔 Oof! Something went wrong while saving your jam...\n" + err.message);
             });
 
           return;
         }
       } catch (e) {
-        // Continue to the next API if one fails
         continue;
       }
-   }
-    m.reply("An error occurred. All APIs might be down or unable to process the request.");
+    }
+    m.reply("😬 Uh-oh… All my sources are either napping or broken. Try again in a bit?");
   } catch (error) {
-    m.reply("Download failed\n" + error.message);
+    m.reply("⚠️ Whoops! I tripped over something...\n" + error.message);
   }
- }
-  break;
+}
+break;
 
 //========================================================================================================================//		      
 case 'ytmp4':
 case "ytv": {
-	try {
+  try {
 
-if (!text) return m.reply("𝗣𝗿𝗼𝘃𝗶𝗱𝗲 𝗮 𝘃𝗮𝗹𝗶𝗱 𝗬𝗼𝘂𝗧𝘂𝗯𝗲 𝗹𝗶𝗻𝗸!")
+    if (!text) return m.reply("🎬✨ *Hold up!* Drop a valid YouTube link, superstar!");
 
-        let urls = text.match(/(?:https?:\/\/)?(?:youtu\.be\/|(?:www\.|m\.)?youtube\.com\/(?:watch\?v=|v\/|embed\/|shorts\/|playlist\?list=)?)([a-zA-Z0-9_-]{11})/gi);
-        if (!urls) return m.reply('𝗧𝗵𝗶𝘀 𝗶𝘀 𝗻𝗼𝘁 𝗮 𝗬𝗼𝘂𝗧𝘂𝗯𝗲 𝗹𝗶𝗻𝗸');
-        let urlIndex = parseInt(text) - 1;
-        if (urlIndex < 0 || urlIndex >= urls.length)
-                return m.reply('𝗜𝗻𝘃𝗮𝗹𝗶𝗱 𝗹𝗶𝗻𝗸.');
+    let urls = text.match(/(?:https?:\/\/)?(?:youtu\.be\/|(?:www\.|m\.)?youtube\.com\/(?:watch\?v=|v\/|embed\/|shorts\/|playlist\?list=)?)([a-zA-Z0-9_-]{11})/gi);
+    if (!urls) return m.reply("🚫🎥 *Oops!* That doesn't look like a real YouTube link. Try again, legend!");
 
-        let search = await yts(text);
+    let urlIndex = parseInt(text) - 1;
+    if (urlIndex < 0 || urlIndex >= urls.length)
+      return m.reply("🔢🤔 *Invalid link number!* Are you trying to confuse me, or yourself?");
+
+    let search = await yts(text);
     if (!search.all.length) {
-      return reply(client, m, "No results found for your query.");
+      return m.reply("📭❌ *No results found!* Looks like the YouTube gods are silent today...");
     }
-    let link = search.all[0].url; 
+
+    let link = search.all[0].url;
 
     const apiUrl = `https://apis-keith.vercel.app/download/dlmp4?url=${link}`;
-
     let response = await fetch(apiUrl);
     let data = await response.json();
 
@@ -5296,68 +5609,43 @@ if (!text) return m.reply("𝗣𝗿𝗼𝘃𝗶𝗱𝗲 𝗮 𝘃𝗮𝗹𝗶�
         {
           video: { url: videoData.downloadUrl },
           mimetype: "video/mp4",
-          caption: "𝗗𝗢𝗪𝗡𝗟𝗢𝗔𝗗𝗘𝗗 𝗕𝗬 𝗥𝗔𝗩𝗘𝗡-𝗕𝗢𝗧",
+          caption: `📽️✨ *Here comes the magic!* \n🎉 *${videoData.title}*\n💾 Downloaded by *FROST-AI* – your sassy digital assistant.`,
         },
         { quoted: m }
       );
 
       return;
     } else {
-      
-      return reply("Unable to fetch the video. Please try again later.");
+      return m.reply("😕🔌 *Welp!* I tried fetching the video but the wires got crossed. Try again later, starlight!");
     }
+    
   } catch (error) {
- 
-    return reply(`An error occurred: ${error.message}`);
+    return m.reply(`💥⚠️ *Kaboom!* Something went wrong:\n\n\`\`\`${error.message}\`\`\``);
   }
 };
+break;
+//========================================================================================================================//
+case "ping":
+case "speed": {
+  // Record the start time.
+  const startTime = (m.messageTimestamp * 1000) || Date.now();
+
+  // Calculate the end time and determine the response speed in milliseconds.
+  const endTime = Date.now();
+  const responseTime = (endTime - startTime);
+
+  // Format the final message string. Using Markdown for bold text.
+  const finalMessage = `✅ *Pong!* \n\n*❄️✨ Catching that signal at a mere ${responseTime.toFixed(2)}Ms*`;
+
+  // Call the new function to display the animation and the final result.
+  await displayAnimatedReply(client, from, finalMessage);
+
   break;
-
-//========================================================================================================================//		      
-switch (command) { // Assuming 'command' holds the command name
-    case "ping":
-    case "speed":
-        {
-            // 1. Show the loading animation and get the message key
-            const { key } = await loading(client, from);
-
-            // 2. Calculate the final speed and determine a status
-            const speedMs = Rspeed.toFixed(2); // Format to 2 decimal places
-            let speedStatus;
-
-            if (speedMs < 100) {
-                speedStatus = "🚀 Excellent";
-            } else if (speedMs < 300) {
-                speedStatus = "✅ Good";
-            } else if (speedMs < 800) {
-                speedStatus = "⚡ Average";
-            } else {
-                speedStatus = "🐢 Slow";
-            }
-
-            // 3. Create a cool, formatted reply string
-            const replyText = `
-╭─⬣「 *BOT LATENCY* 」⬣
-│
-├─ PING: ${speedMs} Ms
-├─ STATUS: ${speedStatus}
-│
-╰─⬣「 _ʄʀօֆᴛ-ɮʏᴛɛ-𐌀i_ 」⬣
-    `;
-
-            // 4. Edit the loading message with the final, formatted result
-            await client.sendMessage(from, {
-                text: replyText,
-                edit: key
-            });
-        }
-        break; // End of the case block
 }
-
-//========================================================================================================================//		      
+//========================================================================================================================//	
 case "uptime": { 
     const stylishUptime = () => {
-        const uptimeMessage = `✨ The system has been thriving for: ${runtime(process.uptime())} ⏳💪`;
+        const uptimeMessage = `*✨ The system has been thriving for: ${runtime(process.uptime())} ⏳💪*`;
         return uptimeMessage;
     };
     m.reply(stylishUptime());
