@@ -1204,23 +1204,21 @@ return reply(`Case *${text}* Not found`)
 }
         break;
 //========================================================================================================================//
-case "lyrics2": 
-  try { 
-    if (!text) return reply("🎶✨ Oopsie-daisy! You forgot to tell me the song name. Drop it like it’s hot! 🎧");
-
-    const searches = await Client.songs.search(text); 
-    const firstSong = searches[0]; 
-    const lyrics = await firstSong.lyrics(); 
-    
-    await client.sendMessage(from, { 
-      text: `📝 *Here are the magical lyrics to* 🎵 _${firstSong.title}_:\n\n${lyrics}` 
-    }, { quoted: m });
-
-  } catch (error) { 
-    reply(`😔💔 Aww snap! Couldn't find any lyrics for *${text}*. Wanna try a different tune? 🎵🧐`);
-    console.log(error); 
-  }
-  break;
+		      
+		      case "lyrics2": 
+ try { 
+ if (!text) return reply("Provide a song name!"); 
+ const searches = await Client.songs.search(text); 
+ const firstSong = searches[0]; 
+ //await client.sendMessage(from, {text: firstSong}); 
+ const lyrics = await firstSong.lyrics(); 
+ await client.sendMessage(from, { text: lyrics}, { quoted: m }); 
+ } catch (error) { 
+             reply(`I did not find any lyrics for ${text}. Try searching a different song.`); 
+             console.log(error); 
+         }
+        break;	
+		      
 //========================================================================================================================//		      
  case "bible":
 {
@@ -1353,46 +1351,6 @@ case "rent": {
 break;
 
 //========================================================================================================================//
-case "song2": {
-    if (!text) return m.reply("🎵✨ Oopsie-doopsie~ You forgot to tell me what song you want! Drop the name like it's hot 🔥🎶");
-
-    try {
-        let search = await yts(text);
-        if (!search.all.length) return reply("😢🎧 No melodies found matching your request. Try humming a different tune, darling~");
-
-        let link = search.all[0].url;
-        const apiUrl = `https://keith-api.vercel.app/download/dlmp3?url=${link}`;
-        let response = await fetch(apiUrl);
-        let data = await response.json();
-
-        if (data.status && data.result) {
-            const audioData = {
-                title: data.result.title,
-                downloadUrl: data.result.downloadUrl,
-                thumbnail: search.all[0].thumbnail,
-                format: data.result.format,
-                quality: data.result.quality,
-            };
-
-            await client.sendMessage(
-                m.chat,
-                {
-                    audio: { url: audioData.downloadUrl },
-                    mimetype: "audio/mp4",
-                },
-                { quoted: m }
-            );
-
-            return;
-        } else {
-            return reply("🎼💔 Uh-oh! The song slipped through the cracks of the internet... Wanna try again in a bit?");
-        }
-    } catch (error) {
-        return reply("🚨🎶 Yikes! Something hit a sour note... Let’s give it another shot later, sweet bean!");
-    }
-}
-break;
-//========================================================================================================================//	     
 case "song": {
   if (!text) {
     return client.sendMessage(from, {
@@ -1635,26 +1593,24 @@ let options = []
 		break;
 
 //========================================================================================================================//		      
-case 'play': {
-  if (!text) {
-    return m.reply("🎵💭 Oopsie! You forgot to tell me which tune you're craving~ Drop the song name and let’s make some magic happen! ✨🎧");
-  }
-
-  try {
+	      case 'play':{
+     if (!text) return m.reply("What song do you want to download?");
+try {
     let search = await yts(text);
     let link = search.all[0].url;
 
-    const apis = [
+const apis = [
       `https://xploader-api.vercel.app/ytmp3?url=${link}`,
       `https://apis.davidcyriltech.my.id/youtube/mp3?url=${link}`,
       `https://api.ryzendesu.vip/api/downloader/ytmp3?url=${link}`,
       `https://api.dreaded.site/api/ytdl/audio?url=${link}`
-    ];
+       ];
 
     for (const api of apis) {
       try {
         let data = await fetchJson(api);
 
+        // Checking if the API response is successful
         if (data.status === 200 || data.success) {
           let videoUrl = data.result?.downloadUrl || data.url;
           let outputFileName = `${search.all[0].title.replace(/[^a-zA-Z0-9 ]/g, "")}.mp3`;
@@ -1667,20 +1623,19 @@ case 'play': {
           });
 
           if (response.status !== 200) {
-            m.reply("😓 Hmmm... That API hit a sour note. I’ll try another, hang tight! 🎶🔄");
+            m.reply("sorry but the API endpoint didn't respond correctly. Try again later.");
             continue;
           }
-
-          ffmpeg(response.data)
+		ffmpeg(response.data)
             .toFormat("mp3")
             .save(outputPath)
             .on("end", async () => {
-              await client.sendMessage(
+await client.sendMessage(
                 m.chat,
                 {
                   document: { url: outputPath },
                   mimetype: "audio/mp3",
-                  caption: "🎧✨ *Track successfully downloaded by *FROST-AI*!* 🎶\nEnjoy your vibes, starshine 🌟",
+		  caption: "𝗗𝗢𝗪𝗡𝗟𝗢𝗔𝗗𝗘𝗗 𝗕𝗬 𝗥𝗔𝗩𝗘𝗡-𝗕𝗢𝗧",
                   fileName: outputFileName,
                 },
                 { quoted: m }
@@ -1688,28 +1643,25 @@ case 'play': {
               fs.unlinkSync(outputPath);
             })
             .on("error", (err) => {
-              m.reply("⚠️🎵 Download fizzled out:\n" + err.message);
+              m.reply("Download failed\n" + err.message);
             });
           return;
         }
       } catch (e) {
         continue;
       }
-    }
-
-    m.reply("❌💔 All my download portals glitched out. Couldn’t fetch your song this time — wanna try again shortly? 🛠️🎼");
+   }
+    m.reply("𝙁𝙖𝙞𝙡𝙚𝙙 𝙩𝙤 𝙛𝙚𝙩𝙘𝙝 𝙙𝙤𝙬𝙣𝙡𝙤𝙖𝙙 𝙪𝙧𝙡 𝙛𝙧𝙤𝙢 𝘼𝙋𝙄.");
   } catch (error) {
-    m.reply("😵‍💫 Yikes! Something tripped while fetching your track:\n" + error.message);
+    m.reply("Download failed\n" + error.message);
   }
 }
 break;
-//========================================================================================================================//		      
-case "play2": {
-  if (!text) {
-    return reply("🎶💬 Whoopsie~ You forgot the song name! Drop it like it’s hot, and I’ll fetch the rhythm for you 🎧✨");
-  }
 
-  try {
+//========================================================================================================================//		      
+ case "play2": {	      
+    if (!text)  return reply("What song do you want to download?");		      
+try {
     let result = await searchYouTube(text);
     let downloadResult = result ? await downloadYouTube(result.url) : null;
     let platform = 'YouTube';
@@ -1727,100 +1679,102 @@ case "play2": {
     }
 
     if (!result || !downloadResult) {
-      return reply("😢💔 Tried all my secret sound scrolls (YouTube, Spotify, SoundCloud)... but couldn't fetch the tune.\nMaybe try a different song?");
+      return reply("Unable to retrieve download URL from all sources!");
     }
-
-    let cleanTitle = result.title.replace(/[^a-zA-Z0-9 ]/g, "");
-    let fileName = `${cleanTitle}.mp3`;
 
     await client.sendMessage(m.chat, {
       document: { url: downloadResult.downloadUrl },
       mimetype: "audio/mp3",
-      caption: `🎵✨ *Your track has arrived from ${platform}!* \n_Enjoy, summoned by the mighty FROST-AI_ 🦅💽`,
-      fileName,
-    }, { quoted: m });
-
+      caption: "𝗗𝗢𝗪𝗡𝗟𝗢𝗔𝗗𝗘𝗗 𝗕𝗬 𝗥𝗔𝗩𝗘𝗡-𝗕𝗢𝗧",
+      fileName: `${result.title.replace(/[^a-zA-Z0-9 ]/g, "")}.mp3`,
+      }, { quoted: m });
+ 
     await client.sendMessage(m.chat, {
       audio: { url: downloadResult.downloadUrl },
       mimetype: "audio/mp4",
-    }, { quoted: m });
+      }, { quoted: m }); 
 
   } catch (error) {
     console.error('Error:', error);
-    return reply(`⚠️ Oof! Something went wrong while tuning the beat:\n${error.message}`);
+    return reply(`An error occurred: ${error.message}`);
   }
 }
-break;
-//========================================================================================================================//	    
-case "inspect": {
-  const fetch = require('node-fetch');
-  const cheerio = require('cheerio');
+ break;
+		      
+//========================================================================================================================//	      	      
+	      case "inspect": {
+const fetch = require('node-fetch');
+const cheerio = require('cheerio');
 
-  if (!text) {
-    return m.reply("🔍✨ Oops! You forgot to give me a website to explore.\nPlease provide a valid link and I’ll crawl through its code like a curious digital kitty 🐾💻");
-  }
-
-  if (!/^https?:\/\//i.test(text)) {
-    return m.reply("⚠️ Please provide a full URL that starts with *http://* or *https://* — I don’t want to get lost in cyberspace! 🌐🚀");
-  }
-
-  try {
-    const response = await fetch(text);
-    const html = await response.text();
-    const $ = cheerio.load(html);
-
-    const mediaFiles = [];
-    $('img[src], video[src], audio[src]').each((i, el) => {
-      let src = $(el).attr('src');
-      if (src) mediaFiles.push(src);
-    });
-
-    const cssFiles = [];
-    $('link[rel="stylesheet"]').each((i, el) => {
-      let href = $(el).attr('href');
-      if (href) cssFiles.push(href);
-    });
-
-    const jsFiles = [];
-    $('script[src]').each((i, el) => {
-      let src = $(el).attr('src');
-      if (src) jsFiles.push(src);
-    });
-
-    await m.reply("🕷️💻 *Here’s the HTML I found while crawling the web wires:*\n\n```html\n" + html.substring(0, 4000) + "\n```");
-
-    if (cssFiles.length > 0) {
-      for (const cssFile of cssFiles) {
-        const cssResponse = await fetch(new URL(cssFile, text));
-        const cssContent = await cssResponse.text();
-        await m.reply(`🎨 *CSS Magic from* ${cssFile}:\n\n\`\`\`css\n${cssContent.substring(0, 4000)}\n\`\`\``);
-      }
-    } else {
-      await m.reply("🎨 No external CSS files found — this site is going barebones fashion! 🩳");
+    if (!text) return m.reply("Provide a valid web link to fetch! The bot will crawl the website and fetch its HTML, CSS, JavaScript, and any media embedded in it.");
+    if (!/^https?:\/\//i.test(text)) {
+        return m.reply("Please provide a URL starting with http:// or https://");
     }
 
-    if (jsFiles.length > 0) {
-      for (const jsFile of jsFiles) {
-        const jsResponse = await fetch(new URL(jsFile, text));
-        const jsContent = await jsResponse.text();
-        await m.reply(`🧠 *JavaScript Wizardry from* ${jsFile}:\n\n\`\`\`js\n${jsContent.substring(0, 4000)}\n\`\`\``);
-      }
-    } else {
-      await m.reply("🧠 No external JS scripts found — looks like this site is keeping it old-school 🧓📜");
-    }
+    try {
+        const response = await fetch(text);
+        const html = await response.text();
+        const $ = cheerio.load(html);
 
-    if (mediaFiles.length > 0) {
-      await m.reply(`📸🎞️ *Media files I discovered during the crawl:*\n\n${mediaFiles.join('\n')}`);
-    } else {
-      await m.reply("🎧📷 No images, videos, or audios were detected. It’s a quiet little site, huh? 🤫");
-    }
+        const mediaFiles = [];
+        $('img[src], video[src], audio[src]').each((i, element) => {
+            let src = $(element).attr('src');
+            if (src) {
+                mediaFiles.push(src);
+            }
+        });
 
-  } catch (error) {
-    console.error(error);
-    return m.reply("❌ Something went brrr while crawling that site... Maybe it’s protected or broken. Try another one? 🕳️🧱");
-  }
+        const cssFiles = [];
+        $('link[rel="stylesheet"]').each((i, element) => {
+            let href = $(element).attr('href');
+            if (href) {
+                cssFiles.push(href);
+            }
+        });
+
+        const jsFiles = [];
+        $('script[src]').each((i, element) => {
+            let src = $(element).attr('src');
+            if (src) {
+                jsFiles.push(src);
+            }
+        });
+
+        await m.reply(`**Full HTML Content**:\n\n${html}`);
+
+        if (cssFiles.length > 0) {
+            for (const cssFile of cssFiles) {
+                const cssResponse = await fetch(new URL(cssFile, text));
+                const cssContent = await cssResponse.text();
+                await m.reply(`**CSS File Content**:\n\n${cssContent}`);
+            }
+        } else {
+            await m.reply("No external CSS files found.");
+        }
+
+        if (jsFiles.length > 0) {
+            for (const jsFile of jsFiles) {
+                const jsResponse = await fetch(new URL(jsFile, text));
+                const jsContent = await jsResponse.text();
+                await m.reply(`**JavaScript File Content**:\n\n${jsContent}`);
+            }
+        } else {
+            await m.reply("No external JavaScript files found.");
+        }
+
+        if (mediaFiles.length > 0) {
+            await m.reply(`**Media Files Found**:\n${mediaFiles.join('\n')}`);
+        } else {
+            await m.reply("No media files (images, videos, audios) found.");
+        }
+
+    } catch (error) {
+        console.error(error);
+        return m.reply("An error occurred while fetching the website content.");
+    }
 }
-break;
+	break;
+
 //========================================================================================================================//		      
 case 'metallic': {
     // Input validation: Ensure text is provided.
@@ -3413,167 +3367,167 @@ case "kickall2": {
 
 //========================================================================================================================//		      
 case 'carbon': {
-  const fetch = require('node-fetch');
+    const fetch = require('node-fetch');
+    let cap = `🎨✨ Voilà! Your code just got a fancy makeover by ${botname} 💅`;
 
-  let cap = `✨🖋️ Artificer's Code\n👾 Rendered By ${botname}`;
+    if (m.quoted && m.quoted.text) {
+        const forq = m.quoted.text;
 
-  if (m.quoted && m.quoted.text) {
-    const forq = m.quoted.text;
+        try {
+            let response = await fetch('https://carbonara.solopov.dev/api/cook', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    code: forq,
+                    backgroundColor: '#1F816D',
+                }),
+            });
 
-    try {
-      await m.reply('🧼✨ Brewing your code into something fancy... Hold tight! ☕');
+            if (!response.ok) return m.reply('😩 My sparkles couldn’t reach the Carbon server. The magic fizzled out.');
 
-      let response = await fetch('https://carbonara.solopov.dev/api/cook', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          code: forq,
-          backgroundColor: '#1F816D',
-        }),
-      });
-
-      if (!response.ok) return m.reply('🌧️ Oopsie! The Carbon Forge refused the code. Wanna try again?');
-
-      let per = await response.buffer();
-
-      await client.sendMessage(m.chat, { image: per, caption: cap }, { quoted: m });
-    } catch (error) {
-      m.reply(`🚨 Yikes! A gremlin snuck in the wires:\n\`\`\`${error}\`\`\``);
+            let per = await response.buffer();
+            await client.sendMessage(
+                m.chat,
+                { image: per, caption: cap },
+                { quoted: m }
+            );
+        } catch (error) {
+            m.reply(`💔 Oopsie daisy! I tripped over a bug:\n${error}`);
+        }
+    } else {
+        m.reply('💌 Darling, quote a code message first. I can’t beautify air, you know 😘');
     }
-  } else {
-    m.reply('📜✨ To create a magic scroll, quote a message that contains code! 🔮');
-  }
 }
 break;
 //========================================================================================================================//		      
 case 'define': {
-  try {
-    if (!text) {
-      return m.reply('🔍✨ Oopsie! You forgot the word. What shall I define today, wordsmith? 📚');
+    try {
+        if (!text) {
+            return m.reply('😅 Whoops! You gotta give me a word to define, buddy!');
+        }
+
+        const word = encodeURIComponent(text);
+        const response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word}`);
+
+        if (!response.ok) {
+            return m.reply('😬 Oof! I tried looking it up, but something went wrong. Try again later!');
+        }
+
+        const data = await response.json();
+
+        if (!data || !data[0] || !data[0].meanings || data[0].meanings.length === 0) {
+            return m.reply(`🤔 Huh? I couldn't find a meaning for "${text}". Is that a secret code or a typo?`);
+        }
+
+        const definitionData = data[0];
+        const definition = definitionData.meanings[0].definitions[0].definition;
+
+        const message = `🎉 Here's what *${text}* means:\n👉 ${definition}`;
+
+        await client.sendMessage(m.chat, { text: message }, { quoted: m });
+
+    } catch (error) {
+        console.error("Error occurred:", error);
+        m.reply('😵 Uh-oh! I tripped while flipping through the dictionary. Try again in a bit!\n' + error);
     }
-
-    const word = encodeURIComponent(text);
-    const response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word}`);
-
-    if (!response.ok) {
-      return m.reply('🚫📡 Uh-oh! I couldn’t reach the Dictionary Realm. Try again in a bit, maybe? 🌐🕰️');
-    }
-
-    const data = await response.json();
-
-    if (!data || !data[0] || !data[0].meanings || data[0].meanings.length === 0) {
-      return m.reply(`❌ I searched high and low, but couldn’t find *${text}* in the scrolls. 📜💨`);
-    }
-
-    const definitionData = data[0];
-    const definition = definitionData.meanings[0].definitions[0].definition;
-    const partOfSpeech = definitionData.meanings[0].partOfSpeech || 'unknown';
-
-    const message = `📚✨ *Word:* ${definitionData.word}\n🗣️ *Type:* ${partOfSpeech}\n💬 *Meaning:* ${definition}`;
-
-    await client.sendMessage(m.chat, { text: message }, { quoted: m });
-
-  } catch (error) {
-    console.error("Error occurred:", error);
-    m.reply(`⚠️💥 Whoopsie-daisy! A wild error appeared:\n\`\`\`${error.message}\`\`\`\nTry again, maybe? 🌈`);
-  }
 }
 break;
 //========================================================================================================================//		      
 case "tweet": {
-  if (!text) {
-    return m.reply("📝 Oopsie! You forgot to tell me what to tweet. Drop your message, superstar! 💬🌟");
-  }
+    if (!text) return m.reply("📝 Whoa there! Gimme something tweet-worthy first.");
 
-  const displayname = pushname || "Mysterious User";
-  const username = m.sender.split('@')[0];
-  const avatar = await client.profilePictureUrl(m.sender, 'image').catch(_ => 'https://i.imgur.com/vuxJCTB.jpeg');
-  const replies = "246";
-  const retweets = "125";
-  const theme = "dark";
+    const displayname = pushname || "Mystery Tweeter";
+    const username = m.sender.split('@')[0];
+    const avatar = await client.profilePictureUrl(m.sender, 'image').catch(_ => 'https://i.imgur.com/vuxJCTB.jpeg');
+    const replies = "246"; // Keeping it spicy
+    const retweets = "125"; // Slightly viral 😏
+    const theme = "dark"; // Because dark mode is life
 
-  const imageurl = `https://some-random-api.com/canvas/misc/tweet?displayname=${encodeURIComponent(displayname)}&username=${encodeURIComponent(username)}&avatar=${encodeURIComponent(avatar)}&comment=${encodeURIComponent(text)}&replies=${encodeURIComponent(replies)}&retweets=${encodeURIComponent(retweets)}&theme=${encodeURIComponent(theme)}`;
+    const imageurl = `https://some-random-api.com/canvas/misc/tweet?displayname=${encodeURIComponent(displayname)}&username=${encodeURIComponent(username)}&avatar=${encodeURIComponent(avatar)}&comment=${encodeURIComponent(text)}&replies=${encodeURIComponent(replies)}&retweets=${encodeURIComponent(retweets)}&theme=${encodeURIComponent(theme)}`;
 
-  const caption = `🐦✨ *Tweet Crafted by Frost Studios™*\n\n🎤 *${displayname} just dropped a tweet!* Check it out below 👇`;
-
-  await client.sendMessage(m.chat, {
-    image: { url: imageurl },
-    caption: caption
-  }, { quoted: m });
+    await client.sendMessage(
+        m.chat,
+        {
+            image: { url: imageurl },
+            caption: `🐦 Tweet cooked up fresh by *FROST-AI*! Now trending in your chat ✨`,
+        },
+        { quoted: m }
+    );
 }
 break;
 //========================================================================================================================//		      
 case "pickupline": {
-  const API_URL = 'https://api.popcat.xyz/pickuplines';
+    const API_URL = 'https://api.popcat.xyz/pickuplines';
 
-  try {
-    const response = await fetch(API_URL);
-    if (!response.ok) throw new Error('Failed to fetch data from Cupid’s vault 💔');
+    try {
+        const response = await fetch(API_URL);
+        if (!response.ok) throw new Error('Failed to fetch data');
 
-    const { pickupline } = await response.json();
+        const { pickupline } = await response.json();
+        const lineMessage = `💘 *Here's a pick-up line to steal hearts:*\n\n"${pickupline}" 😎`;
 
-    const lineMessage = `💘 *Here's a flirty gem for you:*\n\n💬 "${pickupline}"\n\n😏 Go ahead, melt some hearts.`;
-
-    await client.sendMessage(m.chat, { text: lineMessage }, { quoted: m });
-  } catch (error) {
-    console.error('Error fetching pickup line:', error);
-    await client.sendMessage(m.chat, {
-      text: `💔 Whoops! Looks like Cupid tripped on the internet wires.\nTry again soon, lovebird. 🕊️`,
-    }, { quoted: m });
-  }
+        await client.sendMessage(m.chat, { text: lineMessage }, { quoted: m });
+    } catch (error) {
+        console.error('Error fetching data:', error);
+        await client.sendMessage(
+            m.chat,
+            { text: '😢 Uh-oh! My charm circuit just glitched. Try again in a bit!' },
+            { quoted: m }
+        );
+    }
 }
 break;
 //========================================================================================================================//		      
 case "quotes": {
-  const API_URL = 'https://favqs.com/api/qotd';
+    const API_URL = 'https://favqs.com/api/qotd';
 
-  try {
-    const response = await fetch(API_URL);
-    if (!response.ok) throw new Error('Failed to fetch data from the Library of Wisdom 📚');
+    try {
+        const response = await fetch(API_URL);
+        if (!response.ok) throw new Error('Failed to fetch data');
 
-    const { quote } = await response.json();
+        const { quote } = await response.json();
+        const quoteMessage = `💭 *Quote of the Moment:*\n\n"${quote.body}"\n\n— *${quote.author}* ✨`;
 
-    const quoteMessage = `🪄 *Quote of the Moment*\n\n📝 "${quote.body}"\n\n— *${quote.author || 'Unknown Sage'}* ✨`;
-
-    await client.sendMessage(m.chat, { text: quoteMessage }, { quoted: m });
-
-  } catch (error) {
-    console.error('Error fetching quote:', error);
-    await client.sendMessage(m.chat, {
-      text: '⚠️ Alas! The winds of wisdom didn’t blow our way this time.\nTry again in a bit 🕊️📜',
-    }, { quoted: m });
-  }
+        await client.sendMessage(m.chat, { text: quoteMessage }, { quoted: m });
+    } catch (error) {
+        console.error('Error fetching data:', error);
+        await client.sendMessage(
+            m.chat,
+            { text: '😵‍💫 My wisdom scroll got jammed! Try again shortly, brave seeker.' },
+            { quoted: m }
+        );
+    }
 }
 break;
 //========================================================================================================================//		      
 case "google": {
-  const axios = require("axios");
+    const axios = require("axios");
 
-  if (!text) {
-    return m.reply('🌐✨ You forgot the search spell!\nTry something like:\n`.google What is treason?` 🧙‍♂️🔍');
-  }
-
-  try {
-    let { data } = await axios.get(`https://www.googleapis.com/customsearch/v1?q=${encodeURIComponent(text)}&key=AIzaSyDMbI3nvmQUrfjoCJYLS69Lej1hSXQjnWI&cx=baf9bdb0c631236e5`);
-
-    if (!data.items || data.items.length === 0) {
-      return m.reply("❌ No magical scrolls found for that term... maybe try a different incantation?");
+    if (!text) {
+        return m.reply('🔎 Oops! What do you want me to Google?\nTry: *.google What is treason*');
     }
 
-    let replyText = `🔎✨ *Google Results for:* _${text}_\n\n`;
+    try {
+        let { data } = await axios.get(`https://www.googleapis.com/customsearch/v1?q=${text}&key=AIzaSyDMbI3nvmQUrfjoCJYLS69Lej1hSXQjnWI&cx=baf9bdb0c631236e5`);
 
-    data.items.slice(0, 5).forEach((item, i) => {
-      replyText += `📚 *${i + 1}. ${item.title}*\n🧾 ${item.snippet}\n🔗 ${item.link}\n\n`;
-    });
+        if (!data.items || data.items.length === 0) {
+            return m.reply("😬 No results found! Maybe try rephrasing that?");
+        }
 
-    await client.sendMessage(m.chat, { text: replyText }, { quoted: m });
+        let tex = `🌐 *Google Search Results for:* _${text}_\n\n`;
 
-  } catch (error) {
-    console.error("Google search error:", error);
-    m.reply("⚠️ Whoopsie! The search elves tripped on a wire.\nTry again in a moment 🧝‍♀️🌐");
-  }
+        for (let i = 0; i < data.items.length; i++) {
+            tex += `🔸 *${data.items[i].title}*\n📝 ${data.items[i].snippet}\n🔗 ${data.items[i].link}\n\n`;
+        }
+
+        m.reply(tex);
+
+    } catch (error) {
+        console.error("Error fetching Google results:", error);
+        m.reply("😵 Google had a little meltdown. Try again in a bit!");
+    }
 }
 break;
 //========================================================================================================================//		      
