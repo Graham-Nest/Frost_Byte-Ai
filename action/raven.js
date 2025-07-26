@@ -506,39 +506,27 @@ if (antitag === 'on' && !Owner && isBotAdmin && !isAdmin && m.mentionedJid && m.
         await client.groupParticipantsUpdate(m.chat, [cate], "remove");
     }
 //========================================================================================================================//
-//========================================================================================================================//
-async function displayAnimatedReply(client, from, finalText) {
-  // A modern, spinning loader animation sequence
-  const animationFrames = [
-    "◐  Pinging...",
-    "◓  Pinging...",
-    "◑  Pinging...",
-    "◑  Analyzing Latency...",
-    "█▒▒▒▒▒▒▒▒▒ 10%",
-    "███▒▒▒▒▒▒▒ 30%",
-    "█████▒▒▒▒▒ 50%",
-    "███████▒▒▒ 70%",
-    "█████████▒ 90%",
-    "██████████ 100%",
-    "✅ Analysis Complete!"
-  ];
+//========================================================================================================================//	  
+const loading = async () => {
+    const steps = [
+        "〽️ Pinging.",
+        "〽️ Pinging..",
+        "〽️ Pinging...",
+        "📡 Analyzing Latency...",
+        "█▒▒▒▒▒▒▒▒▒ 10%",
+        "███▒▒▒▒▒▒▒ 30%",
+        "█████▒▒▒▒▒ 50%",
+        "███████▒▒▒ 70%",
+        "█████████▒ 90%",
+        "██████████ 100%",
+        "✅ Analysis Complete!"
+    ];
 
-  // Send an initial placeholder message to get its unique key.
-  let { key } = await client.sendMessage(from, { text: '​' }); // Using a zero-width space as a placeholder
-
-  // We'll loop 3 times to make the animation more noticeable.
-  for (let i = 0; i < 3; i++) {
-    for (const frame of animationFrames) {
-      await client.sendMessage(from, { text: frame, edit: key });
-      // Wait for a short duration to make the animation visible to the user.
-      await new Promise(resolve => setTimeout(resolve, 200)); // 200ms delay
+    for (let msg of steps) {
+        await client.sendMessage(m.chat, { text: msg }, { quoted: m });
+        await new Promise(resolve => setTimeout(resolve, 300));
     }
-  }
-
-  // After the animation is complete, edit the message one last time
-  await client.sendMessage(from, { text: finalText, edit: key });
-}
-
+};
 //========================================================================================================================//	  
 const getGreeting = () => {
     const currentHour = DateTime.now().setZone('Africa/Nairobi').hour;
@@ -1210,31 +1198,21 @@ return reply(`Case *${text}* Not found`)
 }
         break;
 //========================================================================================================================//
-case "lyrics2":
-  try {
-    // If no song name is provided, deliver a sassy prompt.
-    if (!text) {
-      return reply(`Oh, you want the lyrical secrets? 🤫 But darling, you haven't even whispered the song's name! 🎶 Spill it, and let's get this lyrical journey started! 🎤✨`);
-    }
-
-    // Search for the song using the provided text.
-    const searches = await Client.songs.search(text);
-    const firstSong = searches[0]; // Assuming the first search result is the most relevant.
-
-    // Fetch the lyrics for the found song.
-    const lyrics = await firstSong.lyrics();
-
-    // Send the fetched lyrics with a classy touch.
-    // Note: 'from' and 'm' are assumed to be available in the scope.
-    await client.sendMessage(from, { text: lyrics }, { quoted: m });
-
-  } catch (error) {
-    // If lyrics aren't found, deliver a sassy and slightly dramatic response.
-    reply(`Ugh, my lyrical radar is *failing* me for "${text}"! 😩 It's like this song is playing hide-and-seek with its own words. 🕵️‍♀️ Try another tune, maybe one that's easier to find? 🌟`);
-    console.log("Lyrics2 Error:", error); // Log the error for debugging.
-  }
-  break;
-
+		      
+		      case "lyrics2": 
+ try { 
+ if (!text) return reply("Provide a song name!"); 
+ const searches = await Client.songs.search(text); 
+ const firstSong = searches[0]; 
+ //await client.sendMessage(from, {text: firstSong}); 
+ const lyrics = await firstSong.lyrics(); 
+ await client.sendMessage(from, { text: lyrics}, { quoted: m }); 
+ } catch (error) { 
+             reply(`I did not find any lyrics for ${text}. Try searching a different song.`); 
+             console.log(error); 
+         }
+        break;	
+		      
 //========================================================================================================================//		      
  case "bible":
 {
@@ -1269,46 +1247,52 @@ break;
 		      
 //========================================================================================================================//
 case 'quran': {
-  // Check if the user provided any text for Surah and Ayah
+  // --- Input Validation with Sassy Flair ---
   if (!text) {
-    // Sassy and stylish prompt for input
-    return reply(`Oh, darling! You've summoned the Quranic wisdom, but forgot to specify *which* verse! 🧐 Please, grace me with the Surah and Ayah, like this: \`quran 2:255\` 📖✨`);
+    // Sassy reply when no text (Surah:Ayah) is provided
+    return reply(`Darling, you've requested the divine word but forgotten the chapter and verse! Do tell, which sacred passage are you seeking? ✨📖 ${getRandomEmoji(['😉', '💖', '💫'])}`);
   }
 
-  // Split the input text by the colon to separate Surah and Ayah
   const input = text.split(":");
   if (input.length !== 2) {
-    // Sassy reply for incorrect format
-    return reply(`Hold up, buttercup! That format is as jumbled as a forgotten prayer. 😅 The divine scriptures require precision: Surah:Ayah. Try \`2:255\` for a classic hit! 👑😉`);
+    // Sassy reply for incorrect input format
+    return reply(`Oh, honey, that format is as confusing as a riddle wrapped in an enigma! 🧐 Please, present it like a queen: Surah:Ayah (e.g., 2:255) 👑✨ ${getRandomEmoji(['💅', '💁‍♀️'])}`);
   }
 
   const [surah, ayah] = input;
-  try {
-    // Fetch the Quran verse from the API
-    const res = await axios.get(`https://api.alquran.cloud/v1/ayah/${surah}:${ayah}/editions/quran-uthmani,en.asad`);
 
-    // Extract the Arabic text, English translation, and Surah information
+  // --- Fetching Quran Verse ---
+  try {
+    // Fetching the Quran verse from the API using axios
+    const res = await axios.get(`https://api.alquran.cloud/v1/ayah/${surah}:${ayah}/editions/quran-uthmani,en.asad`);
+    
+    // Extracting the necessary data from the API response
     const arabic = res.data.data[0].text;
     const english = res.data.data[1].text;
     const surahInfo = res.data.data[0].surah;
 
-    // Construct the classy and stylish message with emojis
-    const msg = `✨ *A Glimpse of Divine Light!* ✨\n\n` +
-      `Unveiling Ayah *${ayah}* from the majestic Surah *${surahInfo.englishName}* (${surahInfo.name}).\n\n` +
-      `📜 **Arabic Script:**\n${arabic}\n\n` +
-      `🌟 **English Essence:**\n${english}\n\n` +
-      `_A requested treasure from the wonderful ${pushname}!_ 💎`;
+    // --- Constructing the Sassy and Emoji-Filled Message ---
+    const msg = `*🌟 A Divine Revelation Just For You, Darling! 🌟*\n\n` +
+      `*${getRandomEmoji(['📜', '📖'])} Surah:* ${surahInfo.englishName} (${surahInfo.name}) ${getRandomEmoji(['🕌', '✨', '🤲'])}\n` +
+      `*${getRandomEmoji(['🔢', '📌'])} Ayah:* ${ayah} ${getRandomEmoji(['💫', '💖', '✨'])}\n\n` +
+      `*${getRandomEmoji(['🕌', '🕋'])} Arabic:* \n${arabic} ${getRandomEmoji(['🌙', '✨', '🙏'])}\n\n` +
+      `*${getRandomEmoji(['🌍', '📖'])} English Translation:* \n${english} ${getRandomEmoji(['📚', '✨', '📖'])}\n\n` +
+      `_A special request from your dearest, ${pushname}! ${getRandomEmoji(['😘', '💖', '💋', '😇'])}_`;
 
-    // Send the formatted message back to the chat
+    // --- Sending the Message ---
+    // Sending the crafted message back to the chat
     client.sendMessage(m.chat, { text: msg }, { quoted: m });
+
   } catch (e) {
-    // Sassy reply if the verse could not be found
-    console.error(e); // Log the error for debugging
-    reply(`Oh dear, it seems that verse is playing coy and hiding from us. 🕵️‍♀️ Are you absolutely certain about those Surah and Ayah numbers? Let's try again with the correct divine coordinates, shall we? 📚💫`);
+    // --- Error Handling with Sassy Tone ---
+    console.error("Quran API error:", e.response ? e.response.data : e.message); // Log detailed error for debugging
+    
+    // Sassy reply when the verse cannot be found
+    reply(`My apologies, my dear, but it seems that particular verse has taken a little vacation. ✈️ Perhaps try another, or double-check your divine coordinates? 🗺️🙏 ${getRandomEmoji(['🙄', '😔', '✨'])}`);
   }
 }
 break;
-
+		      
 //========================================================================================================================//	
 case "pair":
 case "rent": {
@@ -1361,69 +1345,48 @@ case "rent": {
 break;
 
 //========================================================================================================================//
-case "song2": {
-  // If no song title is provided, prompt the user with a sassy request.
-  if (!text) {
-    return reply(`Oh, a music lover! 🎶 But darling, you haven't told me *which* masterpiece to conjure. 🧐 Spill the title, and let's get this party started! ✨`);
-  }
-
-  try {
-    // Search for the song using the yts library.
+	      case "song2": {
+    if (!text) m.reply("What song you want to download.");
+try {
     let search = await yts(text);
-
-    // If no results are found, respond with a sassy message indicating the song is playing hide-and-seek.
-    if (!search.all.length) {
-      return reply(`Oof, darling, I scoured the digital universe, but your requested track is playing hard to get! 🕵️‍♀️ No results found. Wanna try another banger? 💥`);
-    }
-
-    // Get the URL of the first search result.
-    let link = search.all[0].url;
-
-    // Construct the API URL for downloading the MP3.
+    if (!search.all.length) reply("No results found for your query.");
+    let link = search.all[0].url; 
     const apiUrl = `https://keith-api.vercel.app/download/dlmp3?url=${link}`;
     let response = await fetch(apiUrl);
     let data = await response.json();
 
-    // Check if the API successfully processed the request and returned a result.
-    if (data.status && data.result) {
-      // Prepare the audio data for sending.
+if (data.status && data.result) {
       const audioData = {
         title: data.result.title,
         downloadUrl: data.result.downloadUrl,
-        // thumbnail: search.all[0].thumbnail, // Thumbnail not used in audio message
+        thumbnail: search.all[0].thumbnail,
         format: data.result.format,
         quality: data.result.quality,
       };
 
-      // Send the audio message to the chat.
-      await client.sendMessage(
+await client.sendMessage(
         m.chat,
         {
           audio: { url: audioData.downloadUrl },
-          // Note: 'audio/mp4' is used as per original code. If the API returns MP3, 'audio/mpeg' might be more accurate.
           mimetype: "audio/mp4",
         },
         { quoted: m }
       );
 
-      return; // Exit the case after successfully sending the audio.
-    } else {
-      // If the API failed to fetch the song, respond with a sassy message about the music gods.
-      return reply(`Ugh, the music gods are being *so* extra right now! 🙄 My fetching mechanism is having a moment. Try again in a bit, and hopefully, the vibes will be better! 🎶🤞`);
+      return;
+    } else { 
+      return reply("Unable to fetch the song. Please try again later.");
     }
   } catch (error) {
-    // For any other errors, respond with a playful "whoopsie-daisy" message.
-    console.error("Song2 Error:", error); // Log the error for debugging purposes.
-    return reply(`Whoopsie-daisy! 🌸 It seems a mischievous gremlin has tangled my wires. 👾 An unexpected error occurred. Let's reset and try again, shall we? ✨`);
+    return reply(`An error occurred: `);
   }
 }
 break;
 
-//========================================================================================================================//
-case "song": {		      
+//========================================================================================================================//	      		      
+  case "song": {		      
  if (!text) {
-      // Sassy request for the song name with emojis after punctuation.
-      return client.sendMessage(from, { text: 'Darling, you forgot to tell me *what* song to fetch. 💅 Spill the tea, darling! ☕️👑' }, { quoted: m });
+      return client.sendMessage(from, { text: 'Please provide a song name.' }, { quoted: m });
     }
 
 try {
@@ -1431,14 +1394,12 @@ try {
      const video = search.videos[0];
 
         if (!video) {
-          // Dismissive and sassy response for no results, with emojis after punctuation.
           return client.sendMessage(from, {
-            text: 'Hmm, my search came up empty. 🧐 Did you perhaps misspell that, or is it just *that* obscure? 🤷‍♀️🚫'
+            text: 'No results found for your query.'
           }, { quoted: m });
         }
 	
-        // Dramatic and sassy waiting message with emojis after punctuation.
-        m.reply("_Hold your horses, darling! 🐎 Your auditory delight is being meticulously prepared. ✨ Patience is a virtue, you know! 🎶⏳_");
+m.reply("_Please wait your download is in progress_");
 	
         const safeTitle = video.title.replace(/[\\/:*?"<>|]/g, '');
         const fileName = `${safeTitle}.mp3`;
@@ -1448,14 +1409,13 @@ try {
         const data = response.data;
 
         if (!data.downloadLink) {
-          // Playful "oopsie" for link failure with emojis after punctuation.
           return client.sendMessage(from, {
-            text: 'Oopsie! 👻 The magic link for your MP3 seems to have vanished into the digital ether. 💫 Let\'s try that again, shall we? 😉'
+            text: 'Failed to retrieve the MP3 download link.'
           }, { quoted: m });
 	} 
 	
-        // The audio message itself remains the same, as it's the actual content.
-	await client.sendMessage(from, {
+	
+await client.sendMessage(from, {
           audio: { url: data.downloadLink },
           mimetype: 'audio/mpeg',
           fileName
@@ -1463,19 +1423,17 @@ try {
 
       } catch (err) {
         console.error('[PLAY] Error:', err);
-        // Dramatic and sassy error message, blaming sprites, with emojis after punctuation.
         await client.sendMessage(from, {
-          text: 'Well, this is awkward. 😅 Something went spectacularly wrong behind the scenes. 💥 Blame the mischievous digital sprites! 🧚‍♀️🤯'
+          text: 'An error occurred while processing your request.'
         }, { quoted: m });
 }
 }
 break;
-
+		      
 //========================================================================================================================//
 case "video": {		      
 if (!text) {
-	// Sassy request for the video title with emojis after punctuation.
-	return client.sendMessage(from, { text: 'Darling, you forgot to tell me *what* video to fetch. 💅 Spill the tea, darling! ☕️👑' }, { quoted: m });
+	return client.sendMessage(from, { text: 'Please provide a song name.' }, { quoted: m });
     }
 
 try {
@@ -1483,14 +1441,12 @@ try {
      const video = search.videos[0];
 
         if (!video) {
-          // Dismissive and sassy response for no results, with emojis after punctuation.
           return client.sendMessage(from, {
-            text: 'Hmm, my search came up empty. 🧐 Did you perhaps misspell that, or is it just *that* obscure? 🤷‍♀️🚫'
+            text: 'No results found for your query.'
           }, { quoted: m });
         }
 	
-        // Dramatic and sassy waiting message with emojis after punctuation.
-        m.reply("_Hold your horses, darling! 🐎 Your visual masterpiece is being meticulously prepared. ✨ Patience is a virtue, you know! 🎬⏳_");
+m.reply("_Please wait your download is in progress_");
 	
         const safeTitle = video.title.replace(/[\\/:*?"<>|]/g, '');
         const fileName = `${safeTitle}.mp4`;
@@ -1500,14 +1456,13 @@ try {
         const data = response.data;
 
         if (!data.downloadLink) {
-          // Playful "oopsie" for link failure with emojis after punctuation.
           return client.sendMessage(from, {
-            text: 'Oopsie! 👻 The magic link for your MP4 seems to have vanished into the digital ether. 💫 Let\'s try that again, shall we? 😉'
+            text: 'Failed to retrieve the MP4 download link.'
           }, { quoted: m });
 	} 
 	
-        // The video message itself remains the same, as it's the actual content.
-	await client.sendMessage(from, {
+	
+await client.sendMessage(from, {
           video: { url: data.downloadLink },
           mimetype: 'video/mp4', 
 	  fileName
@@ -1515,73 +1470,60 @@ try {
 
       } catch (err) {
         console.error('[PLAY] Error:', err);
-        // Dramatic and sassy error message, blaming sprites, with emojis after punctuation.
         await client.sendMessage(from, {
-          text: 'Well, this is awkward. 😅 Something went spectacularly wrong behind the scenes. 💥 Blame the mischievous digital sprites! 🧚‍♀️🤯'
+          text: 'An error occurred while processing your request.'
         }, { quoted: m });
 }
       }
   break;
-
 //========================================================================================================================//		      
-case 'video2': {
-    if (!text) {
-        // Sassy request for the video title with enhanced flair and emojis.
-        return client.sendMessage(from, { text: 'Oh, darling! 💅 You\'ve presented me with a blank canvas. Tell me, *what* visual masterpiece shall we conjure? Spill the details! ☕️✨👑' }, { quoted: m });
+   
+   case 'video2': { 
+    if (!text) reply("What video you want to download?");
+ 
+ try { 
+    let search = await yts(text);
+    if (!search.all.length) reply("No results found for your query.");
+    let link = search.all[0].url; 
+    const apiUrl = `https://apis-keith.vercel.app/download/dlmp4?url=${link}`;
+    let response = await fetch(apiUrl);
+    let data = await response.json();
+
+    if (data.status && data.result) {
+      const videoData = {
+        title: data.result.title,
+        downloadUrl: data.result.downloadUrl,
+        thumbnail: search.all[0].thumbnail,
+        format: data.result.format,
+        quality: data.result.quality,
+      };
+
+ await client.sendMessage(
+        m.chat,
+        {
+          video: { url: videoData.downloadUrl },
+          mimetype: "video/mp4",
+          caption: "𝗗𝗢𝗪𝗡𝗟𝗢𝗔𝗗𝗘𝗗 𝗕𝗬 𝗥𝗔𝗩𝗘𝗡-𝗕𝗢𝗧",
+        },
+        { quoted: m }
+      );
+      return;
+    } else {
+      return reply("Unable to fetch the video. Please try again later.");
     }
-
-    try {
-        let search = await yts(text);
-        if (!search.all.length) {
-            // Dismissive and sassy response for no results, with more dramatic emojis.
-            return client.sendMessage(from, { text: 'Good heavens, darling! 🙄 My search yielded precisely zilch. 🚫 Are we *certain* this video even exists in this realm, or have you conjured a phantom? 🤔 Perhaps try a different incantation? 🪄✨' }, { quoted: m });
-        }
-
-        let link = search.all[0].url;
-        const apiUrl = `https://apis-keith.vercel.app/download/dlmp4?url=${link}`;
-        let response = await fetch(apiUrl);
-        let data = await response.json();
-
-        if (data.status && data.result) {
-            const videoData = {
-                title: data.result.title,
-                downloadUrl: data.result.downloadUrl,
-                thumbnail: search.all[0].thumbnail,
-                format: data.result.format,
-                quality: data.result.quality,
-            };
-
-            // Sending the video with a more elaborate, fancy, and sassy caption.
-            await client.sendMessage(
-                m.chat, // Assuming m.chat correctly refers to the chat ID
-                {
-                    video: { url: videoData.downloadUrl },
-                    mimetype: "video/mp4",
-                    // Fancy and sassy caption
-                    caption: "The quantum ⭐ stream has been successfully captured. The entity is now stabilized within the Frost AI's sub-zero containment grid.🌐✨",
-                },
-                { quoted: m }
-            );
-            return; // Exit after successfully sending the video.
-        } else {
-            // Playful "oopsie" for link failure with more dramatic flair.
-            return client.sendMessage(from, { text: 'Oh, for goodness sake! 🤦‍♀️ It appears the download link has eloped with a rogue pixel! 💔 Such drama! 🎭 Let\'s pretend this never happened and try again, shall we? ✨' }, { quoted: m });
-        }
-    } catch (error) {
-        // Dramatic and sassy error message, blaming sprites, with enhanced drama.
-        return client.sendMessage(from, { text: `My stars! 🌟 It seems the digital pixies have been playing with the wires again, causing a rather spectacular chaos! 💥🧚‍♀️ My sincerest apologies, darling, but the magic has fizzled. Blame those impish sprites! 😈✨\nError: ${error.message}` }, { quoted: m });
-    }
+  } catch (error) {
+    return reply(`An error occurred: ${error.message}`);
+  }
 };
-break;
+  break;
 
 //========================================================================================================================//		      
-case "update": case "redeploy": {
+	      case "update": case "redeploy": {
 		      const axios = require('axios');
 
 		if(!Owner) throw NotOwner;
 		     if (!appname || !herokuapi) {
-            // Sassy and brief message for missing Heroku configuration.
-            await m.reply("My dear, your deployment parameters are… *unspecified*. 💅 Ensure your Heroku credentials are correctly calibrated for this stellar upgrade! 💫");
+            await m.reply("It looks like the Heroku app name or API key is not set. Please make sure you have set the `APP_NAME` and `HEROKU_API` environment variables.");
             return;
         }
 
@@ -1602,13 +1544,12 @@ case "update": case "redeploy": {
                     }
                 );
 
-                // Sassy and brief success message for redeployment.
-                await m.reply("Engaging hyperdrive! 🚀 Your bot is receiving a critical firmware update. Prepare for the *Frost-Ai* evolution. ✨");
+                await m.reply("Your bot is undergoing a ruthless upgrade, hold tight for the next 2 minutes as the redeploy executes! Once done, you’ll have the freshest version of *RAVEN-BOT* unleashed upon you.");
                 console.log("Build details:", response.data);
             } catch (error) {
-                // Sassy and brief error message for failed redeployment.
-                await m.reply(`System anomaly detected! 💥 Your upgrade sequence has encountered… *resistance*. 💔 Verify your Heroku API key and app name; the cosmos demands precision! 🌌`);
-                console.error("Error triggering redeploy:", error.response?.data || error.message);
+                const errorMessage = error.response?.data || error.message;
+                await m.reply(`Failed to update and redeploy. Please check if you have set the Heroku API key and Heroku app name correctly.`);
+                console.error("Error triggering redeploy:", errorMessage);
             }
         }
 
@@ -1656,32 +1597,30 @@ case "credits":
   break;
 
 //========================================================================================================================//		      
-case 'poll': {
+	  case 'poll': {
 		  let [poll, opt] = text.split("|")
 
-            // Sassy and brief error message for incorrect format.
-            if (text.split("|").length < 2) {
-                return m.reply(`Oh, darling! 💅 Your poll parameters are… *misaligned*. ✨ Please structure your request with precision: \`poll [your question]|[option1,option2]\` for a flawless creation. 💫`);
-            }
+if (text.split("|") < 2)
+                return m.reply(`Wrong format::\nExample:- poll who is the best president|Putin, Ruto`);
 
-            let options = [];
+let options = []
             for (let i of opt.split(',')) {
-                options.push(i.trim()); // Trim whitespace from options
+                options.push(i)
             }
-
-            // No explicit reply message needed here as the poll is sent directly.
             await client.sendMessage(m.chat, {
                 poll: {
-                    name: poll.trim(), // Trim whitespace from poll question
+                    name: poll,
                     values: options
                 }
-            });
+         
+   })
+
 	  }
 		break;
 
 //========================================================================================================================//		      
-case 'play': {
-     if (!text) return m.reply("Darling, don't leave me hanging! Spill the tea, what fabulous track are we gracing our ears with today? 💅🎤");
+	      case 'play':{
+     if (!text) return m.reply("What song do you want to download?");
 try {
     let search = await yts(text);
     let link = search.all[0].url;
@@ -1710,7 +1649,7 @@ const apis = [
           });
 
           if (response.status !== 200) {
-            m.reply("Ugh, one of my little helpers is throwing a tantrum and refusing to cooperate! So dramatic. 🙄 Try again, maybe they'll be in a better mood for you. 💁‍♀️");
+            m.reply("sorry but the API endpoint didn't respond correctly. Try again later.");
             continue;
           }
 		ffmpeg(response.data)
@@ -1722,7 +1661,7 @@ await client.sendMessage(
                 {
                   document: { url: outputPath },
                   mimetype: "audio/mp3",
-		  caption: "Downloaded. Now, if you'll excuse me, I have important brooding to do. 🖤",
+		  caption: "𝗗𝗢𝗪𝗡𝗟𝗢𝗔𝗗𝗘𝗗 𝗕𝗬 𝗥𝗔𝗩𝗘𝗡-𝗕𝗢𝗧",
                   fileName: outputFileName,
                 },
                 { quoted: m }
@@ -1730,7 +1669,7 @@ await client.sendMessage(
               fs.unlinkSync(outputPath);
             })
             .on("error", (err) => {
-              m.reply("Well, isn't this just *divine*? The audio conversion hit a rather unsightly snag. Blame those pesky tech gremlins, they're always messing with my perfectly curated audio! 💥\n" + err.message);
+              m.reply("Download failed\n" + err.message);
             });
           return;
         }
@@ -1738,16 +1677,16 @@ await client.sendMessage(
         continue;
       }
    }
-    m.reply("Darling, it seems my sources are having an existential crisis today. None of them can fetch the download link! 👻 Perhaps a different tune will appease them? 🤷‍♀️");
+    m.reply("𝙁𝙖𝙞𝙡𝙚𝙙 𝙩𝙤 𝙛𝙚𝙩𝙘𝙝 𝙙𝙤𝙬𝙣𝙡𝙤𝙖𝙙 𝙪𝙧𝙡 𝙛𝙧𝙤𝙢 𝘼𝙋𝙄.");
   } catch (error) {
-    m.reply("Oh, darling, a glitch in the matrix! My systems are throwing a fit. Blame the digital sprites for this mess! 🧚‍♀️\n" + error.message);
+    m.reply("Download failed\n" + error.message);
   }
 }
 break;
 
 //========================================================================================================================//		      
-case "play2": {	      
-    if (!text)  return reply("Don't keep me waiting, darling! Spill the tea, what fabulous track are we diving into today? 💅🎤");		      
+ case "play2": {	      
+    if (!text)  return reply("What song do you want to download?");		      
 try {
     let result = await searchYouTube(text);
     let downloadResult = result ? await downloadYouTube(result.url) : null;
@@ -1766,13 +1705,13 @@ try {
     }
 
     if (!result || !downloadResult) {
-      return reply("Oh, darling, it appears my digital muses are having a collective tantrum! They simply refuse to fetch the download link from any of my fabulous sources. 😩 Try a different track, maybe this one is just *too* iconic for them to process? ✨💁‍♀️");
+      return reply("Unable to retrieve download URL from all sources!");
     }
 
     await client.sendMessage(m.chat, {
       document: { url: downloadResult.downloadUrl },
       mimetype: "audio/mp3",
-      caption: "Voila! Your divine download is ready. Now, if you'll excuse me, I must attend to my very important business of looking fabulous. 😉✨",
+      caption: "𝗗𝗢𝗪𝗡𝗟𝗢𝗔𝗗𝗘𝗗 𝗕𝗬 𝗥𝗔𝗩𝗘𝗡-𝗕𝗢𝗧",
       fileName: `${result.title.replace(/[^a-zA-Z0-9 ]/g, "")}.mp3`,
       }, { quoted: m });
  
@@ -1783,19 +1722,19 @@ try {
 
   } catch (error) {
     console.error('Error:', error);
-    return reply(`Well, butter my biscuit! It seems the digital sprites have decided to play dress-up with my circuits. 🧚‍♀️💥 A tiny hiccup, darling! Let's see... ${error.message}`);
+    return reply(`An error occurred: ${error.message}`);
   }
 }
  break;
-
+		      
 //========================================================================================================================//	      	      
-case "inspect": {
+	      case "inspect": {
 const fetch = require('node-fetch');
 const cheerio = require('cheerio');
 
-    if (!text) return m.reply("Darling, you can't expect me to inspect thin air! Provide a valid web link so I can work my magic and uncover all its secrets – HTML, CSS, JavaScript, the whole glamorous shebang! ✨");
+    if (!text) return m.reply("Provide a valid web link to fetch! The bot will crawl the website and fetch its HTML, CSS, JavaScript, and any media embedded in it.");
     if (!/^https?:\/\//i.test(text)) {
-        return m.reply("Honestly, a URL without `http://` or `https://`? That's just *tragic*. Please, darling, present it properly so I can proceed. 💅");
+        return m.reply("Please provide a URL starting with http:// or https://");
     }
 
     try {
@@ -1807,8 +1746,7 @@ const cheerio = require('cheerio');
         $('img[src], video[src], audio[src]').each((i, element) => {
             let src = $(element).attr('src');
             if (src) {
-                // Resolve relative URLs
-                mediaFiles.push(new URL(src, text).href);
+                mediaFiles.push(src);
             }
         });
 
@@ -1816,8 +1754,7 @@ const cheerio = require('cheerio');
         $('link[rel="stylesheet"]').each((i, element) => {
             let href = $(element).attr('href');
             if (href) {
-                // Resolve relative URLs
-                cssFiles.push(new URL(href, text).href);
+                cssFiles.push(href);
             }
         });
 
@@ -1825,8 +1762,7 @@ const cheerio = require('cheerio');
         $('script[src]').each((i, element) => {
             let src = $(element).attr('src');
             if (src) {
-                // Resolve relative URLs
-                jsFiles.push(new URL(src, text).href);
+                jsFiles.push(src);
             }
         });
 
@@ -1834,33 +1770,33 @@ const cheerio = require('cheerio');
 
         if (cssFiles.length > 0) {
             for (const cssFile of cssFiles) {
-                const cssResponse = await fetch(cssFile);
+                const cssResponse = await fetch(new URL(cssFile, text));
                 const cssContent = await cssResponse.text();
                 await m.reply(`**CSS File Content**:\n\n${cssContent}`);
             }
         } else {
-            await m.reply("Hmm, it appears this website is rather... *unadorned*. No external CSS files found. How utterly pedestrian. 🚶‍♀️");
+            await m.reply("No external CSS files found.");
         }
 
         if (jsFiles.length > 0) {
             for (const jsFile of jsFiles) {
-                const jsResponse = await fetch(jsFile);
+                const jsResponse = await fetch(new URL(jsFile, text));
                 const jsContent = await jsResponse.text();
                 await m.reply(`**JavaScript File Content**:\n\n${jsContent}`);
             }
         } else {
-            await m.reply("Shocking! This site seems to be running on sheer willpower, darling, as there are no external JavaScript files to be found. How quaint. 🕰️");
+            await m.reply("No external JavaScript files found.");
         }
 
         if (mediaFiles.length > 0) {
             await m.reply(`**Media Files Found**:\n${mediaFiles.join('\n')}`);
         } else {
-            await m.reply("My dear, this website is practically a ghost town! No images, no videos, no audio to feast my eyes upon. How utterly... minimalist. 👻");
+            await m.reply("No media files (images, videos, audios) found.");
         }
 
     } catch (error) {
-        console.error('Error:', error);
-        return m.reply(`Well, butter my biscuit! It seems the digital realm is being a bit uncooperative today. A glitch in the matrix, perhaps? 💥 Let's try that again, shall we?\n${error.message}`);
+        console.error(error);
+        return m.reply("An error occurred while fetching the website content.");
     }
 }
 	break;
@@ -2692,25 +2628,24 @@ try {
         const response = await axios.get(url);
         const joke = response.data;
         const jokeMessage = `
-Darling, prepare yourself for a giggle fit! I've unearthed a gem just for you. ✨\n\n
+😂 *Below is a random joke for you* 😂\n\n
 *${joke.setup}*\n\n
 ${joke.punchline} 😄
 `;
         return reply(jokeMessage);
     } catch (e) {
         console.log(e);
-        return reply("Ugh, the joke gods are being *so* uncooperative today, darling! My sources are all dried up. Try again later, maybe they'll be in a better mood. 🙄");
+        return reply("Couldn't fetch a joke right now. Please try again later.");
     }
 }
 break;
 
 //========================================================================================================================//		      
-case "gpass": case 'genpassword': {
+   case "gpass": case 'genpassword': {
 		      try {
         const length = args[0] ? parseInt(args[0]) : 12; // Default length is 12 if not provided
         if (isNaN(length) || length < 8) {
-            // Sassy and fancy reply for invalid length
-            return reply('Darling, a password needs *substance*! Please provide a length of at least 8 characters. Don\'t be shy, give me something fabulous to work with! 😉✨');
+            return reply('Please provide a valid length for the password (Minimum 08 Characters).');
         }
 
         const generatePassword = (len) => {
@@ -2724,8 +2659,7 @@ case "gpass": case 'genpassword': {
         };
 
         const password = generatePassword(length);
-        // Fancy and sassy message before sending the password
-        const message = `Hold onto your hat, darling! Your *highly exclusive*, *super-secret* password is about to be revealed. Prepare to be amazed! 💎👑`;
+        const message = `Below is your password 🔥:`;
 
         // Send initial notification message
         await client.sendMessage(from, { text: message }, { quoted: m });
@@ -2734,124 +2668,108 @@ case "gpass": case 'genpassword': {
         await client.sendMessage(from, { text: password }, { quoted: m });
     } catch (e) {
         console.log(e);
-        // Sassy and fancy error message
-        reply(`Well, butter my biscuit! It seems the password-generating fairies are on strike today. 🧚‍♀️💥 A little hiccup occurred: ${e.message}`);
+        reply(`Error generating password🤕: ${e.message}`);
     }
 }
 break;
 
 //========================================================================================================================//	
-case "funfact": {
+        case "funfact": {
   try {
         const url = 'https://uselessfacts.jsph.pl/random.json?language=en';  // API for random facts
         const response = await axios.get(url);
-        const fact = response.data.text; [[1]](https://gist.github.com/552274ce8b250ab070c3b7e1ed92a558)
+        const fact = response.data.text;
 
         const funFact = `
-✨ Prepare to have your mind mildly amused, darling! Here's a fact that's both utterly fascinating and delightfully pointless. ✨
+ *RAVEN-MD RANDOM FUNFACT* 
 
 ${fact}
 
-Quite something, isn't it? Now, if you'll excuse me, I have more important things to ponder. 😉
+Isn't that interesting? 😄
 `;
 
   return reply(funFact);
     } catch (e) {
         console.log(e);
-        return reply("Ugh, darling, it seems my sources are being *so* dramatic today! They're refusing to cough up a fun fact. 😩 Try again later, perhaps the universe will be more cooperative then. 💫");
+        return reply("An error occurred while fetching a fun fact. Please try again later🤕.");
     }
 }
 break;
 
-//========================================================================================================================//		 
-case 'animegirl': {
+//========================================================================================================================//		      
+	      case 'animegirl': {
 try {
         const apiUrl = `https://api.waifu.pics/sfw/waifu`;
         const response = await axios.get(apiUrl);
         const data = response.data;
 
-        // Sassy and fancy caption
-        const caption = `Behold, darling! A masterpiece of digital art, served fresh from my fabulous collection. Isn't she divine? ✨💖`;
-        await client.sendMessage(from, { image: { url: data.url }, caption: caption }, { quoted: m });
+        await client.sendMessage(from, { image: { url: data.url }, caption: '*GENERATED BY RAVEN MD*' }, { quoted: m });
     } catch (e) {
         console.log(e);
-        // Sassy and fancy error message
-        reply(`Oh, darling, it seems the digital sprites are playing hide-and-seek with my images! 🧚‍♀️💥 A little glitch occurred while fetching this vision of beauty: ${e.message}`);
+        reply(`*Error Fetching Anime Girl image*: ${e.message}`);
     }
 }
 break;
 
 //========================================================================================================================//
 case 'rship': {
-	 // Helper function to format a participant ID into a mentionable string
 	 const toM = (a) => '@' + a.split('@')[0];
 try {
-        // Ensure the command is used within a group chat
+        // Ensure command is used in a group
         if (!m.isGroup) {
-            // Sassy reply for incorrect usage context
-            return reply("Oh, honey, this little matchmaking game is strictly for the *exclusive* company of groups! Take this to your private chat, or gather your crew. 😉");
+            return reply("This command can only be used in groups.");
         }
 
-        // Retrieve all participants from the group metadata
-        // Assuming 'groupMetadata' is available in the current scope
+        // Get group participants
         const participants = groupMetadata.participants.map(p => p.id);
 
-        // Check if there are enough members to form a pair
         if (participants.length < 2) {
-            // Sassy reply for insufficient participants
-            return reply("Darling, I need at least two dazzling individuals to orchestrate a perfect pairing. Gather more lovely souls, and I'll work my magic! ✨");
+            return reply("Not enough members to pair.");
         }
 
-        // Identify the sender of the command
+        // Sender of the command
         const sender = m.sender;
 
-        // Randomly select another participant, ensuring it's not the sender themselves
+        // Randomly select another participant
         let randomParticipant;
         do {
             randomParticipant = participants[Math.floor(Math.random() * participants.length)];
-        } while (randomParticipant === sender); // Keep picking until a different participant is found
+        } while (randomParticipant === sender);
 
-        // Craft a sassy and fancy message announcing the pairing
-        const message = `Get ready, darlings! The stars have aligned and my impeccable matchmaking skills have found your ultimate digital partner! 💖✨\n\nIt's official: ${toM(sender)} and ${toM(randomParticipant)} are a match made in the digital heavens! May your connection be as fabulous as you are. 💘`;
-        
-        // Send the generated message, ensuring the participants are correctly mentioned
+        // Reply with the pairing
+        const message = `${toM(sender)} your match is  ${toM(randomParticipant)}\nCongratulations☠️`;
         await client.sendMessage(from, { text: message, mentions: [sender, randomParticipant] });
     } catch (e) {
         console.error("Error in ship command:", e);
-        // Sassy and fancy error message if something goes wrong
-        reply(`Oh, darling, it seems the love gods are playing hard to get today! 💔 A little hiccup occurred in my matchmaking machinery. Try again, and maybe the stars will align better next time! 💫`);
+        reply("An error occurred while processing the command. Please try again.");
     }
 }
 break;
 
 //========================================================================================================================//
-case 'calculate': case 'calc': {
+	      case 'calculate': case 'calc': {
 try {
-    // Check if any text (expression) was provided
     if (!text) {
-      // Sassy and fancy reply when no expression is given
-      return m.reply("*Darling, even my brilliant mind needs a number to crunch!* Please provide an expression to calculate, like `.calculate 5+72` to dazzle me. ✨🔢");
+      return m.reply("*Example usage:* .calculate 5+72");
     }
 
-    // Validate the input to prevent unsafe operations and ensure it's a valid mathematical expression
+    // Validate the input to prevent unsafe operations
     if (!/^[0-9+\-*/().\s]+$/.test(text)) {
-      // Sassy and fancy reply for invalid input format
-      return m.reply("Oh, darling, that input looks... *unconventional*! 💅 My sophisticated circuits only understand numbers and basic arithmetic operators (+, -, *, /, parentheses). Please present your calculation with elegance! 💫");
+      return m.reply("Invalid format. Only numbers and +, -, *, /, ( ) are allowed.");
     }
 
-    // Evaluate the mathematical expression using eval.
+    // Evaluate the mathematical expression
     let result = eval(text);
 
-    // Reply with the result in a fancy and sassy manner
-    const message = `*Ta-da!* Your brilliant calculation results in: \n\n${result}\n\nMy genius is truly unmatched, isn't it? You're welcome. 👑😉`;
-    m.reply(message);
+    // Reply with the result
+    m.reply(`${result}`);
   } catch (e) {
     console.error("Error in .calculate command:", e);
-    // Sassy and fancy error message if calculation fails
-    m.reply(`Oh, darling, it seems even my sophisticated algorithms stumbled upon an unsolvable enigma! 😵‍💫 There was an error in your calculation: "${e.message}". Please try a more... *comprehensible* expression. 💔`);
+    m.reply("Error in calculation. Please check your expression.");
   }
 }
 break;
+
 //========================================================================================================================//
 case "raven":
 		{
@@ -3715,33 +3633,32 @@ m.reply("An error occured.")
 	      break;
 
 //========================================================================================================================//		      
-case "alive": case "test": {
-  const audiovn = "./Media/alive.mp3";
-  const dooc = {
-    audio: {
-      url: audiovn
-    },
-    mimetype: 'audio/mp4',
-    ptt: true,
-    waveform: [100, 0, 100, 0, 100, 0, 100],
-    fileName: "FROST",
+	      case "alive": case "test": {
+		      const audiovn = "./Media/alive.mp3";
+    const dooc = {
+        audio: {
+          url: audiovn
+        },
+        mimetype: 'audio/mp4',
+        ptt: true,
+        waveform:  [100, 0, 100, 0, 100, 0, 100],
+        fileName: "𝗥𝗮𝘃𝗲𝗻",
 
-    contextInfo: {
-      mentionedJid: [m.sender],
-      externalAdReply: {
-        title: "✨ Darling, I'm not just alive... I'm THRIVING! ✨", 
-        body: "FROST-AI: Your Sassy Digital Companion", 
-        thumbnailUrl: "https://files.catbox.moe/7f98vp.jpg",
-        sourceUrl: 'https://github.com/HunterNick2/RAVEN-BOT', 
-        mediaType: 1,
-        renderLargerThumbnail: true
-      }
-    }
-  };
-  await client.sendMessage(m.chat, dooc, { quoted: m });
-}
-break;
-
+        contextInfo: {
+          mentionedJid: [m.sender],
+          externalAdReply: {
+          title: "𝗛𝗶 𝗛𝘂𝗺𝗮𝗻👋, 𝗜 𝗮𝗺 𝗔𝗹𝗶𝘃𝗲 𝗻𝗼𝘄",
+          body: "𝗥𝗔𝗩𝗘𝗡 𝗕𝗢𝗧",
+          thumbnailUrl: "https://files.catbox.moe/7f98vp.jpg",
+          sourceUrl: '',
+          mediaType: 1,
+          renderLargerThumbnail: true
+          }}
+      };
+	await client.sendMessage(m.chat, dooc, {quoted: m });
+	      }
+		 break;
+		      
 //========================================================================================================================//		      
 	case "removebg": {
 try {
@@ -4107,26 +4024,10 @@ try {
 break;
 		      
 //========================================================================================================================//		      
-case "system": 
-  client.sendMessage(m.chat, { 
-    image: { url: 'https://files.catbox.moe/duv8ac.jpg' }, 
-    caption: `
-👑 *RAVEN-BOT* 👑 - Your sassy digital companion!
-
-⚡️ *SPEED*: Blazing fast at *${Rspeed.toFixed(4)} MS*! Try to keep up, human. 😉
-
-⏳ *UPTIME*: Been rocking for *${runtime(process.uptime())}* straight! No breaks for this queen. 💅
-
-☁️ *PLATFORM*: Living my best life on *Heroku*! Where else would a bot of my caliber reside? ✨
-
-🏡 *HOSTNAME*: You can call me *Raven* – sounds as cool as I am, right? 😎
-
-📚 *LIBRARY*: Powered by the legendary *Baileys* – only the best for me! 🌟
-
-✨ *DEVELOPER*: Crafted with love (and a bit of sass) by the one and only *Nick༆*!
-`
-  }); 
-  break;
+  case "system": 
+  
+              client.sendMessage(m.chat, { image: { url: 'https://files.catbox.moe/duv8ac.jpg' }, caption:`*𝐁𝐎𝐓 𝐍𝐀𝐌𝐄: 𝗥𝗔𝗩𝗘𝗡-𝗕𝗢𝗧*\n\n*𝐒𝐏𝐄𝐄𝐃: ${Rspeed.toFixed(4)} 𝐌𝐒*\n\n*𝐑𝐔𝐍𝐓𝐈𝐌𝐄: ${runtime(process.uptime())}*\n\n*𝐏𝐋𝐀𝐓𝐅𝐎𝐑𝐌: 𝗛𝗲𝗿𝗼𝗸𝘂*\n\n*𝐇𝐎𝐒𝐓𝐍𝐀𝐌𝐄: 𝗥𝗮𝘃𝗲𝗻*\n\n*𝐋𝐈𝐁𝐑𝐀𝐑𝐘: Baileys*\n\n𝐃𝐄𝐕𝐄𝐋𝐎𝐏𝐄𝐑: 𝗡𝗶𝗰𝗸༆`}); 
+ break;
 
 //========================================================================================================================//		      
 case "vcf": case "group-vcf": {
@@ -4391,27 +4292,19 @@ case "remove": case "kick": {
 
        if (!m.isGroup) throw group; 
        if (!isBotAdmin) throw botAdmin; 
-      if (!isAdmin) throw admin; 
+      if (!isAdmin) throw admin;
   
     if (!m.quoted && (!m.mentionedJid || m.mentionedJid.length === 0)) {
-            // Original: return m.reply("Who should i remove !?");
-            return m.reply("My dear, I require a target! Whom shall I remove with my mighty powers? 👑");
+            return m.reply("Who should i remove !?");
         }
         let users = m.mentionedJid[0] ? m.mentionedJid[0] : m.quoted ? m.quoted.sender : null;
         const parts = users.split('@')[0];
 
-if (users == "254756360306@s.whatsapp.net") {
-    // Original: return m.reply("It's an Owner Number! 😡");
-    return m.reply("Oh no, darling, you can't possibly expect me to remove the *owner*! That's simply not done. 🚫👑");
-}
+if (users == "254114660061@s.whatsapp.net") return m.reply("It's an Owner Number! 😡");
 
-	  if (users  == client.decodeJid(client.user.id)) {
-          // Original: throw 'I cannot remove Myself 😡';
-          throw 'As if! I\'m the star of this show, and I can\'t remove myself. 😉';
-      }
+	  if (users  == client.decodeJid(client.user.id)) throw 'I cannot remove Myself 😡';
 
-		      // Original: m.reply(`@${parts} Goodbye🤧`);
-                 m.reply(`Farewell, darling! May your journey elsewhere be... interesting. 👋✨ @${parts}`);
+		      m.reply(`@${parts} Goodbye🤧`);
 
                  await client.groupParticipantsUpdate(m.chat, [users], 'remove'); 
  
@@ -4420,62 +4313,55 @@ if (users == "254756360306@s.whatsapp.net") {
   break;
 
 //========================================================================================================================//		      
-case "instagram": case "igdl": case "ig": { 
+    case "instagram": case "igdl": case "ig": {
 		      
-const { igdl } = require("ruhend-scraper"); 
+const { igdl } = require("ruhend-scraper");
 
   if (!text) {
-    // Original: "Darling, did you forget to spill the Insta tea? 💅✨ Drop that link already!"
-    return m.reply("My dear, one simply cannot conjure content from thin air! 🌟 Pray tell, where is the Instagram link you wish for me to grace with my attention?");
+    return m.reply("Please provide an Instagram link for the video.");
   }
 
   if (!text.includes('https://www.instagram.com/')) {
-    // Original: "Uh oh, that link is as fake as a three-dollar bill! 🙅‍♀️💋 A *real* Insta URL, please!"
-    return m.reply("Oh, heavens no! 😱 That URL appears to be... less than authentic. A genuine Instagram address, if you please, darling.");
+    return m.reply("That is not a valid Instagram link.");
   }
 
 await client.sendMessage(m.chat, {
       react: { text: '✅️', key: m.key }
-    }); 
+    });
 
 
   try {
     
-    const downloadData = await igdl(text); 
+    const downloadData = await igdl(text);
    
     if (!downloadData || !downloadData.data || downloadData.data.length === 0) {
-      // Original: "Oopsie! Looks like that link is a total flop. 🤷‍♀️💔 No video for you, sweetie!"
-      return m.reply("Alas! It seems the link provided leads to an empty vault. 😔 No treasures to be found here, I'm afraid.");
+      return m.reply("No video found at the provided link.");
     }
 
     const videoData = downloadData.data;
     for (let i = 0; i < Math.min(20, videoData.length); i++) {
       const video = videoData[i];
-      const videoUrl = video.url; 
+      const videoUrl = video.url;
 
       await client.sendMessage(m.chat, {
         video: { url: videoUrl },
         mimetype: "video/mp4",
-        // Updated caption for a fancy and sophisticated tone
-        caption: "Your exquisite Instagram content, delivered with unparalleled flair by FROST-AI! 👑✨" 
+        caption: "𝗗𝗢𝗪𝗡𝗟𝗢𝗔𝗗𝗘𝗗 𝗕𝗬 𝗥𝗔𝗩𝗘𝗡-𝗕𝗢𝗧"
       },{ quoted: m });
     }
   } catch (error) {
     console.error(error);
-    // Original: "Well, this is awkward. The system hiccuped. Blame the digital gremlins! 👾🔥"
-    return m.reply("My apologies, a momentary celestial alignment issue has occurred. 🌌 Please bear with me while I recalibrate.");
+    return m.reply("An error occurred while processing the request.");
   }
 }
 break;
 
 //========================================================================================================================//
-case "twitter": case "twtdl": {
- // Original: if (!q) return reply("Please provide a valid Twitter Link !");
- if (!q) return reply("My dearest, a Twitter link is essential for this operation! 💅✨ Pray tell, where is the X-factor you wish for me to fetch?");
+  case "twitter": case "twtdl": {
+ if (!q) return reply("Please provide a valid Twitter Link !");
 
-// Original: if (!text.includes('x.com')) { return m.reply("That is not a valid Twitter link."); }
 if (!text.includes('x.com')) {
-    return m.reply("Oh, darling, that link is as genuine as a plastic diamond! 💎🚫 Please provide a proper X.com URL.");
+    return m.reply("That is not a valid Twitter link.");
 }
 	  
 await client.sendMessage(m.chat, {
@@ -4486,285 +4372,240 @@ try {
     const response = await axios.get(`https://www.dark-yasiya-api.site/download/twitter?url=${q}`);
     const data = response.data;
 
-    // Original: if (!data || !data.status || !data.result) { return reply("Failed to retrieve Twitter video. Please check the link and try again."); }
     if (!data || !data.status || !data.result) {
-      return reply("Alas, the Twitter servers seem to be playing coy! 🤷‍♀️ The link you provided isn't yielding any treasures. Do try again, perhaps with a different gem.");
+      return reply("Failed to retrieve Twitter video. Please check the link and try again.");
     }
 
     const { video_hd } = data.result;
 
 	await client.sendMessage(m.chat, {
               video: { url: video_hd },
-              // Updated caption for Frost-Ai, fancy and sassy tone
-              caption: "Your X-tra special video, courtesy of Frost-Ai! ❄️✨"
+              caption: "𝗗𝗢𝗪𝗡𝗟𝗢𝗔𝗗𝗘𝗗 𝗕𝗬 𝗥𝗔𝗩𝗘𝗡-𝗕𝗢𝗧"
             }, { quoted: m });
 
 	} catch (error) {
     console.error("Error:", error);
-    // Original: reply("An error occurred while processing your request. Please try again.");
-    reply("Well, this is simply *vexing*! A digital kerfuffle has occurred. 😤 Please bear with me and try once more.");
+    reply("An error occurred while processing your request. Please try again.");
   }
 };	      
 	break;
 
 //========================================================================================================================//		      
-case "facebook": case "fb": case "fbdl": {
-    // Original: if (!text) { return m.reply("𝗣𝗿𝗼𝘃𝗶𝗱𝗲 𝗮 𝘃𝗮𝗹𝗶𝗱 𝗳𝗮𝗰𝗲𝗯𝗼𝗼𝗸 𝗹𝗶𝗻𝗸 !"); }
-    if (!text) {
-        return m.reply("My dear, a Facebook link is absolutely essential for this endeavor! 💖 Please provide the URL.");
+	 case "facebook": case "fb": case "fbdl": {
+if (!text) {
+        return m.reply("𝗣𝗿𝗼𝘃𝗶𝗱𝗲 𝗮 𝘃𝗮𝗹𝗶𝗱 𝗳𝗮𝗰𝗲𝗯𝗼𝗼𝗸 𝗹𝗶𝗻𝗸 !");
     }
 
-    // Original: if (!text.includes("facebook.com")) { return m.reply("That is not a facebook link."); }
     if (!text.includes("facebook.com")) {
-        return m.reply("Oh, darling, that link seems to have wandered off the Facebook path! 🚶‍♀️ Please ensure it's a proper Facebook URL.");
+        return m.reply("That is not a facebook link.");
     }
 
-    await client.sendMessage(m.chat, {
-        react: { text: '✅️', key: m.key }
-    });
-
+await client.sendMessage(m.chat, {
+                       react: { text: '✅️', key: m.key }
+                      });
     try {
-        let data = await fetchJson(`https://api.dreaded.site/api/facebook?url=${text}`);
+                let data = await fetchJson(`https://api.dreaded.site/api/facebook?url=${text}`);
 
-        // Original: if (!data || data.status !== 200 || !data.facebook || !data.facebook.sdVideo) { return m.reply("𝗦𝗼𝗿𝗿𝘆 𝘁𝗵𝗲 𝗔𝗣𝗜 𝗱𝗶𝗱𝗻'𝘁 𝗿𝗲𝘀𝗽𝗼𝗻𝗱 𝗰𝗼𝗿𝗿𝗲𝗰𝘁𝗹𝘆. 𝗣𝗹𝗲𝗮𝘀𝗲 𝘁𝗿𝘆 𝗔𝗴𝗮𝗶𝗻 𝗹𝗮𝘁𝗲𝗿!"); }
+
         if (!data || data.status !== 200 || !data.facebook || !data.facebook.sdVideo) {
-            return m.reply("Alas, the digital ether is being uncooperative! 🌫️ The API didn't quite deliver. Please try again later, my love.");
+            return m.reply("𝗦𝗼𝗿𝗿𝘆 𝘁𝗵𝗲 𝗔𝗣𝗜 𝗱𝗶𝗱𝗻'𝘁 𝗿𝗲𝘀𝗽𝗼𝗻𝗱 𝗰𝗼𝗿𝗿𝗲𝗰𝘁𝗹𝘆. 𝗣𝗹𝗲𝗮𝘀𝗲 𝘁𝗿𝘆 𝗔𝗴𝗮𝗶𝗻 𝗹𝗮𝘁𝗲𝗿!");
         }
 
         const fbvid = data.facebook.sdVideo;
 
-        // Original: if (!fbvid) { return m.reply("Wrong facebook data. Please ensure the video exists."); }
         if (!fbvid) {
-            return m.reply("It appears the Facebook data is a tad... elusive. 🧐 Could you double-check that the video is indeed available?");
+            return m.reply("Wrong facebook data. Please ensure the video exists.");
         }
 
         await client.sendMessage(
             m.chat,
             {
                 video: { url: fbvid },
-                // Updated caption for Frost-Ai, fancy and sassy tone
-                caption: "Your Facebook treasure, delivered with frosty flair by Frost-Ai! ❄️✨",
+                caption: "𝗗𝗢𝗪𝗡𝗟𝗢𝗔𝗗𝗘𝗗 𝗕𝗬 𝗥𝗔𝗩𝗘𝗡-𝗕𝗢𝗧",
                 gifPlayback: false,
             },
             { quoted: m }
         );
     } catch (e) {
         console.error("Error occurred:", e);
-        // Original: m.reply("An error occurred. API might be down. Error: " + e.message);
-        m.reply(`Oh, heavens! A rather unfortunate digital mishap has occurred. 😱 The API might be feeling a bit under the weather. Error: ${e.message}`);
+        m.reply("An error occurred. API might be down. Error: " + e.message);
     }
 }
 break;
 
 //========================================================================================================================//		      
-case "tiktok": case "tikdl":  {
-    // Original: if (!text) { return m.reply('Please provide a TikTok video link.'); }
-    if (!text) {
-        return m.reply('My dearest, a TikTok link is paramount! 💖 Please share the URL so I may fetch your content.');
-    }
+      case "tiktok": case "tikdl":  {
+if (!text) {
+    return m.reply('Please provide a TikTok video link.');
+  }
 	      
-    // Original: if (!text.includes("tiktok.com")) { return m.reply("That is not a TikTok link."); }
-    if (!text.includes("tiktok.com")) {
-        return m.reply("Oh, darling, that link seems to have taken a detour from TikTok! 🚫 Please ensure it's a genuine TikTok URL.");
-    }
-
-    await client.sendMessage(m.chat, {
-        react: { text: '✅️', key: m.key }
+if (!text.includes("tiktok.com")) {
+        return m.reply("That is not a TikTok link.");
+}
+await client.sendMessage(m.chat, {
+      react: { text: '✅️', key: m.key }
     });
 
-    try {
-        const response = await axios.get(`https://bk9.fun/download/tiktok?url=${encodeURIComponent(text)}`);
+ try {
+    const response = await axios.get(`https://bk9.fun/download/tiktok?url=${encodeURIComponent(text)}`);
 
-        if (response.data.status && response.data.BK9) {
-            const videoUrl = response.data.BK9.BK9;
-            const description = response.data.BK9.desc;
-            const commentCount = response.data.BK9.comment_count;
-            const likesCount = response.data.BK9.likes_count;
-            const uid = response.data.BK9.uid;
-            const nickname = response.data.BK9.nickname;
-            const musicTitle = response.data.BK9.music_info.title;
+    if (response.data.status && response.data.BK9) {
+      const videoUrl = response.data.BK9.BK9;
+      const description = response.data.BK9.desc;
+      const commentCount = response.data.BK9.comment_count;
+      const likesCount = response.data.BK9.likes_count;
+      const uid = response.data.BK9.uid;
+      const nickname = response.data.BK9.nickname;
+      const musicTitle = response.data.BK9.music_info.title;
 
-            await client.sendMessage(m.chat, {
-                text: `Data fetched successfully✅ wait a moment. . .`,
-            }, { quoted: m });
+      await client.sendMessage(m.chat, {
+        text: `Data fetched successfully✅ wait a moment. . .`,
+      }, { quoted: m });
 
-            await client.sendMessage(m.chat, {
-                video: { url: videoUrl },
-                // Updated caption for Frost-Ai, fancy and sassy tone
-                caption: "Your TikTok delight, served with frosty elegance by Frost-Ai! ❄️✨",
-                gifPlayback: false
-            }, { quoted: m });
+      await client.sendMessage(m.chat, {
+        video: { url: videoUrl },
+        caption: "𝗗𝗢𝗪𝗡𝗟𝗢𝗔𝗗𝗘𝗗 𝗕𝗬 𝗥𝗔𝗩𝗘𝗡-𝗕𝗢𝗧",
+        gifPlayback: false
+      }, { quoted: m });
 
-        } else {
-            // Original: reply('Failed to retrieve video from the provided link.');
-            reply('Alas, the TikTok servers are being rather elusive today! 🤷‍♀️ The link you provided isn\'t yielding any treasures. Do try again, my love.');
-        }
-
-    } catch (e) {
-        // Original: reply(`An error occurred during download: ${e.message}`);
-        reply(`Oh, how utterly vexing! A digital mishap has occurred. 😤 The download process encountered an issue: ${e.message}`);
+    } else {
+      reply('Failed to retrieve video from the provided link.');
     }
+
+  } catch (e) {
+    reply(`An error occurred during download: ${e.message}`);
+  }
 }
-break;
+  break;
 
 //========================================================================================================================//
-case "pinterest": case "pin":
+  case "pinterest": case "pin":
 	      {      
-	// Original: if (!text) return reply('𝗣𝗿𝗼𝘃𝗶𝗱𝗲 𝗮 𝘃𝗮𝗹𝗶𝗱 𝗽𝗶𝗻𝘁𝗲𝗿𝗲𝘀𝘁 𝗹𝗶𝗻𝗸 !');
-	if (!text) return reply('My dearest, a Pinterest link is absolutely essential for this endeavor! 💖 Please provide the URL.');
+	if (!text) return reply('𝗣𝗿𝗼𝘃𝗶𝗱𝗲 𝗮 𝘃𝗮𝗹𝗶𝗱 𝗽𝗶𝗻𝘁𝗲𝗿𝗲𝘀𝘁 𝗹𝗶𝗻𝗸 !');
 		      
-	// Original: if (!text.includes("pin.it")) { return m.reply("That is not a pinterest link."); }
-	if (!text.includes("pin.it")) {
-        return m.reply("Oh, darling, that link seems to have wandered off the Pinterest path! 🚶‍♀️ Please ensure it's a proper pin.it URL.");
+if (!text.includes("pin.it")) {
+        return m.reply("That is not a pinterest link.");
     }	
-	
-    await client.sendMessage(m.chat, {
+await client.sendMessage(m.chat, {
       react: { text: '✅️', key: m.key }
     });
  
-	try {
+try {
         const pinterestUrl = text;
         const response = await axios.get(`https://bk9.fun/download/pinterest?url=${encodeURIComponent(pinterestUrl)}`);
 
-        // Original: if (!response.data.status) { return reply('Unable to fetch pinterest data.'); }
         if (!response.data.status) {
-            return reply('Alas, the Pinterest servers are being rather elusive today! 🤷‍♀️ The link you provided isn\'t yielding any treasures. Do try again, my love.');
+            return reply('Unable to fetch pinterest data.');
         }
 
         const media = response.data.BK9;
-        // Updated caption for Frost-Ai, fancy and sassy tone
-        const capp = "Your Pinterest treasure, delivered with frosty flair by Frost-Ai! ❄️✨";
+        const capp = `𝗗𝗢𝗪𝗡𝗟𝗢𝗔𝗗𝗘𝗗 𝗕𝗬 𝗥𝗔𝗩𝗘𝗡-𝗕𝗢𝗧`;
 
-        if (media.length > 0) {
+if (media.length > 0) {
             const videoUrl = media.find(item => item.url.includes('.mp4'))?.url;
             const imageUrl = media.find(item => item.url.includes('.jpg'))?.url;
 
-            if (videoUrl) {
+if (videoUrl) {
                 await client.sendMessage(m.chat, { video: { url: videoUrl }, caption: capp }, { quoted: m });
-            } else if (imageUrl) {
+            } else 
+if (imageUrl) {
                 await client.sendMessage(m.chat, { image: { url: imageUrl }, caption: capp }, { quoted: m });
             } else {
-                // Original: reply('No Video found!');
-                reply('It seems the Pinterest treasures are all videos today, and I couldn\'t find one! 🧐 Could you double-check the link?');
+                reply('No Video found!');
             }
         } else {
-            // Original: reply('No Image found.');
-            reply('It appears the Pinterest treasures are all images today, and I couldn\'t find one! 🧐 Could you double-check the link?');
+            reply('No Image found.');
         }
     } catch (e) {
         console.error(e);
-        // Original: await client.sendMessage(m.chat, { react: { text: '☠️', key: mek.key } });
-        // Assuming 'mek.key' is meant to be 'm.key' for consistency
-        await client.sendMessage(m.chat, { react: { text: '☠️', key: m.key } });
-        // Original: reply('An error occurred while processing your request.');
-        reply('Oh, heavens! A rather unfortunate digital mishap has occurred. 😱 Please bear with me and try once more.');
+        await client.sendMessage(m.chat, { react: { text: '☠️', key: mek.key } });
+        reply('An error occurred while processing your request.');
     }
 }
 break;
-
+		      
 //========================================================================================================================//
-case "epl": case "epl-table": {
+	      case "epl": case "epl-table": {
+		      
 try {
-        // Assuming fetchJson is a globally available or imported function for fetching JSON data
         const data = await fetchJson('https://api.dreaded.site/api/standings/PL');
-        const standings = data.data; // This contains the formatted string of standings
+        const standings = data.data;
 
-        // Craft a brief, fancy, and sassy success message for EPL standings
-        const message = `✨ EPL update, darling! Your weekly dose of football fabulousness, served with extra sass! ⚽👑\n\n${standings}\n\nMay your faves reign supreme! 😉🌟`;
+        const message = ` 𝗖𝘂𝗿𝗿𝗲𝗻𝘁 𝗘𝗽𝗹 𝗧𝗮𝗯𝗹𝗲 𝗦𝘁𝗮𝗻𝗱𝗶𝗻𝗴𝘀:-\n\n${standings}`;
 
         await m.reply(message);
     } catch (error) {
-        // Craft a brief, fancy, and sassy error message for EPL standings
-        console.error("Error fetching EPL standings:", error); // Log the error for debugging
-        m.reply(`Oh, darling! 🙄 The EPL connection is being a total drama queen today. Can't fetch the standings! 😩\n\nTry again soon, maybe the Wi-Fi fairies will be kinder! 🧚‍♀️💫`);
+        m.reply('Something went wrong. Unable to fetch 𝗘𝗽𝗹 standings.');
     }
+
  }
 	break;
-
+		      
 //========================================================================================================================//
-case "laliga": case "pd-table": {
+	      case "laliga": case "pd-table": {
 try {
-        // Assuming fetchJson is a globally available or imported function for fetching JSON data
         const data = await fetchJson('https://api.dreaded.site/api/standings/PD');
-        const standings = data.data; // This contains the formatted string of La Liga standings
+        const standings = data.data;
 
-        // Craft a brief, fancy, and sassy success message for La Liga standings
-        const message = `👑 ¡Hola, darling! Your La Liga fix is served, hotter than a Spanish sun! 🇪🇸⚽ Get your dose of football fabulousness right here:\n\n${standings}\n\nMay your faves snatch victory! 😉🌟`;
-
+        const message = `𝗖𝘂𝗿𝗿𝗲𝗻𝘁 𝗟𝗮𝗹𝗶𝗴𝗮 𝗧𝗮𝗯𝗹𝗲 𝗦𝘁𝗮𝗻𝗱𝗶𝗻𝗴𝘀:-\n\n${standings}`;
         await m.reply(message);
 
     } catch (error) {
-        // Craft a brief, fancy, and sassy error message for La Liga standings
-        console.error("Error fetching La Liga standings:", error); // Log the error for debugging
-        m.reply(`Ugh, darling! 😩 The La Liga connection is being a total diva today. Can't fetch the standings! 💔\n\nTry again soon, maybe the football gods will be more cooperative! ✨🤞`);
+        m.reply('Something went wrong. Unable to fetch 𝗟𝗮𝗹𝗶𝗴𝗮 standings.');
   }
-}
+}   
 break;
-
+		      
 //========================================================================================================================//
-case "bundesliga": case "bl-table": {
+	      case "bundesliga": case "bl-table": {
 try {
-        // Assuming fetchJson is a globally available or imported function for fetching JSON data
         const data = await fetchJson('https://api.dreaded.site/api/standings/BL1');
-        const standings = data.data; // This contains the formatted string of Bundesliga standings
+        const standings = data.data;
 
-        // Craft a brief, fancy, and sassy success message for Bundesliga standings
-        const message = `🇩🇪 Bundesliga's here, darling! 🌭⚽ Your football fix, served with sparkle! ✨\n\n${standings}\n\nMay your faves win! Prost! 🍻😉`;
-
+        const message = `𝗖𝘂𝗿𝗿𝗲𝗻𝘁 𝗕𝘂𝗻𝗱𝗲𝘀𝗹𝗶𝗴𝗮 𝗧𝗮𝗯𝗹𝗲 𝗦𝘁𝗮𝗻𝗱𝗶𝗻𝗴𝘀\n\n${standings}`;
         await m.reply(message);
 
     } catch (error) {
-        // Craft a brief, fancy, and sassy error message for Bundesliga standings
-        console.error("Error fetching Bundesliga standings:", error); // Log the error for debugging
-        m.reply(`Oh, darling! 😩 Bundesliga standings are being a diva today. Connection issues! 💔\n\nTry again soon, fingers crossed! 🤞🇩🇪`);
+        m.reply('Something went wrong. Unable to fetch 𝗕𝘂𝗻𝗱𝗲𝘀𝗹𝗶𝗴𝗮 standings.');
     }
 }
 break;
-
+		      
 //========================================================================================================================//
-case "ligue-1": case "lg-1": {
+	      case "ligue-1": case "lg-1": {
   try {
-        // Assuming fetchJson is a globally available or imported function for fetching JSON data
         const data = await fetchJson('https://api.dreaded.site/api/standings/FL1');
-        const standings = data.data; // This contains the formatted string of Ligue 1 standings
+        const standings = data.data;
 
-        // Craft a brief, fancy, and sassy success message for Ligue 1 standings
-        const message = `Bonjour, darling! 🇫🇷 Your chic Ligue 1 table has arrived, served with a side of Parisian flair! ⚽✨\n\n${standings}\n\nMay your favorite French clubs conquer the pitch! Magnifique! 😉`;
+        const message = `𝗖𝘂𝗿𝗿𝗲𝗻𝘁 𝗟𝗶𝗴𝘂𝗲-1 𝗧𝗮𝗯𝗹𝗲 𝗦𝘁𝗮𝗻𝗱𝗶𝗻𝗴𝘀\n\n${standings}`;
         await m.reply(message);
 
     } catch (error) {
-        // Craft a brief, fancy, and sassy error message for Ligue 1 standings
-        console.error("Error fetching Ligue 1 standings:", error); // Log the error for debugging
-        m.reply(`Ugh, darling! 🙄 The Ligue 1 connection is being as stubborn as a defender! Can't fetch the standings. 💔🇫🇷\n\nTry again later, maybe the football spirits will be kinder! ✨`);
+        m.reply('Something went wrong. Unable to fetch 𝗹𝗶𝗴𝘂𝗲-1 standings.');
     }
 }
 break;
-
+		      
 //========================================================================================================================//
-case "serie-a": case "sa-table":{
+	      case "serie-a": case "sa-table":{
 try {
-        // Assuming fetchJson is a globally available or imported function for fetching JSON data
         const data = await fetchJson('https://api.dreaded.site/api/standings/SA');
-        const standings = data.data; // This contains the formatted string of Serie A standings
+        const standings = data.data;
 
-        // Craft a brief, fancy, and sassy success message for Serie A standings
-        const message = `Ciao, darling! 🇮🇹 Your Serie A table has arrived, hotter than a fresh cannoli! 🍝⚽ Get your dose of Italian football fabulousness right here:\n\n${standings}\n\nMay your favorite clubs score big! Bellissimo! 😉✨`;
+        const message = `𝗖𝘂𝗿𝗿𝗲𝗻𝘁 𝗦𝗲𝗿𝗶𝗲-𝗮 𝗧𝗮𝗯𝗹𝗲 𝗦𝘁𝗮𝗻𝗱𝗶𝗻𝗴𝘀\n\n${standings}`;
         await m.reply(message);
 
     } catch (error) {
-        // Craft a brief, fancy, and sassy error message for Serie A standings
-        console.error("Error fetching Serie A standings:", error); // Log the error for debugging
-        m.reply(`Ugh, darling! 😩 The Serie A connection is being as stubborn as a perfectly aged Parmigiano. Can't fetch the standings! 💔🇮🇹\n\nTry again soon, maybe the football gods will be more cooperative! ✨`);
+        m.reply('Something went wrong. Unable to fetch 𝗦𝗲𝗿𝗶𝗲-𝗮 standings.');
     }
 }
 break;
-
+		      
 //========================================================================================================================//
-case "fixtures": case "matches": {
+     case "fixtures": case "matches": {
  try {
         let pl, laliga, bundesliga, serieA, ligue1;
 
-        // Fetching match data for each league
         const plData = await fetchJson('https://api.dreaded.site/api/matches/PL');
         pl = plData.data;
 
@@ -4777,536 +4618,392 @@ case "fixtures": case "matches": {
         const serieAData = await fetchJson('https://api.dreaded.site/api/matches/SA');
         serieA = serieAData.data;
 
-        // Note: The API endpoint for Ligue 1 is 'FR' in this snippet.
         const ligue1Data = await fetchJson('https://api.dreaded.site/api/matches/FR');
         ligue1 = ligue1Data.data;
 
-        // Crafting a sassy and brief success message
-        let message = `⚽🔥 Your daily football fix has landed, darling! Get ready for some global pitch action! 🌍✨\n\n`;
+        let message = `𝗧𝗼𝗱𝗮𝘆𝘀 𝗙𝗼𝗼𝘁𝗯𝗮𝗹𝗹 𝗙𝗶𝘅𝘁𝘂𝗿𝗲𝘀 ⚽\n\n`;
 
-        // Premier League
-        if (typeof pl === 'string') {
-            message += `🇬🇧 Premier League:\n${pl}\n\n`;
-        } else if (Array.isArray(pl) && pl.length > 0) {
-            message += `🇬🇧 Premier League:\n${pl.map(match => {
-                const { game, date, time } = match;
-                return `${game}\nDate: ${date}\nTime: ${time} (EAT)\n`;
-            }).join('\n')}\n\n`;
-        } else {
-            message += "🇬🇧 Premier League: No matches scheduled today, darling. How quiet! 🤫\n\n";
-        }
+        message += typeof pl === 'string' ? `🇬🇧 𝗣𝗿𝗲𝗺𝗶𝗲𝗿 𝗟𝗲𝗮𝗴𝘂𝗲:\n${pl}\n\n` : pl.length > 0 ? `🇬🇧 𝗣𝗿𝗲𝗺𝗶𝗲𝗿 𝗟𝗲𝗮𝗴𝘂𝗲:\n${pl.map(match => {
+            const { game, date, time } = match;
+            return `${game}\nDate: ${date}\nTime: ${time} (EAT)\n`;
+        }).join('\n')}\n\n` : "🇬🇧 𝗣𝗿𝗲𝗺𝗶𝗲𝗿 𝗟𝗲𝗮𝗴𝘂𝗲: No matches scheduled\n\n";
 
-        // La Liga
         if (typeof laliga === 'string') {
-            message += `🇪🇸 La Liga:\n${laliga}\n\n`;
-        } else if (Array.isArray(laliga) && laliga.length > 0) {
-            message += `🇪🇸 La Liga:\n${laliga.map(match => {
+            message += `🇪🇸 𝗟𝗮 𝗟𝗶𝗴𝗮:\n${laliga}\n\n`;
+        } else {
+            message += laliga.length > 0 ? `🇪🇸 𝗟𝗮 𝗟𝗶𝗴𝗮:\n${laliga.map(match => {
                 const { game, date, time } = match;
                 return `${game}\nDate: ${date}\nTime: ${time} (EAT)\n`;
-            }).join('\n')}\n\n`;
-        } else {
-            message += "🇪🇸 La Liga: No games today, darling. The Spanish sun is too hot for football! ☀️\n\n";
+            }).join('\n')}\n\n` : "🇪🇸 𝗟𝗮 𝗟𝗶𝗴𝗮: No matches scheduled\n\n";
         }
 
-        // Bundesliga
-        if (typeof bundesliga === 'string') {
-            message += `🇩🇪 Bundesliga:\n${bundesliga}\n\n`;
-        } else if (Array.isArray(bundesliga) && bundesliga.length > 0) {
-            message += `🇩🇪 Bundesliga:\n${bundesliga.map(match => {
-                const { game, date, time } = match;
-                return `${game}\nDate: ${date}\nTime: ${time} (EAT)\n`;
-            }).join('\n')}\n\n`;
-        } else {
-            message += "🇩🇪 Bundesliga: Nada today, darling. Germany is taking a well-deserved break! 😴\n\n";
-        }
+        message += typeof bundesliga === 'string' ? `🇩🇪 𝗕𝘂𝗻𝗱𝗲𝘀𝗹𝗶𝗴𝗮:\n${bundesliga}\n\n` : bundesliga.length > 0 ? `🇩🇪 𝗕𝘂𝗻𝗱𝗲𝘀𝗹𝗶𝗴𝗮:\n${bundesliga.map(match => {
+            const { game, date, time } = match;
+            return `${game}\nDate: ${date}\nTime: ${time} (EAT)\n`;
+        }).join('\n')}\n\n` : "🇩🇪 𝗕𝘂𝗻𝗱𝗲𝘀𝗹𝗶𝗴𝗮: No matches scheduled\n\n";
 
-        // Serie A
-        if (typeof serieA === 'string') {
-            message += `🇮🇹 Serie A:\n${serieA}\n\n`;
-        } else if (Array.isArray(serieA) && serieA.length > 0) {
-            message += `🇮🇹 Serie A:\n${serieA.map(match => {
-                const { game, date, time } = match;
-                return `${game}\nDate: ${date}\nTime: ${time} (EAT)\n`;
-            }).join('\n')}\n\n`;
-        } else {
-            message += "🇮🇹 Serie A: No footballing drama today, how sad! Italy is enjoying a pasta break. 🍝\n\n";
-        }
+        message += typeof serieA === 'string' ? `🇮🇹 𝗦𝗲𝗿𝗶𝗲 𝗔:\n${serieA}\n\n` : serieA.length > 0 ? `🇮🇹 𝗦𝗲𝗿𝗶𝗲 𝗔:\n${serieA.map(match => {
+            const { game, date, time } = match;
+            return `${game}\nDate: ${date}\nTime: ${time} (EAT)\n`;
+        }).join('\n')}\n\n` : "🇮🇹 𝗦𝗲𝗿𝗶𝗲 𝗔: No matches scheduled\n\n";
 
-        // Ligue 1
-        if (typeof ligue1 === 'string') {
-            message += `🇫🇷 Ligue 1:\n${ligue1}\n\n`;
-        } else if (Array.isArray(ligue1) && ligue1.length > 0) {
-            message += `🇫🇷 Ligue 1:\n${ligue1.map(match => {
-                const { game, date, time } = match;
-                return `${game}\nDate: ${date}\nTime: ${time} (EAT)\n`;
-            }).join('\n')}\n\n`;
-        } else {
-            message += "🇫🇷 Ligue 1: Zilch today, darling. France is enjoying a leisurely afternoon. 🥐\n\n";
-        }
+        message += typeof ligue1 === 'string' ? `🇫🇷 𝗟𝗶𝗴𝘂𝗲 1:\n${ligue1}\n\n` : ligue1.length > 0 ? `🇫🇷 𝗟𝗶𝗴𝘂𝗲 1:\n${ligue1.map(match => {
+            const { game, date, time } = match;
+            return `${game}\nDate: ${date}\nTime: ${time} (EAT)\n`;
+        }).join('\n')}\n\n` : "🇫🇷 𝗟𝗶𝗴𝘂𝗲- 1: No matches scheduled\n\n";
 
-        message += `\nAll times are in glorious East Africa Time (EAT). Now go enjoy the games! 😉`;
+        message += "𝗧𝗶𝗺𝗲 𝗮𝗻𝗱 𝗗𝗮𝘁𝗲 𝗮𝗿𝗲 𝗶𝗻 𝗘𝗮𝘀𝘁 𝗔𝗳𝗿𝗶𝗰𝗮 𝗧𝗶𝗺𝗲𝘇𝗼𝗻𝗲 (𝗘𝗔𝗧).";
 
         await m.reply(message);
     } catch (error) {
-        // Crafting a sassy and brief error message
-        console.error("Error fetching matches:", error); // Log the error for debugging
-        // Updated sassy error message
-        m.reply(`Oh, darling! 😩 It seems the football gods are having a major tantrum today, and the match data is completely off the pitch! 💔⚽ Can't fetch your fixtures. Try again later, maybe the connection will decide to play nice! ✨🤞`);
+        m.reply('Something went wrong. Unable to fetch matches.' + error);
     }
-}
-break;
-
+};
+break;		      
+		      
 //========================================================================================================================//		      
-case 'sc': case 'script': case 'repo':
-  client.sendMessage(m.chat, { 
-    image: { url: `https://telegra.ph/file/416c3ae0cfe59be8db011.jpg` }, 
-    caption: `
-✨ Hey there, *${pushname}*! ✨
+ case 'sc': case 'script': case 'repo':
 
-Wanna peek behind the curtain? My glorious code lives here:
-🔗 *GitHub Repo:* https://github.com/HunterNick2/RAVEN-BOT
-Go on, *fork* me! And a *star* wouldn't hurt, darling. 😉🌟
+ client.sendMessage(m.chat, { image: { url: `https://telegra.ph/file/416c3ae0cfe59be8db011.jpg` }, caption: ` Hello👋 *${pushname}*, 𝗕𝗲𝗹𝗼𝘄 𝗶𝘀 𝗥𝗔𝗩𝗘𝗡-𝗕𝗢𝗧 𝗴𝗶𝘁𝗵𝘂𝗯 𝗿𝗲𝗽𝗼𓅂\n\nFork and maybe give us a star🌟.\n\n https://github.com/HunterNick2/RAVEN-BOT\n\nLink with your whatsapp using pairing link below\n\nhttps://pairing-raven.onrender.com\n\nCopy the session and paste it on the SESSION string, Fill in the other required Variables before Deploy\n\nEnjoy and have fun with the Bot\n\n𝗠𝗮𝗱𝗲 𝗼𝗻 𝗲𝗮𝗿𝘁𝗵 𝗯𝘆 𝗛𝘂𝗺𝗮𝗻𝘀 !`},{quoted : m });
 
-Ready to join forces? Pair up with me!
-🔗 *Pairing Link:* https://pairing-raven.onrender.com
-Grab that session, fill your vars, and let's get this show on the road! 🚀
-
-Enjoy the magic! 🎩🥂
-`
-  },{quoted : m });
-  break;
-                        
+   break;
+                                                  
 //========================================================================================================================//
-case 'closetime':
-                if (!m.isGroup) throw group; 
-                if (!isAdmin) throw admin; 
-                if (!isBotAdmin) throw botAdmin; 
-
-                let timer; 
-
-                // Determine the timer duration
-                if (args[1] === 'second') {
-                    timer = args[0] * 1000; 
-                } else if (args[1] === 'minute') {
-                    timer = args[0] * 60000; 
-                } else if (args[1] === 'hour') {
-                    timer = args[0] * 3600000; 
-                } else if (args[1] === 'day') {
-                    timer = args[0] * 86400000; 
+		      case 'closetime':
+                if (!m.isGroup) throw group;
+                if (!isAdmin) throw admin;
+                if (!isBotAdmin) throw botAdmin;
+                if (args[1] == 'second') {
+                    var timer = args[0] * `1000`
+                } else if (args[1] == 'minute') {
+                    var timer = args[0] * `60000`
+                } else if (args[1] == 'hour') {
+                    var timer = args[0] * `3600000`
+                } else if (args[1] == 'day') {
+                    var timer = args[0] * `86400000`
                 } else {
-                    // Sassy error message 
-                    return reply('Oh, *bless your heart*. Did you forget how to read? 🙄 The options are `second`, `minute`, `hour`, or `day`. Try again, sweetie. 💅');
+                    return reply('*select:*\nsecond\nminute\nhour\n\n*Example*\n10 second')
                 }
-
-                // Sassy confirmation message 
-                reply(`Alright, buckle up! 🚀 The group is set to close in ${q}. Hope you're ready for the quiet! 🤫`);
-
-                // Set a timeout to close the group
+                reply(`Countdown of  ${q} starting from now to close the group`)
                 setTimeout(() => {
-
-                    // Sassy and fancy message 
-                    const close = `And just like that... **POOF!** ✨ The group has been officially **CLOSED**. Enjoy the blissful silence (or the deafening quiet)! 🤫🚪`;
-                    client.groupSettingUpdate(m.chat, 'announcement'); // Update group setting to announcement mode
-                    reply(close); 
-                }, timer); 
-
-                break; 
-
-//========================================================================================================================//		      
-case 'opentime':
-    if (!m.isGroup) throw "Darling, this command is strictly for group chats. Try again, but in the right place, okay? 💅";
-    if (!isAdmin) throw "Hold up, superstar! You need admin powers to pull this off. Not today, not without the crown. 👑🚫";
-    if (!isBotAdmin) throw "My dear, I need admin privileges to work my magic! Get me promoted, or this won't happen. ✨💁‍♀️";
-    if (args[1] == 'second') {
-        var timer = args[0] * 1000; // Using number directly instead of string concatenation
-    } else if (args[1] == 'minute') {
-        var timer = args[0] * 60000;
-    } else if (args[1] == 'hour') {
-        var timer = args[0] * 3600000;
-    } else if (args[1] == 'day') {
-        var timer = args[0] * 86400000;
-    } else {
-        return reply("Seriously? That's not how you set a timer, sweetie. Try again with a valid unit like 'second', 'minute', or 'hour'. Don't make me spell it out! 🙄");
-    }
-    // Assuming 'q' is a variable holding the formatted duration, e.g., "10 seconds"
-    reply(`Alright, buckle up! The group is about to get a glow-up in ${q}. Get ready! ✨🚀`);
-    setTimeout(() => {
- 
-        const open = `Ta-da! The gates are open! 🚪✨ Welcome back, everyone! Hope you missed me. 😘`;
-        client.groupSettingUpdate(m.chat, 'not_announcement');
-        reply(open);
-    }, timer);
-    break;
-
-//========================================================================================================================//		
-case "close":
-case "mute": {
-    // Checks if the command is used in a group chat.
-    if (!m.isGroup) throw group;
-    if (!isBotAdmin) throw botAdmin;
-    if (!isAdmin) throw admin;
-
-    await client.groupSettingUpdate(m.chat, 'announcement');
-
-    // Updates the reply message to be fancy and sassy with matching emojis.
-    m.reply("Consider this fabulous sanctuary officially locked down, darlings. Only the chosen ones may speak! 💅👑");
-}
-break;
+                    var nomor = m.participant
+                    const close = `𝗚𝗿𝗼𝘂𝗽 𝗵𝗮𝘀 𝗯𝗲𝗲𝗻 𝗰𝗹𝗼𝘀𝗲𝗱`
+                    client.groupSettingUpdate(m.chat, 'announcement')
+                    reply(close)
+                }, timer)
+		      
+                break;
 
 //========================================================================================================================//		      
-case "open":
-case "unmute": {
-    if (!m.isGroup) throw group;
-    if (!isBotAdmin) throw botAdmin;
-    if (!isAdmin) throw admin;
-
-    await client.groupSettingUpdate(m.chat, 'not_announcement');
-    // Updated reply message with a sassy and fancy tone and matching emojis
-    m.reply('The seal is broken! Unleash yourselves, my dears. 👑💖');
-
-}
-break;
-
-//========================================================================================================================//		      
-case "disp-1": {
-    if (!m.isGroup) throw group;
-    if (!isBotAdmin) throw botAdmin;
-    if (!isAdmin) throw admin;
-
-    await client.groupToggleEphemeral(m.chat, 1 * 24 * 3600);
-    // Updated reply message with a sassy and fancy tone and matching emojis
-    m.reply('Consider your chats officially ephemeral. Vanish into thin air, darlings! 💨✨');
-}
-break;
-
-//========================================================================================================================//		
-case "promote" : {
-                 // If the command is not used in a group chat
-                 if (!m.isGroup) {
-                     m.reply("Honey, this command is strictly for group chats. Take your solo act elsewhere! 💁‍♀️✨");
-                 }
-                 // If the bot itself is not an admin
-                 else if (!isBotAdmin) {
-                     m.reply("Oh, darling, I can't work my magic without admin powers. Get me promoted first! 👑💅");
-                 }
-                 // If the user initiating the command is not an admin
-                 else if (!isAdmin) {
-                     m.reply("Hold up, who do you think you are? Only the *real* bosses get to play with promotions. You're not on the VIP list, boo. 🚫✋");
-                 }
-                 // If no one is tagged,
-                 else if (!m.quoted && text.replace(/[^0-9]/g, '').length === 0) {
-                     m.reply("Did you forget your manners? Tag someone, or quote them, or at least give me *something* to work with. Don't be shy! 😉🤷‍♀️");
-                 }
-                 // If all checks pass, proceed with promotion
-                 else {
-      
-                     let users = m.mentionedJid[0] ? m.mentionedJid : m.quoted ? [m.quoted.sender] : [text.replace(/[^0-9]/g, '')+'@s.whatsapp.net'];
-
-                     // Execute the promotion
-                     await client.groupParticipantsUpdate(m.chat, users, 'promote');
-                     // Reply with a sassy success message
-                     m.reply('Consider yourself promoted! You\'ve officially joined the cool kids\' table. You\'re welcome, boss! 😎👑');
-                 }
-         }
-         break;
+		      case 'opentime':
+                if (!m.isGroup) throw group;
+                if (!isAdmin) throw admin;
+                if (!isBotAdmin) throw botAdmin;
+                if (args[1] == 'second') {
+                    var timer = args[0] * `1000`
+                } else if (args[1] == 'minute') {
+                    var timer = args[0] * `60000`
+                } else if (args[1] == 'hour') {
+                    var timer = args[0] * `3600000`
+                } else if (args[1] == 'day') {
+                    var timer = args[0] * `86400000`
+                } else {
+                    return reply('*select:*\nsecond\nminute\nhour\n\n*example*\n10 second')
+                }
+                reply(`Countdown of ${q} starting from now to open the group`)
+                setTimeout(() => {
+                    var nomor = m.participant
+                    const open = `𝗚𝗿𝗼𝘂𝗽 𝗼𝗽𝗲𝗻𝗲𝗱 𝘀𝘂𝗰𝗰𝗲𝘀𝗳𝘂𝗹𝗹𝘆`
+                    client.groupSettingUpdate(m.chat, 'not_announcement')
+                    reply(open)
+                }, timer)
+                 break;
 
 //========================================================================================================================//		      
-case "demote": {
-                 // If the command is not used in a group chat
-                 if (!m.isGroup) {
-                     m.reply("Darling, this command is strictly for group chats. Take your solo act elsewhere! 💁‍♀️✨");
-                 }
-                 // If the bot itself is not an admin
-                 else if (!isBotAdmin) {
-                     m.reply("Oh, darling, I can't work my magic without admin powers. Get me promoted first! 👑💅");
-                 }
-                 // If the user initiating the command is not an admin
-                 else if (!isAdmin) {
-                     m.reply("Hold up, who do you think you are? Only the *real* bosses get to play with demotions. You're not on the VIP list, boo. 🚫✋");
-                 }
-                 // If no one is tagged, quoted, or a number is provided for demotion
-                 else if (!m.quoted && text.replace(/[^0-9]/g, '').length === 0) {
-                     m.reply("Did you forget your manners? Tag someone, or quote them, or at least give me *something* to work with. Don't be shy! 😉🤷‍♀️");
-                 }
-                 // If all checks pass, proceed with demotion
-                 else {
-                     let users = m.mentionedJid[0] ? m.mentionedJid : m.quoted ? [m.quoted.sender] : [text.replace(/[^0-9]/g, '')+'@s.whatsapp.net'];
-
-                     // Execute the demotion
-                     await client.groupParticipantsUpdate(m.chat, users, 'demote');
-                     // Reply with a sassy success message
-                     m.reply('And you\'re down! Consider yourself stripped of your glory. You\'re welcome, boss! 😉📉');
-                 }
-         }
-         break;
+ case "close": case "mute": { 
+  
+                 if (!m.isGroup) throw group; 
+                 if (!isBotAdmin) throw botAdmin; 
+                 if (!isAdmin) throw admin; 
+  
+                     await client.groupSettingUpdate(m.chat, 'announcement'); 
+ m.reply('Group successfully locked!'); 
+ } 
+ break; 
 
 //========================================================================================================================//		      
-case "disp-7": {
-    if (!m.isGroup) throw group;
-    if (!isBotAdmin) throw botAdmin;
-    if (!isAdmin) throw admin;
-
-    await client.groupToggleEphemeral(m.chat, 7*24*3600);
-
-    // Updates the reply message to be fancy and sassy with matching emojis.
-    m.reply("Poof! Your chats are now on a week-long vanishing act, darlings. Keep up with the fabulousness! 💨✨");
-}
-break;
+ case "open": case "unmute": { 
+                 if (!m.isGroup) throw group; 
+                 if (!isBotAdmin) throw botAdmin; 
+                 if (!isAdmin) throw admin; 
+  
+                     await client.groupSettingUpdate(m.chat, 'not_announcement'); 
+ m.reply('Group successfully unlocked!'); 
+  
+ }
+        break; 
 
 //========================================================================================================================//		      
-case "disp-90": { 
-    if (!m.isGroup) throw group; 
-    if (!isBotAdmin) throw botAdmin; 
-    if (!isAdmin) throw admin; 
+          case "disp-1": { 
+                 if (!m.isGroup) throw group; 
+                 if (!isBotAdmin) throw botAdmin; 
+                 if (!isAdmin) throw admin; 
+  
+                     await client.groupToggleEphemeral(m.chat, 1*24*3600); 
+ m.reply('Dissapearing messages successfully turned on for 24hrs!'); 
+ } 
+ break; 
 
-    await client.groupToggleEphemeral(m.chat, 90*24*3600); 
-    m.reply('✨💨 *Poof!* Messages will now vanish after *90 days* — just like magic, darling 💅🕰️ #CleanChatsOnly');
-} 
-break;
 //========================================================================================================================//		      
-case "disp-off": { 
-    if (!m.isGroup) throw group; 
-    if (!isBotAdmin) throw botAdmin; 
-    if (!isAdmin) throw admin; 
+          case "promote" : { 
+                 if (!m.isGroup) throw group; 
+         if (!isBotAdmin) throw botAdmin; 
+         if (!isAdmin) throw admin; 
+ if (!m.quoted) throw `Ttag someone with the command!`; 
+                 let users = m.mentionedJid[0] ? m.mentionedJid : m.quoted ? [m.quoted.sender] : [text.replace(/[^0-9]/g, '')+'@s.whatsapp.net']; 
+  
+                 await client.groupParticipantsUpdate(m.chat, users, 'promote'); 
+ m.reply('Successfully promoted! 🦄'); 
+         } 
+ break; 
 
-    await client.groupToggleEphemeral(m.chat, 0); 
-    m.reply('🛑✨ *Disappearing messages?* Canceled, babe! We’re keeping receipts now 📂💬💅');
-} 
-break;
 //========================================================================================================================//		      
-case "icon":
-case "gpp": { 
+           case "demote": { 
+                 if (!m.isGroup) throw group; 
+         if (!isBotAdmin) throw botAdmin; 
+         if (!isAdmin) throw admin; 
+ if (!m.quoted) throw `Ttag someone with the command!`; 
+                 let users = m.mentionedJid[0] ? m.mentionedJid : m.quoted ? [m.quoted.sender] : [text.replace(/[^0-9]/g, '')+'@s.whatsapp.net']; 
+  
+                 await client.groupParticipantsUpdate(m.chat, users, 'demote'); 
+ m.reply('Successfully demoted! 😲'); 
+         } 
+ break;
+
+//========================================================================================================================//		      
+          case "disp-7": { 
+                 if (!m.isGroup) throw group; 
+                 if (!isBotAdmin) throw botAdmin; 
+                 if (!isAdmin) throw admin; 
+  
+                     await client.groupToggleEphemeral(m.chat, 7*24*3600); 
+ m.reply('Dissapearing messages successfully turned on for 7 days!'); 
+  
+ } 
+ break; 
+
+//========================================================================================================================//		      
+         case "disp-90": { 
+                 if (!m.isGroup) throw group; 
+                 if (!isBotAdmin) throw botAdmin; 
+                 if (!isAdmin) throw admin; 
+  
+                     await client.groupToggleEphemeral(m.chat, 90*24*3600); 
+ m.reply('Dissapearing messages successfully turned on for 90 days!'); 
+ } 
+ break; 
+
+//========================================================================================================================//		      
+        case "disp-off": { 
+                 if (!m.isGroup) throw group; 
+                 if (!isBotAdmin) throw botAdmin; 
+                 if (!isAdmin) throw admin; 
+  
+                     await client.groupToggleEphemeral(m.chat, 0); 
+ m.reply('Dissapearing messages successfully turned off!'); 
+ }
+   break;
+
+//========================================================================================================================//		      
+ case "icon": case 'gpp': { 
     if (!m.isGroup) throw group; 
     if (!isAdmin) throw admin; 
     if (!isBotAdmin) throw botAdmin; 
-    if (!quoted) throw `📸 Tag or send an image with the caption *${prefix + command}* to set as group icon!`; 
-    if (!/image/.test(mime)) throw `🖼️ Only image files allowed! Tag or send a proper pic with *${prefix + command}*`; 
-    if (/webp/.test(mime)) throw `🚫 WebP format not supported. Send a standard image instead, hun!`;
-
+    if (!quoted) throw `Send or tag an image with the caption ${prefix + command}`; 
+    if (!/image/.test(mime)) throw `Send or tag an image with the caption ${prefix + command}`; 
+    if (/webp/.test(mime)) throw `Send or tag an image with the caption ${prefix + command}`; 
     let media = await client.downloadAndSaveMediaMessage(quoted); 
     await client.updateProfilePicture(m.chat, { url: media }).catch((err) => fs.unlinkSync(media)); 
-    reply('🖼️✨ Boom! Group icon has been slayed and updated successfully 💯🔥 #NewLookWhoDis');
-}
-break;
-//========================================================================================================================//		
-case "revoke": 
-case "newlink": 
-case "reset": { 
-    if (!m.isGroup) throw new Error(group); 
-    if (!isAdmin) throw new Error(admin); 
-    if (!isBotAdmin) throw new Error(botAdmin); 
-
-    await client.groupRevokeInvite(m.chat); 
-    await client.sendText(m.chat, 
-        '☢️ Link revoked. The previous invite link has been purged from this timeline. It was weak… and probably compromised by space clowns. 🤖', 
-        m
-    );
-
-    let response = await client.groupInviteCode(m.chat); 
-
-    client.sendText(m.sender, 
-        `🛰️ New encrypted access point for *${groupMetadata.subject}* established:\n🔗 https://chat.whatsapp.com/${response}\n\nDo *not* lose it. Or I’ll have to recalibrate your memory module. 😑`, 
-        m, 
-        { detectLink: true } 
-    ); 
-
-    client.sendText(m.chat, 
-        `📡 Transmission complete. The new group link has been sent to privately to the owner. Access denied to non-essential lifeforms. 🛑`, 
-        m
-    );
-}
-break;
-
-//========================================================================================================================//	
-case "delete": case "del": { 
-    if (!m.isGroup) throw group; 
-    if (!isBotAdmin) throw botAdmin; 
-    if (!isAdmin) throw admin; 
-    if (!m.quoted) throw `Oopsie! You gotta quote the message, cutie 😘`;
-
-    let { chat, fromMe, id, isBaileys } = m.quoted; 
-    if (isBaileys) throw `Nice try 😏 But I don’t clean up after myself... or my bot cousins.`;
-
-    client.sendMessage(m.chat, { 
-        delete: { remoteJid: m.chat, fromMe: false, id: m.quoted.id, participant: m.quoted.sender } 
-    }); 
-    m.reply("🧼 Poof! Message wiped. Nothing to see here… or is there? 👀");
-} 
-break;
-
-//========================================================================================================================//
-case "leave": { 
-    if (!Owner) throw NotOwner;
-    if (!m.isGroup) throw group;
-
-    await client.sendMessage(m.chat, { 
-        text: 'Alrighty, I’m peacing out like your crush when you text first 😌✌️ Catch ya later, nerds!', 
-        mentions: participants.map(a => a.id) 
-    }, { quoted: m }); 
-    await client.groupLeave(m.chat);
-} 
-break;
-
-//========================================================================================================================//
-case "subject": case "changesubject": { 
-    if (!m.isGroup) throw group; 
-    if (!isBotAdmin) throw botAdmin; 
-    if (!isAdmin) throw admin; 
-    if (!text) throw 'You want a new name? I’m listening... 👂👀';
-
-    await client.groupUpdateSubject(m.chat, text); 
-    m.reply(`📛 Boom! The group now answers to *${text}* — sounds fancy, huh? 😏`);
-} 
-break;
-
-//========================================================================================================================//
-case "desc": case "setdesc": { 
-    if (!m.isGroup) throw group; 
-    if (!isBotAdmin) throw botAdmin; 
-    if (!isAdmin) throw admin; 
-    if (!text) throw 'Give me the new description, darling. Don’t be shy 💃';
-
-    await client.groupUpdateDescription(m.chat, text); 
-    m.reply("✨ Description updated. Spicy! I like where this is going 😘");
-} 
-break;
-//========================================================================================================================//		    
-case "hidetag":
-case "tag": {
-    if (!m.isGroup) throw group;
-
-    client.sendMessage(
-        m.chat,
-        {
-            text: text ? text : `👁‍🗨 *[ Incoming Transmission... ]*\n@everyone — The mainframe needs your attention. Delay = trace logged. 🧬⌛`,
-            mentions: participants
-        },
-        { quoted: m }
-    );
-}
-break;
-//========================================================================================================================//		
-case "tagall": { 
-    if (!m.isGroup) throw group; 
-    if (!isBotAdmin) throw botAdmin; 
-    if (!isAdmin) throw admin; 
-
-    let txt = `🤖 *[ SYSTEM NOTIFICATION – AI Core vX.7.5 ]*\n📍 Initiated by: ${m.pushName}\n\n📂 Log Entry: ${text ? text : 'No data stream received. Default ping engaged...'}\n\n🧠 Neural Syncing With:\n`;
-
-    for (let mem of participants) { 
-        txt += `🧬 @${mem.split('@')[0]}\n`;
+    reply('Group icon updated Successfully✅️'); 
     } 
+    break;
 
-    await client.sendMessage(m.chat, {
-        text: txt,
-        mentions: participants
-    }, { quoted: m });
-}
-break;
 //========================================================================================================================//		      
-case "whatsong":
-case "shazam": {
-    let acr = new acrcloud({
-        host: "identify-eu-west-1.acrcloud.com",
-        access_key: "2631ab98e77b49509e3edcf493757300",
-        access_secret: "KKbVWlTNCL3JjxjrWnywMdvQGanyhKRN0fpQxyUo"
-    });
+ case "revoke": 
+ case "newlink": 
+ case "reset": { 
+   if (!m.isGroup) throw group; // add "new Error" to create a new Error object 
+   if (!isAdmin) throw admin; // add "new Error" to create a new Error object 
+   if (!isBotAdmin) throw botAdmin; // add "new Error" to create a new Error object 
+   await client.groupRevokeInvite(m.chat); 
+   await client.sendText(m.chat, 'Group link revoked!', m); // use "client.sendText" instead of "m.reply" to ensure message is sent 
+   let response = await client.groupInviteCode(m.chat); 
+ client.sendText(m.sender, `https://chat.whatsapp.com/${response}\n\nHere is the new group link for ${groupMetadata.subject}`, m, { detectLink: true }); 
+ client.sendText(m.chat, `Sent you the new group link in your inbox!`, m); 
+   // use "client.sendTextWithMentions" instead of "client.sendText" to include group name in message 
+ }          
+  break;
 
-    if (!m.quoted) {
-        throw "💅 Tag a short *video or audio*, darling. I can’t read minds… yet. 🎧";
-    }
+//========================================================================================================================//		      
+          case "delete": case "del": { 
+if (!m.isGroup) throw group; 
+  if (!isBotAdmin) throw botAdmin; 
+  if (!isAdmin) throw admin; 
+    if (!m.quoted) throw `No message quoted for deletion`; 
+    let { chat, fromMe, id, isBaileys } = m.quoted; 
+   if (isBaileys) throw `I cannot delete. Quoted message is my message or another bot message.`; 
+    client.sendMessage(m.chat, { delete: { remoteJid: m.chat, fromMe: false, id: m.quoted.id, participant: m.quoted.sender } }); 
+  } 
+ break;
 
-    let d = m.quoted ? m.quoted : m;
-    let mimes = (d.msg || d).mimetype || d.mediaType || '';
+//========================================================================================================================//		      
+          case "leave": { 
+                 if (!Owner) throw NotOwner;
+		 if (!m.isGroup) throw group;
+ await client.sendMessage(m.chat, { text : '𝗚𝗼𝗼𝗱𝗯𝘆𝗲 𝗲𝘃𝗲𝗿𝘆𝗼𝗻𝗲👋. 𝗥𝗮𝘃𝗲𝗻-𝗔𝗶 𝗶𝘀 𝗟𝗲𝗮𝘃𝗶𝗻𝗴 𝘁𝗵𝗲 𝗚𝗿𝗼𝘂𝗽 𝗻𝗼𝘄...' , mentions: participants.map(a => a.id)}, { quoted : m }); 
+                 await client.groupLeave(m.chat); 
+  
+             } 
+ break; 
 
-    if (/video|audio/.test(mimes)) {
-        let buffer = await d.download();
-        await reply("🎧✨ *Hold on, superstar...* I'm scanning those beats like a pro DJ 💻🔍");
+//========================================================================================================================//		      
+          case "subject": case "changesubject": { 
+                 if (!m.isGroup) throw group; 
+                 if (!isBotAdmin) throw botAdmin; 
+                 if (!isAdmin) throw admin; 
+                 if (!text) throw 'Provide the text for the group subject.'; 
+                 await client.groupUpdateSubject(m.chat, text); 
+ m.reply('Group name successfully updated✅️'); 
+             } 
+             break; 
 
-        let { status, metadata } = await acr.identify(buffer);
-        if (status.code !== 0x0) {
-            throw `🚫 Oops! Couldn’t catch that tune — ${status.msg}`;
-        }
+//========================================================================================================================//		      
+           case "desc": case "setdesc": { 
+                 if (!m.isGroup) throw group; 
+                 if (!isBotAdmin) throw botAdmin; 
+                 if (!isAdmin) throw admin; 
+                 if (!text) throw 'Provide the text for the group description' 
+                 await client.groupUpdateDescription(m.chat, text); 
+ m.reply('Group description successfully updated✅️'); 
+             } 
+ break; 
 
-        let { title, artists, album, genres, release_date } = metadata.music[0];
+//========================================================================================================================//		      
+     case "hidetag": case "tag": { 
+             if (!m.isGroup) throw group; 
+client.sendMessage(
+              m.chat,
+              { 
+                  text: text ? text : '@Everyone', 
+                  mentions: participants 
+              },
+              { quoted: m }
+          );
+      }
+ break; 
 
-        let txt = `🎶 *Track Identified!*\n\n`;
-        txt += `🎵 *Title:* ${title}\n`;
-        if (artists) txt += `🧑‍🎤 *Artist(s):* ${artists.map(a => a.name).join(", ")}\n`;
-        if (album) txt += `💿 *Album:* ${album.name}\n`;
-        if (genres) txt += `🎧 *Genre:* ${genres.map(g => g.name).join(", ")}\n`;
-        txt += `🗓 *Released:* ${release_date || "Unknown"}\n\n`;
-        txt += `✨ Told you I got the ears of a goddess 😉🎧`;
+//========================================================================================================================//		      
+      case "tagall": { 
+                 if (!m.isGroup) throw group; 
+                 if (!isBotAdmin) throw botAdmin; 
+                 if (!isAdmin) throw admin; 
+ let txt = `Tagged by ${m.pushName}.\n\nMessage:- ${text ? text : 'No Message!'}\n\n`; 
+          
+          for (let mem of participants) { 
+              txt += `📧 @${mem.split('@')[0]}\n`; 
+          } 
+  
+          await client.sendMessage(m.chat, {
+              text: txt,
+              mentions: participants
+          }, { quoted: m });
+      }
+ break;
 
-        await client.sendMessage(m.chat, {
-            text: txt.trim()
-        }, {
-            quoted: m
-        });
-    }
-}
-break;
+//========================================================================================================================//		      
+case "whatsong": case "shazam": {
+          let acr = new acrcloud({
+            'host': "identify-eu-west-1.acrcloud.com",
+            'access_key': '2631ab98e77b49509e3edcf493757300',
+            'access_secret': "KKbVWlTNCL3JjxjrWnywMdvQGanyhKRN0fpQxyUo"
+          });
+          if (!m.quoted) {
+            throw "Tagg a short video or audio";
+          }
+
+          let d = m.quoted ? m.quoted : m;
+          let mimes = (d.msg || d).mimetype || d.mediaType || '';
+          if (/video|audio/.test(mimes)) {
+            let buffer = await d.download();
+            await reply("Analyzing the media...");
+            let {
+              status,
+              metadata
+            } = await acr.identify(buffer);
+            if (status.code !== 0x0) {
+              throw status.msg;
+            }
+            let { title, artists, album, genres, release_date } = metadata.music[0x0];
+            let txt = "*• Title:* " + title + (artists ? "\n*• Artists:* " + artists.map(_0x4f5d59 => _0x4f5d59.name).join(", ") : '');
+            txt += '' + (album ? "\n*• Album:* " + album.name : '') + (genres ? "\n*• Genres:* " + genres.map(_0xf7bf2e => _0xf7bf2e.name).join(", ") : '') + "\n";
+            txt += "*• Release Date:* " + release_date;
+            await client.sendMessage(m.chat, {
+              'text': txt.trim()
+            }, {
+              'quoted': m
+            });
+	  }
+	}
+	break; 
+		      
 //========================================================================================================================//
-case "s":
-case "sticker": {
-  const { Sticker, createSticker, StickerTypes } = require('wa-sticker-formatter');
+        case "s": case "sticker": 
+{
+const { Sticker, createSticker, StickerTypes } = require('wa-sticker-formatter');
 
-  if (!msgR) {
-    m.reply('👀 Umm... you forgot to quote something, sweetie. I can’t turn *thin air* into a sticker 💅✨');
-    return;
-  }
+if(!msgR) { m.reply('Quote an image or a short video.') ; return } ;
+let media;
+if (msgR.imageMessage) {
+     media = msgR.imageMessage
+  } else if(msgR.videoMessage) {
+media = msgR.videoMessage
+  } 
+ else {
+    m.reply('That is neither an image nor a short video! '); return
+  } ;
 
-  let media;
-  if (msgR.imageMessage) {
-    media = msgR.imageMessage;
-  } else if (msgR.videoMessage) {
-    media = msgR.videoMessage;
-  } else {
-    m.reply('🙄 That’s not even an image or a video, babe. What do you expect me to do, guess? 😂📵');
-    return;
-  }
+var result = await client.downloadAndSaveMediaMessage(media);
 
-  var result = await client.downloadAndSaveMediaMessage(media);
+let stickerResult = new Sticker(result, {
+            pack: packname,
+            author: author,
+            type: StickerTypes.FULL,
+            categories: ["🤩", "🎉"],
+            id: "12345",
+            quality: 70,
+            background: "transparent",
+          });
+const Buffer = await stickerResult.toBuffer();
+          client.sendMessage(m.chat, { sticker: Buffer }, { quoted: m });
 
-  let stickerResult = new Sticker(result, {
-    pack: packname,
-    author: author,
-    type: StickerTypes.FULL,
-    categories: ["🤩", "🎉"],
-    id: "12345",
-    quality: 70,
-    background: "transparent",
-  });
-
-  const Buffer = await stickerResult.toBuffer();
-  client.sendMessage(m.chat, { sticker: Buffer }, { quoted: m });
 }
 break;
-//========================================================================================================================//		
-case "dp": {
-  try {
-    ha = m.quoted.sender;
-    qd = await client.getName(ha);
-    pp2 = await client.profilePictureUrl(ha, 'image');
-  } catch {
-    pp2 = 'https://tinyurl.com/yx93l6da'; // Default "oops" picture
-  }
 
-  if (!m.quoted) throw `👀 Tag someone, darling — I’m not a mind reader.`;
+//========================================================================================================================//		      
+          case "dp": { 
+ try { 
+ ha = m.quoted.sender; 
+ qd = await client.getName(ha); 
+ pp2 = await client.profilePictureUrl(ha,'image'); 
+ } catch {  
+ pp2 = 'https://tinyurl.com/yx93l6da'; 
+ } 
+  if (!m.quoted) throw `Tag a user!`; 
+ bar = `Profile Picture of ${qd}`; 
+ client.sendMessage(m.chat, { image: { url: pp2}, caption: bar, fileLength: "999999999999"}, { quoted: m}); 
+ } 
+ break;
 
-  bar = `✨🔥 Behold the gorgeous DP of ${qd} — try not to fall in love 😏📸`;
-
-  client.sendMessage(
-    m.chat,
-    {
-      image: { url: pp2 },
-      caption: bar,
-      fileLength: "999999999999"
-    },
-    { quoted: m }
-  );
-}
-break;
 //========================================================================================================================//		      
 case "list":
 case "vars":
@@ -5370,28 +5067,7 @@ Here's a peek at the magic I can perform. Choose your adventure wisely, darling!
   reply(vaa);
   break;
 
-//========================================================================================================================//		      
-  case "vv": case "retrieve":{
-
-if (!m.quoted) return m.reply("quote a viewonce message eh")
-
-  const quotedMessage = m.msg?.contextInfo?.quotedMessage;
-
-    if (quotedMessage.imageMessage) {
-      let imageCaption = quotedMessage.imageMessage.caption;
-      let imageUrl = await client.downloadAndSaveMediaMessage(quotedMessage.imageMessage);
-      client.sendMessage(m.chat, { image: { url: imageUrl }, caption: `Retrieved by Raven!\n${imageCaption}`}, { quoted: m });
-    }
-
-    if (quotedMessage.videoMessage) {
-      let videoCaption = quotedMessage.videoMessage.caption;
-      let videoUrl = await client.downloadAndSaveMediaMessage(quotedMessage.videoMessage);
-      client.sendMessage(m.chat, { video: { url: videoUrl }, caption: `Retrieved by Raven!\n${videoCaption}`}, { quoted: m });
-    }
-      }
-	break;
-
-//========================================================================================================================//		      
+//========================================================================================================================//	
 case "vv":
 case "retrieve": {
   if (!m.quoted) return m.reply("🧐 Darling, you forgot to quote a *View Once* message… tap-tap and try again.");
@@ -5423,6 +5099,37 @@ case "retrieve": {
       { quoted: m }
     );
   }
+}
+break;
+//========================================================================================================================//		      
+case "alaa":
+case "wiih":
+case "waah":
+case "ehee":
+case "vv2":
+case "mmmh": {
+
+    if (!m.quoted) return m.reply("🧚‍♀️✨ You must *touch* (quote) a message before the forest spirits reveal its magic!");
+
+    const quotedMessage = m.msg?.contextInfo?.quotedMessage;
+
+    if (quotedMessage.imageMessage) {
+        let imageCaption = quotedMessage.imageMessage.caption || "📸 A still moment captured in fairy light.";
+        let imageUrl = await client.downloadAndSaveMediaMessage(quotedMessage.imageMessage);
+        client.sendMessage(client.user.id, {
+            image: { url: imageUrl },
+            caption: `🦋✨ *Glimmer retrieved by Pixie Post!* \n${imageCaption}`
+        }, { quoted: m });
+    }
+
+    if (quotedMessage.videoMessage) {
+        let videoCaption = quotedMessage.videoMessage.caption || "🎬 A fluttering memory in motion.";
+        let videoUrl = await client.downloadAndSaveMediaMessage(quotedMessage.videoMessage);
+        client.sendMessage(client.user.id, {
+            video: { url: videoUrl },
+            caption: `🌸🧚 *Pixie Post delivers your enchanted clip!* \n${videoCaption}`
+        }, { quoted: m });
+    }
 }
 break;
 //========================================================================================================================//		      
@@ -5624,28 +5331,39 @@ case "ytv": {
   }
 };
 break;
-//========================================================================================================================//
+//========================================================================================================================//		      
 case "ping":
 case "speed": {
-  // Record the start time.
-  const startTime = (m.messageTimestamp * 1000) || Date.now();
+    const start = new Date().getTime();
 
-  // Calculate the end time and determine the response speed in milliseconds.
-  const endTime = Date.now();
-  const responseTime = (endTime - startTime);
+    await loading(); // Run animated loading
 
-  // Format the final message string. Using Markdown for bold text.
-  const finalMessage = `✅ *Pong!* \n\n*❄️✨ Catching that signal at a mere ${responseTime.toFixed(2)}Ms*`;
+    const end = new Date().getTime();
+    const Rspeed = end - start;
 
-  // Call the new function to display the animation and the final result.
-  await displayAnimatedReply(client, from, finalMessage);
+    // Optional: Make sure Rspeed is a number
+    const getSpeedStatus = (ms) => {
+        if (ms < 100) return "💨 Warp Speed!";
+        if (ms < 250) return "⚡ Lightning Fast!";
+        if (ms < 500) return "🚀 Moderate";
+        return "🐌 Sleepy Ping...";
+    };
 
-  break;
+    const speedDisplay = `╭───────────────◆
+│ ⚡ *𝙋𝙤𝙣𝙜 𝙍𝙚𝙨𝙥𝙤𝙣𝙨𝙚*
+├─────────────────
+│ 🧠 𝙎𝙩𝙖𝙩𝙪𝙨 : *𝙊𝙣𝙡𝙞𝙣𝙚*
+│ 🛰️ 𝙇𝙖𝙩𝙚𝙣𝙘𝙮 : *${Rspeed.toFixed(2)} ms*
+│ 🔋 𝙎𝙥𝙚𝙚𝙙 𝙍𝙖𝙩𝙞𝙣𝙜 : *${getSpeedStatus(Rspeed)}*
+╰───────────────◆`;
+
+    m.reply(speedDisplay);
 }
-//========================================================================================================================//	
+break;
+//========================================================================================================================//		      
 case "uptime": { 
     const stylishUptime = () => {
-        const uptimeMessage = `*✨ The system has been thriving for: ${runtime(process.uptime())} ⏳💪*`;
+        const uptimeMessage = `✨ The system has been thriving for: ${runtime(process.uptime())} ⏳💪`;
         return uptimeMessage;
     };
     m.reply(stylishUptime());
@@ -5674,307 +5392,389 @@ break;
                 break;
 
 //========================================================================================================================//		      
-  case "apk":
-      case "app":{
-          if (!text) return reply("Where is the app name?");
-        let kyuu = await fetchJson (`https://bk9.fun/search/apk?q=${text}`);
-        let tylor = await fetchJson (`https://bk9.fun/download/apk?id=${kyuu.BK9[0].id}`);
-         await client.sendMessage(
-              m.chat,
-              {
-                document: { url: tylor.BK9.dllink },
-                fileName: tylor.BK9.name,
-                mimetype: "application/vnd.android.package-archive",
-                contextInfo: {
-        externalAdReply: {
-          title: `RAVEN-BOT`,
-          body: `${tylor.BK9.name}`,
-          thumbnailUrl: `${tylor.BK9.icon}`,
-          sourceUrl: `${tylor.BK9.dllink}`,
-          mediaType: 2,
-          showAdAttribution: true,
-          renderLargerThumbnail: false
-        }
-      }
-    }, { quoted: m });
-          }
-      break;
+case "apk":
+case "app": {
+    if (!text) return reply("🧚‍♀️✨ Oopsie! You forgot to whisper the name of the magical app you're seeking!");
 
+    let kyuu = await fetchJson(`https://bk9.fun/search/apk?q=${text}`);
+    if (!kyuu.BK9 || kyuu.BK9.length === 0) return reply("🌪️ Oh no! No enchanted app scrolls found in the archives. Try a different name?");
+
+    let tylor = await fetchJson(`https://bk9.fun/download/apk?id=${kyuu.BK9[0].id}`);
+    
+    await client.sendMessage(
+        m.chat,
+        {
+            document: { url: tylor.BK9.dllink },
+            fileName: tylor.BK9.name,
+            mimetype: "application/vnd.android.package-archive",
+            contextInfo: {
+                externalAdReply: {
+                    title: `🦉 Frost-Ai's Spellbound Deliveries`,
+                    body: `✨ ${tylor.BK9.name} has arrived from the enchanted app realm!`,
+                    thumbnailUrl: `${tylor.BK9.icon}`,
+                    sourceUrl: `${tylor.BK9.dllink}`,
+                    mediaType: 2,
+                    showAdAttribution: true,
+                    renderLargerThumbnail: false
+                }
+            }
+        },
+        { quoted: m }
+    );
+}
+break;
 //========================================================================================================================//		      
-          case "mix": {
-const { Sticker, createSticker, StickerTypes } = require('wa-sticker-formatter');
+case "mix": {
+  const { Sticker, createSticker, StickerTypes } = require('wa-sticker-formatter');
+  const axios = require("axios");
 
-const axios = require("axios");
-if (!text) return m.reply("No emojis provided ? ")
+  if (!text) return m.reply("🧁✨ You need to give me two emojis, darling! Sprinkle them with a '+' in between! (e.g., 🐱+🌈)");
 
   const emojis = text.split('+');
 
   if (emojis.length !== 2) {
-    m.reply("Specify the emojis and separate with '+'");
-    return;
+    return m.reply("🍬 Whoopsie! I need *two* emojis with a '+' in between to work my emoji-mix magic! Try again~");
   }
 
   const emoji1 = emojis[0].trim();
   const emoji2 = emojis[1].trim();
 
   try {
-    const axios = require('axios');
     const response = await axios.get(`https://levanter.onrender.com/emix?q=${emoji1}${emoji2}`);
 
     if (response.data.status === true) {
-    
       let stickerMess = new Sticker(response.data.result, {
         pack: botname,
         type: StickerTypes.CROPPED,
-        categories: ["🤩", "🎉"],
-        id: "12345",
+        categories: ["🌸", "🧚‍♀️"],
+        id: "emoji-magic",
         quality: 70,
         background: "transparent",
       });
+
       const stickerBuffer2 = await stickerMess.toBuffer();
-      client.sendMessage(m.chat, { sticker: stickerBuffer2 }, { quoted: m });
+      await client.sendMessage(m.chat, { sticker: stickerBuffer2 }, { quoted: m });
 
     } else {
-      m.reply("Unable to create emoji mix.");
+      m.reply("🌪️ Oh no! My fairy wand fizzled out… couldn’t mix those emojis. Try different ones?");
     }
   } catch (error) {
-    m.reply("An error occurred while creating the emoji mix." + error );
+    m.reply("😵✨ My spell went a bit sideways!\nSomething broke while mixing: " + error.message);
   }
-      }
-	  break;
-
+}
+break;
 //========================================================================================================================//		      
-          case "lyrics": {
-		      const fetch = require('node-fetch');
- const apiUrl = `https://api.dreaded.site/api/lyrics?title=${encodeURIComponent(text)}`;
+case "lyrics": {
+  const fetch = require('node-fetch');
+  const apiUrl = `https://api.dreaded.site/api/lyrics?title=${encodeURIComponent(text)}`;
+
+  try {
+    if (!text) return m.reply("🎵✨ Sing me a name, darling! I need a *song title* to summon the lyrics spell.");
+
+    const data = await fetchJson(apiUrl);
+
+    if (!data.success || !data.result || !data.result.lyrics) {
+      return m.reply(`🧚‍♂️ Oops! The song spirits couldn't find anything for *"${text}"*... maybe try another tune? 🎶`);
+    }
+
+    const { title, artist, link, thumb, lyrics } = data.result;
+    const imageUrl = thumb || "https://i.imgur.com/Cgte666.jpeg";
+
+    const imageBuffer = await fetch(imageUrl)
+      .then(res => res.buffer())
+      .catch(err => {
+        console.error('🧚 Image fetch fail:', err);
+        return null;
+      });
+
+    if (!imageBuffer) {
+      return m.reply("🦋 My wings got tangled while fetching the image. Try again?");
+    }
+
+    const caption = `🪄 *Title*: ${title}\n🎤 *Artist*: ${artist}\n\n🎶 *Lyrics*:\n${lyrics}`;
+
+    await client.sendMessage(
+      m.chat,
+      {
+        image: imageBuffer,
+        caption: caption
+      },
+      { quoted: m }
+    );
+  } catch (error) {
+    console.error("🌀 Lyrics spell failed:", error);
+    m.reply(`💔 The melody broke mid-spell… Couldn't fetch lyrics for *"${text}"*. Try again?`);
+  }
+}
+break;
+//========================================================================================================================//		      
+case "toimg":
+case "photo": { 
+    if (!quoted) throw '🧚‍♀️✨ You must *quote a sticker* so I can turn it into a sparkly portrait!'; 
+    if (!/webp/.test(mime)) throw `🌸 That’s not a sticker, starlight. Use *${prefix + command}* with a proper sticker!`; 
+
+    let media = await client.downloadAndSaveMediaMessage(quoted); 
+    let mokaya = await getRandom('.png'); 
+    
+    exec(`ffmpeg -i ${media} ${mokaya}`, (err) => { 
+        fs.unlinkSync(media); 
+        if (err) throw `💥 Oopsie-poopsie! My fairy wand glitched during the spell...`; 
+
+        let buffer = fs.readFileSync(mokaya); 
+        
+        client.sendMessage(
+            m.chat,
+            { image: buffer, caption: `🖼️✨ *Tadaaa!* Your sticker has blossomed into a magical image — courtesy of Frost_Ai-Bot 🦉🌙` },
+            { quoted: m }
+        ); 
+        
+        fs.unlinkSync(mokaya); 
+    }); 
+} 
+break;
+//========================================================================================================================//		      
+case "movie": {
+    if (!text) return reply("🍿✨ Tell me the name of the movie or series you seek, starlight!");
 
     try {
-        if (!text) return m.reply("Provide a song name!");
+        let fids = await axios.get(`http://www.omdbapi.com/?apikey=742b2d09&t=${text}&plot=full`);
 
-        const data = await fetchJson(apiUrl);
-
-        if (!data.success || !data.result || !data.result.lyrics) {
-            return m.reply(`Sorry, I couldn't find any lyrics for "${text}".`);
+        if (!fids.data || fids.data.Response === "False") {
+            return reply(`🧚‍♀️ Couldn't find anything titled *"${text}"* — maybe the spell was miscast? Try again!`);
         }
 
-        const { title, artist, link, thumb, lyrics } = data.result;
-
-        const imageUrl = thumb || "https://i.imgur.com/Cgte666.jpeg";
-
-        const imageBuffer = await fetch(imageUrl)
-            .then(res => res.buffer())
-            .catch(err => {
-                console.error('Error fetching image:', err);
-                return null;
-            });
-
-        if (!imageBuffer) {
-            return m.reply("An error occurred while fetching the image.");
-        }
-
-        const caption = `**Title**: ${title}\n**Artist**: ${artist}\n\n${lyrics}`;
+        let imdbt = "🌙✨ *Frost-Ai Magical Movie Scroll* ✨🌙\n";
+        imdbt += "────────────────────────\n";
+        imdbt += `🎬 *Title*      : ${fids.data.Title}\n`;
+        imdbt += `📅 *Year*       : ${fids.data.Year}\n`;
+        imdbt += `⭐ *Rated*      : ${fids.data.Rated}\n`;
+        imdbt += `📆 *Released*   : ${fids.data.Released}\n`;
+        imdbt += `⏳ *Runtime*    : ${fids.data.Runtime}\n`;
+        imdbt += `🌀 *Genre*      : ${fids.data.Genre}\n`;
+        imdbt += `🧙‍♂️ *Director*   : ${fids.data.Director}\n`;
+        imdbt += `🖋️ *Writer*     : ${fids.data.Writer}\n`;
+        imdbt += `🎭 *Actors*     : ${fids.data.Actors}\n`;
+        imdbt += `📖 *Plot*       : ${fids.data.Plot}\n`;
+        imdbt += `🗣️ *Language*   : ${fids.data.Language}\n`;
+        imdbt += `🌍 *Country*    : ${fids.data.Country}\n`;
+        imdbt += `🏆 *Awards*     : ${fids.data.Awards}\n`;
+        imdbt += `💰 *Box Office* : ${fids.data.BoxOffice}\n`;
+        imdbt += `🏙️ *Production* : ${fids.data.Production}\n`;
+        imdbt += `🌟 *IMDb Rating*: ${fids.data.imdbRating}\n`;
+        imdbt += `🗳️ *Votes*      : ${fids.data.imdbVotes}`;
 
         await client.sendMessage(
-            m.chat,
+            from,
             {
-                image: imageBuffer,
-                caption: caption
+                image: {
+                    url: fids.data.Poster,
+                },
+                caption: imdbt,
             },
             { quoted: m }
         );
     } catch (error) {
         console.error(error);
-        m.reply(`An error occurred while fetching the lyrics for "${text}".`);
+        reply("💥 Oof! My cinema crystal ball cracked… try again in a bit, dear.");
     }
-      }
-	break;
 
-//========================================================================================================================//		      
-        case "toimg": case "photo": { 
-    if (!quoted) throw 'Tag a static video with the command!'; 
-    if (!/webp/.test(mime)) throw `Tag a sticker with ${prefix + command}`; 
-  
-    let media = await client.downloadAndSaveMediaMessage(quoted); 
-    let mokaya = await getRandom('.png'); 
-    exec(`ffmpeg -i ${media} ${mokaya}`, (err) => { 
-   fs.unlinkSync(media); 
-   if (err) throw err 
-   let buffer = fs.readFileSync(mokaya); 
-   client.sendMessage(m.chat, { image: buffer, caption: `𝗖𝗼𝗻𝘃𝗲𝗿𝘁𝗲𝗱 𝗯𝘆 𝗥𝗮𝘃𝗲𝗻-𝗕𝗼𝘁`}, { quoted: m }) 
-   fs.unlinkSync(mokaya); 
-    }); 
-    } 
-     break;
-
-//========================================================================================================================//		      
-   case "movie": 
-             if (!text) return reply(`Provide a series or movie name.`);  
-              let fids = await axios.get(`http://www.omdbapi.com/?apikey=742b2d09&t=${text}&plot=full`);  
-              let imdbt = "";  
-              console.log(fids.data)  
-              imdbt += "⚍⚎⚎⚎⚎⚎⚎⚎⚎⚎⚎⚎⚎⚎⚎⚍\n" + " ``` IMDB MOVIE SEARCH```\n" + "⚎⚎⚎⚎⚎⚎⚎⚎⚎⚎⚎⚎⚎⚎⚎⚎\n";  
-              imdbt += "🎬Title      : " + fids.data.Title + "\n";  
-              imdbt += "📅Year       : " + fids.data.Year + "\n";  
-              imdbt += "⭐Rated      : " + fids.data.Rated + "\n";  
-              imdbt += "📆Released   : " + fids.data.Released + "\n";  
-              imdbt += "⏳Runtime    : " + fids.data.Runtime + "\n";  
-              imdbt += "🌀Genre      : " + fids.data.Genre + "\n";  
-              imdbt += "👨🏻‍💻Director   : " + fids.data.Director + "\n";  
-              imdbt += "✍Writer     : " + fids.data.Writer + "\n";  
-              imdbt += "👨Actors     : " + fids.data.Actors + "\n";  
-              imdbt += "📃Plot       : " + fids.data.Plot + "\n";  
-              imdbt += "🌐Language   : " + fids.data.Language + "\n";  
-              imdbt += "🌍Country    : " + fids.data.Country + "\n";  
-              imdbt += "🎖️Awards     : " + fids.data.Awards + "\n";  
-              imdbt += "📦BoxOffice  : " + fids.data.BoxOffice + "\n";  
-              imdbt += "🏙️Production : " + fids.data.Production + "\n";  
-              imdbt += "🌟imdbRating : " + fids.data.imdbRating + "\n";  
-              imdbt += "❎imdbVotes  : " + fids.data.imdbVotes + "";  
-             client.sendMessage(from, {  
-                  image: {  
-                      url: fids.data.Poster,  
-                  },  
-                  caption: imdbt,  
-              },  
-                 { quoted: m }); 
-  
-                       break;
-		      
-//========================================================================================================================//                                   
-  case "linkgroup": case "link": { 
-                 if (!m.isGroup) throw group; 
-                 if (!isBotAdmin) throw botAdmin; 
-                 let response = await client.groupInviteCode(m.chat); 
-                 client.sendText(m.chat, `https://chat.whatsapp.com/${response}\n\nGroup link for  ${groupMetadata.subject}`, m, { detectLink: true }); 
-             } 
-          break;
-       
-//========================================================================================================================//
-          case 'botpp': { 
-    if (!Owner) throw NotOwner; 
-    if (!quoted) throw `Tag an image you want to be the bot's profile picture with ${prefix + command}`; 
-    if (!/image/.test(mime)) throw `Tag an image you want to be the bot's profile picture with ${prefix + command}`; 
-    if (/webp/.test(mime)) throw `Tag an image you want to be the bot's profile picture with ${prefix + command}`; 
-    let media = await client.downloadAndSaveMediaMessage(quoted);
-		
-                    await client.updateProfilePicture(botNumber, { url: media }).catch((err) => fs.unlinkSync(media)); 
-    reply `Bot's profile picture has been successfully updated✅️`; 
-	  }
     break;
+}
+//========================================================================================================================//   
+case "linkgroup":
+case "link": {
+    if (!m.isGroup) throw '🚫 This spell only works inside group realms, dear traveler!';
 
-//========================================================================================================================//		      
-          case 'broadcast': { 
-         if (!Owner) throw NotOwner; 
-         if (!text) { 
-             reply("Provide a message to cats!") 
-             return; 
-         } 
-         let getGroups = await client.groupFetchAllParticipating() 
-         let groups = Object.entries(getGroups) 
-             .slice(0) 
-             .map(entry => entry[1]) 
-         let res = groups.map(v => v.id) 
-         reply(` Broadcasting in ${res.length} Group Chat, in ${res.length * 1.5} seconds`) 
-         for (let i of res) { 
-             let txt = `𝗥𝗔𝗩𝗘𝗡-𝗕𝗢𝗧 𝗕𝗥𝗢𝗔𝗗𝗖𝗔𝗦𝗧\n\n🀄 Message: ${text}\n\nAuthor: ${pushname}` 
-             await client.sendMessage(i, { 
-                 image: { 
-                     url: menulink
-                 }, 
-                 caption: `${txt}` 
-             }) 
-         } 
-         reply(`Broadcasted to ${res.length} Groups.`) 
-     } 
- break;
+    if (!isBotAdmin) throw '🧙‍♀️ Oopsie! I need to be a group admin to fetch the portal link!';
 
+    let response = await client.groupInviteCode(m.chat);
+    let groupName = groupMetadata.subject || "this enchanted circle";
+
+    client.sendText(
+        m.chat,
+        `🔗✨ *Here’s the portal to ${groupName}*\nhttps://chat.whatsapp.com/${response}\n\n🌟 Use it wisely — only the worthy shall enter!`,
+        m,
+        { detectLink: true }
+    );
+}
+break;
+//========================================================================================================================//
+case 'botpp': {
+    if (!Owner) throw '🧙‍♀️ Only the enchanted overlord (bot owner) may grant me a new face!';
+
+    if (!quoted) throw `🌸 Tag a lovely image with *${prefix + command}* so I may blossom anew!`;
+    if (!/image/.test(mime)) throw `🖼️ That doesn’t look like a picture, starlight. Try again with a proper image and *${prefix + command}*.`;
+    if (/webp/.test(mime)) throw `🧚‍♀️ Stickers are cute, but I need a real photo to sparkle with!`;
+
+    let media = await client.downloadAndSaveMediaMessage(quoted);
+
+    await client.updateProfilePicture(botNumber, { url: media })
+        .then(() => {
+            fs.unlinkSync(media);
+            reply(`📸✨ Behold! My profile picture has been glamorously updated — ready to shine!`);
+        })
+        .catch((err) => {
+            fs.unlinkSync(media);
+            reply(`😵‍💫 Oopsie! Something went wrong during the makeover...`);
+        });
+}
+break;
 //========================================================================================================================//		      
- case "gemini": {
-    try {
-        if (!text) return m.reply("This is Raven, an AI using Gemini APIs to process text, provide yr query");
+case 'broadcast': {
+    if (!Owner) throw '🧙‍♀️ Only the supreme spellcaster (bot owner) may send messages across the kingdoms!';
+
+    if (!text) {
+        reply("📜✨ Whisper me the message you'd like to cast to the lands!");
+        return;
+    }
+
+    let getGroups = await client.groupFetchAllParticipating();
+    let groups = Object.entries(getGroups).map(entry => entry[1]);
+    let res = groups.map(v => v.id);
+
+    reply(`🌐✨ Casting your message across *${res.length} enchanted group realms*...`);
     
-        const { default: Gemini } = await import('gemini-ai');
+    for (let i of res) {
+        let txt = `🦉 *FROST-AI ROYAL BROADCAST* 🦉\n\n💌 *Message*: ${text}\n🔮 *Sender*: ${pushname || 'A mysterious being...'}`;
+        await client.sendMessage(i, {
+            image: { url: menulink },
+            caption: txt
+        });
+    }
 
+    reply(`🎉✨ The broadcast spell was successful! Your message soared through *${res.length} realms*. 📡🌟`);
+}
+break;
+//========================================================================================================================//		      
+case "gemini": {
+    try {
+        if (!text) return m.reply("🌌✨ You’ve summoned *Frost-Ai*, the cosmic whisperer using Gemini’s star-scripts, but you forgot to ask your question! 🌠");
+
+        const { default: Gemini } = await import('gemini-ai');
         const gemini = new Gemini("AIzaSyDJUtskTG-MvQdlT4tNE319zBqLMFei8nQ");
         const chat = gemini.createChat();
 
         const res = await chat.ask(text);
 
-        await m.reply(res);
+        await m.reply(`🌙 *Raven speaks...*\n\n${res}`);
     } catch (e) {
-        m.reply("I am unable to generate responses\n\n" + e);
+        m.reply("💫 Alas! The stars were cloudy and I couldn’t receive a divine reply...\n\n📜 Error: " + e);
     }
- }
- break;
-
+}
+break;
 //========================================================================================================================//		      
-        case "setvar": 
- if (!Owner) throw NotOwner;  
- if(!text.split('=')[1]) return reply('Incorrect Usage:\nProvide the key and value correctly\nExample: setvar AUTOVIEW_STATUS=TRUE')  
- const herok = new Heroku({  
-            token: herokuapi,  
-          });  
-          let baseURI = "/apps/" + appname;  
- await herok.patch(baseURI + "/config-vars", {  
-            body: {  
-                    [text.split('=')[0]]: text.split('=')[1],  
-            },  
- });  
-          await reply(`✅ The variable ${text.split('=')[0]} = ${text.split('=')[1]} has been set Successfuly.\nWait 20s for changes to effect!`);  
-  
- break;
-		      
+case "setvar": {
+    if (!Owner) throw NotOwner;
+
+    if (!text || !text.includes('=') || !text.split('=')[1]) {
+        return reply(
+            `🔮 *Magic Mishap Detected!*\n\n` +
+            `To alter the sacred environment scrolls, provide both *Key* and *Value* like so:\n\n` +
+            `📜 Example:\n*${prefix}setvar AUTOVIEW_STATUS=TRUE*`
+        );
+    }
+
+    const [key, value] = text.split('=');
+    const herok = new Heroku({ token: herokuapi });
+    const baseURI = "/apps/" + appname;
+
+    await herok.patch(baseURI + "/config-vars", {
+        body: { [key]: value },
+    });
+
+    await reply(
+        `✨ *Arcane Environment Updated!*\n\n` +
+        `📂 *Variable:* ${key}\n` +
+        `🔐 *Value:* ${value}\n\n` +
+        `Changes may take ~20s to flow through the ether. 🌌`
+    );
+}
+break;
 //========================================================================================================================//	
- case "dlt": case "dil": { 
- if (!m.quoted) throw `No message quoted for deletion`; 
- let { chat, fromMe, id, isBaileys } = m.quoted; 
- if (isBaileys) throw `I cannot delete. Quoted message is my message or another bot message.`; 
- client.sendMessage(m.chat, { delete: { remoteJid: m.chat, fromMe: true, id: m.quoted.id, participant: m.quoted.sender } }); 
- } 
- break;
- 
+case "dlt":
+case "dil": {
+    if (!m.quoted) throw `🕯️✨ *Whisper to the Shadows* ✨🕯️\n\nYou must *quote a message* to erase it from the veil.`;
+
+    let { chat, fromMe, id, isBaileys } = m.quoted;
+
+    if (isBaileys)
+        throw `⚠️ The message dances with bot energy — I cannot vanish what's mine or another spirit's.`;
+
+    await client.sendMessage(m.chat, {
+        delete: {
+            remoteJid: m.chat,
+            fromMe: true,
+            id: m.quoted.id,
+            participant: m.quoted.sender,
+        },
+    });
+
+    // Optional aesthetic reply (remove if stealth mode is desired)
+    reply(`💨✨ *Vanished without a trace...*`);
+}
+break;
 //========================================================================================================================//
-case "block": { 
- if (!Owner) throw NotOwner; 
- if (!m.quoted) throw `𝗧𝗮𝗴 𝘀𝗼𝗺𝗲𝗼𝗻𝗲!`  
- let users = m.mentionedJid[0] ? m.mentionedJid[0] : m.quoted ? m.quoted.sender : text.replace(/[^0-9]/g, '')+'@s.whatsapp.net'
-	 if (users == "254114660061@s.whatsapp.net") return m.reply("𝗜 𝗰𝗮𝗻𝗻𝗼𝘁 𝗯𝗹𝗼𝗰𝗸 𝗺𝘆 𝗢𝘄𝗻𝗲𝗿 😡");
-		  if (users  == client.decodeJid(client.user.id)) throw '𝗜 𝗰𝗮𝗻𝗻𝗼𝘁 𝗯𝗹𝗼𝗰𝗸 𝗺𝘆𝘀𝗲𝗹𝗳 𝗶𝗱𝗶𝗼𝘁 😡';
- await client.updateBlockStatus(users, 'block'); 
- m.reply (`𝗕𝗹𝗼𝗰𝗸𝗲𝗱 𝘀𝘂𝗰𝗰𝗲𝘀𝗳𝘂𝗹𝗹𝘆!`); 
- } 
- break; 
+case "block": {
+    if (!Owner) throw NotOwner;
 
+    if (!m.quoted) throw `🧿✨ *Summon a soul to banish...* \n\nTag or quote the one you wish to block from the realms.`;
+
+    let users = m.mentionedJid[0]
+        ? m.mentionedJid[0]
+        : m.quoted
+        ? m.quoted.sender
+        : text.replace(/[^0-9]/g, '') + '@s.whatsapp.net';
+
+    if (users === "254114660061@s.whatsapp.net")
+        return m.reply("🩸🔮 *Foolish mortal!* I cannot block the one who crafted me...");
+
+    if (users === client.decodeJid(client.user.id))
+        throw `🪞🌫️ Blocking *myself*? Madness. This spell shall not pass.`;
+
+    await client.updateBlockStatus(users, 'block');
+
+    m.reply(`🚫🕯️ *They have been cast out of the circle...*\nBlocked successfully.`);
+}
+break;
 //========================================================================================================================//		      
- case "unblock": { 
- if (!Owner) throw NotOwner; 
- if (!m.quoted) throw `𝗧𝗮𝗴 𝘀𝗼𝗺𝗲𝗼𝗻𝗲!`; 
- let users = m.mentionedJid[0] ? m.mentionedJid[0] : m.quoted ? m.quoted.sender : text.replace(/[^0-9]/g, '')+'@s.whatsapp.net'; 
- await client.updateBlockStatus(users, 'unblock'); 
- m.reply (`𝗨𝗻𝗯𝗹𝗼𝗰𝗸𝗲𝗱 𝘀𝘂𝗰𝗰𝗲𝘀𝗳𝘂𝗹𝗹𝘆✅!`); 
- } 
- break;
+ case "unblock": {
+    if (!Owner) throw NotOwner;
 
+    if (!m.quoted) throw `🌿✨ *Whisper their name...* \n\nTag or quote the one you wish to release from the dark spell.`;
+
+    let users = m.mentionedJid[0]
+        ? m.mentionedJid[0]
+        : m.quoted
+        ? m.quoted.sender
+        : text.replace(/[^0-9]/g, '') + '@s.whatsapp.net';
+
+    await client.updateBlockStatus(users, 'unblock');
+
+    m.reply(`🔓🦋 *The banishment has been lifted...* \nThey may now return to the magical circle.`);
+}
+break;
 //========================================================================================================================//		      
-          case 'join': { 
-                 if (!Owner) throw NotOwner
-                 if (!text) return reply("provide a valid group link") 
-                 let result = args[0].split('https://chat.whatsapp.com/')[1] 
-                 await client.groupAcceptInvite(result).then((res) =>  reply(jsonformat(res))).catch((err) =>reply(`Link has problem.`)) 
-  
-             }  
-               break;
+case 'join': { 
+    if (!Owner) throw NotOwner;
 
+    if (!text) return reply("🧚‍♀️✨ *Summon me properly!* \nYou must provide a valid group link to open a portal.");
+
+    let result = args[0].split('https://chat.whatsapp.com/')[1];
+
+    await client.groupAcceptInvite(result)
+        .then((res) => reply(`🦋✨ *I’ve gracefully entered the realm!*\n\n${jsonformat(res)}`))
+        .catch((err) => reply(`⚠️ The portal seems broken... \nCheck that group link again!`));
+}
+break;
 //========================================================================================================================//		      
- case "enc": case "encrypte": {
-	const Obf = require("javascript-obfuscator");
+case "enc":
+case "encrypte": {
+    const Obf = require("javascript-obfuscator");
 
-    // Check if the quoted message has text
     if (m.quoted && m.quoted.text) {
-        const forq = m.quoted.text;
+        const spell = m.quoted.text;
 
-        // Obfuscate the JavaScript code
-        const obfuscationResult = Obf.obfuscate(forq, {
+        const enchantedScroll = Obf.obfuscate(spell, {
             compact: true,
             controlFlowFlattening: true,
             controlFlowFlatteningThreshold: 1,
@@ -5985,59 +5785,95 @@ case "block": {
             stringArrayThreshold: 1
         });
 
-        console.log("Successfully encrypted the code✅️");
-        m.reply(obfuscationResult.getObfuscatedCode());
+        console.log("✨🔮 Spell encrypted successfully!");
+        m.reply(`🧙‍♀️✨ *Here’s your encrypted incantation:* \n\n${enchantedScroll.getObfuscatedCode()}`);
     } else {
-        m.reply("Quote/Tag a valid JavaScript code to encrypt!");
+        m.reply("📜✨ *Summon failed!*\nTag or quote a JavaScript code snippet to enchant.");
     }
 }
-	break;
-
+break;
 //========================================================================================================================//		      
 
 //========================================================================================================================//		      
-	      case 'gcprofile': {
- function convertTimestamp(timestamp) {
-  const d = new Date(timestamp * 1000);
-  const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  return {
-    date: d.getDate(),
-    month: new Intl.DateTimeFormat('en-US', { month: 'long' }).format(d),
-    year: d.getFullYear(),
-    day: daysOfWeek[d.getUTCDay()],
-    time: `${d.getUTCHours()}:${d.getUTCMinutes()}:${d.getUTCSeconds()}`
+case 'gcprofile': {
+  function convertTimestamp(timestamp) {
+    const d = new Date(timestamp * 1000);
+    const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    return {
+      date: d.getDate(),
+      month: new Intl.DateTimeFormat('en-US', { month: 'long' }).format(d),
+      year: d.getFullYear(),
+      day: daysOfWeek[d.getUTCDay()],
+      time: `${d.getUTCHours()}:${d.getUTCMinutes()}:${d.getUTCSeconds()}`
+    };
+  }
+
+  if (!m.isGroup) return m.reply("🧚‍♀️ Whoops! This sparkly charm only works in *groups*, darling 🌸");
+
+  let info = await client.groupMetadata(m.chat);
+  let ts = await convertTimestamp(info.creation);
+  let groupOwner = info.owner ? `@${info.owner.split('@')[0]}` : '🌟 Mysteriously Vanished';
+
+  let groupPic;
+  try {
+    groupPic = await client.profilePictureUrl(m.chat, 'image');
+  } catch {
+    groupPic = 'https://files.catbox.moe/duv8ac.jpg'; // fallback scroll ✨
+  }
+
+  const total = info.participants.length;
+  const admins = info.participants.filter(p => p.admin !== null).length;
+  const members = total - admins;
+
+  let enchantedProfile = `╭── ⋆⋅☆⋅⋆ ──╮
+🌺 *Group Scroll: ${info.subject}*
+╰── ⋆⋅☆⋅⋆ ──╯
+
+🆔 *ID:* ${info.id}
+👑 *Group Owner:* ${groupOwner}
+🗓️ *Born On:* ${ts.day}, ${ts.date} ${ts.month} ${ts.year}
+🕰️ *Time:* ${ts.time} UTC
+
+👥 *Adventurers:* ${total}
+✨ *Members:* ${members}
+🧚 *Admins:* ${admins}
+
+📢 *Talk Access:* ${info.announce ? 'Only ✨Admins✨' : 'Everyone in the realm'}
+🛠️ *Edit Spells:* ${info.restrict ? 'Only ✨Admins✨' : 'Everyone can shape the realm'}
+➕ *Summoning:* ${info.memberAddMode === true ? 'Open to all 🌟' : 'Guarded by Admins 🛡️'}
+
+🌟 *May the magic of community thrive!* 🌟`;
+
+  await client.sendMessage(m.chat, {
+    image: { url: groupPic },
+    caption: enchantedProfile,
+    mentions: [info.owner],
+  }, { quoted: m });
+}
+break;
+//========================================================================================================================//		      
+case 'tovideo':
+case 'mp4':
+case 'tovid': {
+  if (!quoted) return reply('🧚‍♂️ Oopsie! Reply to a *sticker* you want to enchant into a video.');
+  if (!/webp/.test(mime)) return reply(`🔮 That’s not a sticker! Reply to a *webp sticker* and try again using *${prefix + command}*`);
+
+  try {
+    let media = await client.downloadAndSaveMediaMessage(quoted);
+    let webpToMp4 = await webp2mp4File(media);
+    
+    await client.sendMessage(m.chat, {
+      video: { url: webpToMp4.result },
+      caption: '✨ Here’s your enchanted video from sticker!'
+    }, { quoted: m });
+
+    await fs.unlinkSync(media);
+  } catch (e) {
+    console.error(e);
+    reply('💥 Something went wrong while casting the conversion spell...');
   }
 }
-
-if (!m.isGroup) return m.reply("This command is meant for groups");
-
-let info = await client.groupMetadata(m.chat);
-let ts = await convertTimestamp(info.creation);
-
-try {
-        pp = await client.profilePictureUrl(chat, 'image');
-      } catch {
-        pp = 'https://files.catbox.moe/duv8ac.jpg';
-      }
-
-await client.sendMessage(m.chat, { image: { url: pp }, 
-          caption: `_Name_ : *${info.subject}*\n\n_ID_ : *${info.id}*\n\n_Group owner_ : ${'@'+info.owner.split('@')[0]} || 'No Creator'\n\n_Group created_ : *${ts.day}, ${ts.date} ${ts.month} ${ts.year}, ${ts.time}*\n\n_Participants_ : *${info.size}*\n_Members_ : *${info.participants.filter((p) => p.admin == null).length}*\n\n_Admins_ : *${Number(info.participants.length - info.participants.filter((p) => p.admin == null).length)}*\n\n_Who can send message_ : *${info.announce == true ? 'Admins' : 'Everyone'}*\n\n_Who can edit group info_ : *${info.restrict == true ? 'Admins' : 'Everyone'}*\n\n_Who can add participants_ : *${info.memberAddMode == true ? 'Everyone' : 'Admins'}*`
-        }, {quoted: m })
-}
-	 break;
-
-//========================================================================================================================//		      
-   case 'tovideo': case 'mp4': case 'tovid': {
-			
-                if (!quoted) return reply('Reply to Sticker')
-                if (!/webp/.test(mime)) return reply(`reply sticker with caption *${prefix + command}*`)
-                
-        let media = await client.downloadAndSaveMediaMessage(quoted)
-                let webpToMp4 = await webp2mp4File(media)
-                await client.sendMessage(m.chat, { video: { url: webpToMp4.result, caption: 'Convert Webp To Video' } }, { quoted: m })
-                await fs.unlinkSync(media)
-            }
-            break;
+break;
 //========================================================================================================================//
 //========================================================================================================================//        
         default: {
