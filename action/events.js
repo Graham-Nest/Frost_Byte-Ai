@@ -1,82 +1,128 @@
-// Import necessary modules
-const botname = require('../set'); // Assuming 'set.js' exports the bot's name or configuration
-const fetchSettings = require('../Database/fetchSettings'); // Assuming this fetches your bot's settings, like welcome/goodbye status
+const botname = require('../set');
+const fetchSettings = require('../Database/fetchSettings');
+const moment = require('moment-timezone');
 
-/**
- * Handles group events such as members joining or leaving.
- * It sends stylish and sassy welcome/goodbye messages with profile pictures.
- *
- * @param {object} client - The WhatsApp client instance.
- * @param {object} Nick - The event object containing details about the participant action.
- *   - Nick.id: The group ID.
- *   - Nick.action: The action performed ('add' or 'remove').
- *   - Nick.participants: An array of participant JIDs involved in the action.
- */
+const whatsappChannelId = '120363369453603973@newsletter';
+const whatsappChannelLink = 'https://whatsapp.com/channel/0029VasHgfG4tRrwjAUyTs10';
+
+const welcomeMessages = [
+    "🎉 Welcome aboard, @{user}! 🛸\nHope you brought memes 📸 and good vibes 🎧!",
+    "👋 Holla @{user}!\nYou've just entered the legend zone a.k.a *{group}*! 🦾",
+    "⚡️ Boom! @{user} just teleported into *{group}*!\nFasten your seatbelt! 🛫",
+    "💫 Welcome @{user} to *{group}*.\nLet’s make memories! 💭",
+    "🎈 A warm welcome to @{user}!\nEnjoy your stay in *{group}*! 🌍"
+];
+
+const goodbyeMessages = [
+    "💨 @{user} has vanished from *{group}*... Just like that.",
+    "🚪 @{user} left the chat.\nWe’ll keep your seat warm. 🪑",
+    "😢 @{user} ran out of bundles.\nPray for their return. 🙏",
+    "👻 @{user} said goodbye to us...\nFly high, digital soul! 🕊️",
+    "🕳️ @{user} disappeared like a magician... 🎩✨"
+];
+
+const welcomeQuotes = [
+    "🌈 “Welcome to the madness — snacks and memes are mandatory!” 😜",
+    "🧠 “You’ve officially joined the smartest (and sassiest) group in town!” 😎",
+    "🎊 “Brace yourself @{user}, greatness and chaos await you!” 🧨",
+    "👑 “You didn’t choose the group life — the group life chose you.” 💥",
+    "🚀 “Welcome aboard the vibe shuttle! Buckle up, laughs ahead!” 🌠",
+    "🎩 “May your stay be meme-tastic and drama-free!” 🍿",
+    "📱 “New phone, who dis? Oh wait, it's @{user} joining the squad!” 🔥",
+    "💌 “Welcome to the group! Now you’re part of the daily notifications club.” 🔔",
+    "🦄 “You're not just a member — you're *the* main character now!” 🎬",
+    "🍕 “Welcome! Pizza in the front, chaos in the back.” 🤪"
+];
+
+const goodbyeQuotes = [
+    "👻 “@{user} has ghosted us... again. Typical.” 🧂",
+    "💀 “One less notification. @{user} just rage-quit the group!” 🔕",
+    "🚽 “@{user} left mid-conversation... probably nature called.” 🧻",
+    "📡 “@{user} disconnected from the Matrix. Send snacks and signal.” 📶",
+    "🐸 “So long, @{user}. May your bundles last longer on the other side.” 💸",
+    "📉 “Group vibe levels dropped by 0.5% — @{user} has left the building.” 🏃",
+    "📦 “@{user} has packed their memes and vanished like rent money.” 🧳",
+    "🛌 “Left the group to finally sleep in peace. We respect that energy.” 😴",
+    "🪄 “Poof! @{user} turned into a ‘left the group’ message. Magic!” ✨",
+    "🧠 “@{user} escaped our group IQ drop rate. Farewell, legend!” 🧬"
+];
+
 const Events = async (client, Nick) => {
     try {
-        // Fetch settings to determine if welcome/goodbye messages should be sent.
         const welcomegoodbye = await fetchSettings();
+        if (welcomegoodbye !== 'on') return;
 
-        // If welcome/goodbye messages are turned off, exit the function early.
-        if (welcomegoodbye !== 'on') {
-            return;
-        }
+        const metadata = await client.groupMetadata(Nick.id);
+        const participants = Nick.participants;
+        const groupName = metadata.subject;
+        const groupDesc = metadata.desc || "No Description";
+        const groupMembersCount = metadata.participants.length;
 
-        // Get group metadata and participant count.
-        let metadata = await client.groupMetadata(Nick.id);
-        let participants = Nick.participants;
-        // let desc = metadata.desc || "No Description"; // Description is not used in current messages but kept for context
-        // let groupMembersCount = metadata.participants.length; // Member count not used in current messages
-
-        // Iterate through each participant involved in the event.
-        for (let num of participants) {
-            let dpuser; // Variable to store the user's profile picture URL.
-
+        for (const num of participants) {
+            let dpuser;
             try {
-                // Attempt to get the user's profile picture.
-                dpuser = await client.profilePictureUrl(num, "image");
-            } catch (error) {
-                // If fetching the picture fails, use a default placeholder image.
-                console.log(`Failed to fetch profile picture for ${num}: ${error.message}`);
-                dpuser = "https://files.catbox.moe/xmlidu.jpg"; // Default placeholder image URL
+                dpuser = await client.profilePictureUrl(num, 'image');
+                if (!dpuser) throw new Error("No profile pic");
+            } catch {
+                dpuser = "https://files.catbox.moe/3l3qgq.jpg";
             }
 
-            // Handle 'add' action (member joining).
+            const userTag = num.split('@')[0];
+            const currentTime = moment().tz("Africa/Nairobi").format("dddd, MMMM Do YYYY | hh:mm A");
+
+            let message = "";
+
             if (Nick.action === "add") {
-                let userName = num; // Participant's JID (e.g., '1234567890@s.whatsapp.net')
+                const welcomeMsg = welcomeMessages[Math.floor(Math.random() * welcomeMessages.length)];
+                const quote = welcomeQuotes[Math.floor(Math.random() * welcomeQuotes.length)];
 
-                // Craft a stylish, sassy, and welcoming message.
-                const welcomeMessage = `✨ A radiant welcome to you, darling, as you step into the enchanting realm of *${metadata.subject}*! 👑\n\nWe're absolutely delighted to have you join our fabulous circle. Do take a moment to peek at the group description and rules – it's all part of the magic! 😉💖\n\n~ ${botname} 2025`;
+                message = `${welcomeMsg.replace('{user}', userTag).replace('{group}', groupName)}\n\n📌 *Group Description:* ${groupDesc}\n📅 *Joined on:* ${currentTime}\n💬 *Members:* ${groupMembersCount}\n\n💡 *Quote:* _${quote}_\n\n— ${botname} 🤖`;
 
-                // Send the welcome message with the user's profile picture.
                 await client.sendMessage(Nick.id, {
-                    image: { url: dpuser }, // User's profile picture
-                    caption: welcomeMessage, // The sassy welcome text
-                    mentions: [num], // Mention the user in the message
+                    image: { url: dpuser },
+                    caption: message,
+                    mentions: [num],
                 });
 
-            }
-            // Handle 'remove' action (member leaving).
-            else if (Nick.action === "remove") {
-                let userName2 = num; // Participant's JID
+            } else if (Nick.action === "remove") {
+                const goodbyeMsg = goodbyeMessages[Math.floor(Math.random() * goodbyeMessages.length)];
+                const quote = goodbyeQuotes[Math.floor(Math.random() * goodbyeQuotes.length)];
 
-                // Craft a sassy and dramatic goodbye message.
-                const goodbyeMessage = `Oh, *farewell*, my dear! 👋💨 It seems your journey with us in *${metadata.subject}* has reached its conclusion. May your future endeavors be as swift and memorable as your departure! We'll miss your presence, but life, as they say, must go on! 😢👑`;
+                message = `${goodbyeMsg.replace('{user}', userTag).replace('{group}', groupName)}\n\n📅 *Left on:* ${currentTime}\n💬 *Remaining Members:* ${groupMembersCount - 1}\n\n💡 *Quote:* _${quote}_\n\n— ${botname} 🤖`;
 
-                // Send the goodbye message with the user's profile picture.
                 await client.sendMessage(Nick.id, {
-                    image: { url: dpuser }, // User's profile picture
-                    caption: goodbyeMessage, // The sassy goodbye text
-                    mentions: [num], // Mention the user in the message
+                    image: { url: dpuser },
+                    caption: message,
+                    mentions: [num],
                 });
             }
+
+            // ✅ Log to bot owner's inbox
+            await client.sendMessage(client.user.id, {
+                image: { url: 'https://files.catbox.moe/3l3qgq.jpg' },
+                caption: message,
+                contextInfo: {
+                    isForwarded: true,
+                    forwardingScore: 999,
+                    forwardedNewsletterMessageInfo: {
+                        newsletterJid: whatsappChannelId,
+                        newsletterName: "ʄʀօֆᴛ-ɮʏᴛɛ-𐌀i",
+                        serverMessageId: -1,
+                    },
+                    externalAdReply: {
+                        title: "Frost-Byte Bot",
+                        body: "Powered By Graham-Nest",
+                        thumbnailUrl: 'https://files.catbox.moe/wpenxk.jpg',
+                        sourceUrl: whatsappChannelLink,
+                        mediaType: 1,
+                        renderLargerThumbnail: false,
+                    },
+                }
+            });
         }
     } catch (err) {
-        // Log any errors that occur during event processing.
-        console.error(`Error in Events handler: ${err.message}`);
-        // Optionally, you could send an error message to a specific admin or log channel.
+        console.error("❌ Event Error:", err);
     }
 };
 
-// Export the Events handler function.
 module.exports = Events;
