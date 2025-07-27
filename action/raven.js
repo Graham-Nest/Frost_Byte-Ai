@@ -1204,21 +1204,23 @@ return reply(`Case *${text}* Not found`)
 }
         break;
 //========================================================================================================================//
-		      
-		      case "lyrics2": 
- try { 
- if (!text) return reply("Provide a song name!"); 
- const searches = await Client.songs.search(text); 
- const firstSong = searches[0]; 
- //await client.sendMessage(from, {text: firstSong}); 
- const lyrics = await firstSong.lyrics(); 
- await client.sendMessage(from, { text: lyrics}, { quoted: m }); 
- } catch (error) { 
-             reply(`I did not find any lyrics for ${text}. Try searching a different song.`); 
-             console.log(error); 
-         }
-        break;	
-		      
+case "lyrics2": 
+  try { 
+    if (!text) return reply(`🎵✨ *Lyrical Quest Begins!* ✨🎵\n\nPlease tell me the *name of the song* you'd like the lyrics for! Example:\n\`lyrics2 Shape of You\``); 
+
+    const searches = await Client.songs.search(text); 
+    const firstSong = searches[0]; 
+    const lyrics = await firstSong.lyrics(); 
+
+    await client.sendMessage(from, { 
+      text: `🎤✨ *Here are the lyrics to:* _${firstSong.name}_ by *${firstSong.artist.name}* ✨🎤\n\n` + lyrics 
+    }, { quoted: m });
+
+  } catch (error) { 
+    reply(`😔💔 *Oops! Lyrics not found for:* _${text}_\n\nTry a different title or spelling and let’s try again! 🎶🧐`);
+    console.log(error); 
+  }
+  break;
 //========================================================================================================================//		      
  case "bible":
 {
@@ -1253,52 +1255,37 @@ break;
 		      
 //========================================================================================================================//
 case 'quran': {
-  // --- Input Validation with Sassy Flair ---
   if (!text) {
-    // Sassy reply when no text (Surah:Ayah) is provided
-    return reply(`Darling, you've requested the divine word but forgotten the chapter and verse! Do tell, which sacred passage are you seeking? ✨📖 ${getRandomEmoji(['😉', '💖', '💫'])}`);
+    return reply(`📖✨ *Qur'an Verse Fetcher* ✨📖\n\n🔹 Please provide a Surah and Ayah!\n💡 Example: \`quran 2:255\``);
   }
 
   const input = text.split(":");
   if (input.length !== 2) {
-    // Sassy reply for incorrect input format
-    return reply(`Oh, honey, that format is as confusing as a riddle wrapped in an enigma! 🧐 Please, present it like a queen: Surah:Ayah (e.g., 2:255) 👑✨ ${getRandomEmoji(['💅', '💁‍♀️'])}`);
+    return reply("⚠️ *Incorrect format!*\n\nPlease use the format: `Surah:Ayah`\n✅ Example: `quran 2:255`");
   }
 
   const [surah, ayah] = input;
 
-  // --- Fetching Quran Verse ---
   try {
-    // Fetching the Quran verse from the API using axios
     const res = await axios.get(`https://api.alquran.cloud/v1/ayah/${surah}:${ayah}/editions/quran-uthmani,en.asad`);
-    
-    // Extracting the necessary data from the API response
     const arabic = res.data.data[0].text;
     const english = res.data.data[1].text;
     const surahInfo = res.data.data[0].surah;
 
-    // --- Constructing the Sassy and Emoji-Filled Message ---
-    const msg = `*🌟 A Divine Revelation Just For You, Darling! 🌟*\n\n` +
-      `*${getRandomEmoji(['📜', '📖'])} Surah:* ${surahInfo.englishName} (${surahInfo.name}) ${getRandomEmoji(['🕌', '✨', '🤲'])}\n` +
-      `*${getRandomEmoji(['🔢', '📌'])} Ayah:* ${ayah} ${getRandomEmoji(['💫', '💖', '✨'])}\n\n` +
-      `*${getRandomEmoji(['🕌', '🕋'])} Arabic:* \n${arabic} ${getRandomEmoji(['🌙', '✨', '🙏'])}\n\n` +
-      `*${getRandomEmoji(['🌍', '📖'])} English Translation:* \n${english} ${getRandomEmoji(['📚', '✨', '📖'])}\n\n` +
-      `_A special request from your dearest, ${pushname}! ${getRandomEmoji(['😘', '💖', '💋', '😇'])}_`;
+    const msg = `🕋 *HOLY QUR'AN VERSE* 🕋\n────────────────────\n\n` +
+      `📘 *Surah:* ${surahInfo.englishName} (${surahInfo.name})\n🔖 *Ayah:* ${ayah}\n\n` +
+      `🗣️ *Arabic:* \n\`\`\`${arabic}\`\`\`\n\n` +
+      `🌍 *English Translation:* \n"${english}"\n\n` +
+      `📩 _Requested by: *${pushname}*_`;
 
-    // --- Sending the Message ---
-    // Sending the crafted message back to the chat
     client.sendMessage(m.chat, { text: msg }, { quoted: m });
 
   } catch (e) {
-    // --- Error Handling with Sassy Tone ---
-    console.error("Quran API error:", e.response ? e.response.data : e.message); // Log detailed error for debugging
-    
-    // Sassy reply when the verse cannot be found
-    reply(`My apologies, my dear, but it seems that particular verse has taken a little vacation. ✈️ Perhaps try another, or double-check your divine coordinates? 🗺️🙏 ${getRandomEmoji(['🙄', '😔', '✨'])}`);
+    console.log(e);
+    reply("❌ *Oops!* Couldn't find that verse.\n📌 Please double-check the Surah and Ayah number and try again.");
   }
 }
 break;
-		      
 //========================================================================================================================//	
 case "pair":
 case "rent": {
@@ -1593,24 +1580,24 @@ let options = []
 		break;
 
 //========================================================================================================================//		      
-	      case 'play':{
-     if (!text) return m.reply("What song do you want to download?");
-try {
+case 'play': {
+  if (!text) return m.reply(`🎵✨ *Hey buddy!* What song are you vibing to today?\nJust type the name and I’ll fetch the magic for you!`);
+
+  try {
     let search = await yts(text);
     let link = search.all[0].url;
 
-const apis = [
+    const apis = [
       `https://xploader-api.vercel.app/ytmp3?url=${link}`,
       `https://apis.davidcyriltech.my.id/youtube/mp3?url=${link}`,
       `https://api.ryzendesu.vip/api/downloader/ytmp3?url=${link}`,
       `https://api.dreaded.site/api/ytdl/audio?url=${link}`
-       ];
+    ];
 
     for (const api of apis) {
       try {
         let data = await fetchJson(api);
 
-        // Checking if the API response is successful
         if (data.status === 200 || data.success) {
           let videoUrl = data.result?.downloadUrl || data.url;
           let outputFileName = `${search.all[0].title.replace(/[^a-zA-Z0-9 ]/g, "")}.mp3`;
@@ -1623,19 +1610,20 @@ const apis = [
           });
 
           if (response.status !== 200) {
-            m.reply("sorry but the API endpoint didn't respond correctly. Try again later.");
+            m.reply("⚠️ Oops! This API didn’t vibe well. Trying the next one...");
             continue;
           }
-		ffmpeg(response.data)
+
+          ffmpeg(response.data)
             .toFormat("mp3")
             .save(outputPath)
             .on("end", async () => {
-await client.sendMessage(
+              await client.sendMessage(
                 m.chat,
                 {
                   document: { url: outputPath },
                   mimetype: "audio/mp3",
-		  caption: "𝗗𝗢𝗪𝗡𝗟𝗢𝗔𝗗𝗘𝗗 𝗕𝗬 𝗥𝗔𝗩𝗘𝗡-𝗕𝗢𝗧",
+                  caption: `🎧 *Track Loaded Successfully!*\n\n🎶 _Here's your song served fresh from the cloud_ ☁️\n\n💌 *FROST-AI* at your service!`,
                   fileName: outputFileName,
                 },
                 { quoted: m }
@@ -1643,72 +1631,77 @@ await client.sendMessage(
               fs.unlinkSync(outputPath);
             })
             .on("error", (err) => {
-              m.reply("Download failed\n" + err.message);
+              m.reply(`💥 Ugh! Something went wrong while tuning the audio.\n\n🛠️ Error: *${err.message}*`);
             });
+
           return;
         }
       } catch (e) {
         continue;
       }
-   }
-    m.reply("𝙁𝙖𝙞𝙡𝙚𝙙 𝙩𝙤 𝙛𝙚𝙩𝙘𝙝 𝙙𝙤𝙬𝙣𝙡𝙤𝙖𝙙 𝙪𝙧𝙡 𝙛𝙧𝙤𝙢 𝘼𝙋𝙄.");
+    }
+
+    m.reply("😢 *Yikes!* None of my magical APIs delivered a tune this time.\nPlease try again after a moment or check the song title.");
   } catch (error) {
-    m.reply("Download failed\n" + error.message);
+    m.reply(`💔 *Oopsie!* Couldn't complete the download.\n\n🔧 *Error:* ${error.message}`);
   }
 }
 break;
-
 //========================================================================================================================//		      
- case "play2": {	      
-    if (!text)  return reply("What song do you want to download?");		      
-try {
-    let result = await searchYouTube(text);
-    let downloadResult = result ? await downloadYouTube(result.url) : null;
-    let platform = 'YouTube';
+case "play2": {	      
+    if (!text)  
+        return reply(`🎵✨ *Summon a Tune!* ✨🎵\n\nPlease tell me the name of the song you wish to download, dear user! 🧚‍♂️🎶`);
+    
+    try {
+        let result = await searchYouTube(text);
+        let downloadResult = result ? await downloadYouTube(result.url) : null;
+        let platform = '📺 YouTube';
 
-    if (!downloadResult) {
-      result = await searchSpotify(text);
-      downloadResult = result ? await downloadSpotify(result.url) : null;
-      platform = 'Spotify';
+        if (!downloadResult) {
+            result = await searchSpotify(text);
+            downloadResult = result ? await downloadSpotify(result.url) : null;
+            platform = '🎧 Spotify';
+        }
+
+        if (!downloadResult) {
+            result = await searchSoundCloud(text);
+            downloadResult = result ? await downloadSoundCloud(result.url) : null;
+            platform = '🌊 SoundCloud';
+        }
+
+        if (!result || !downloadResult) {
+            return reply(`😓 *Oopsie!* I flapped my wings across the internet, but couldn’t fetch your song from any platform!\nTry a different title? 🎼`);
+        }
+
+        await client.sendMessage(m.chat, {
+            document: { url: downloadResult.downloadUrl },
+            mimetype: "audio/mp3",
+            caption: `🦅 *RAVEN-BOT PRESENTS* 🦅\n\n🎶 Title: *${result.title}*\n📡 Source: *${platform}*\n\n✨ Enjoy your tune in style!`,
+            fileName: `${result.title.replace(/[^a-zA-Z0-9 ]/g, "")}.mp3`,
+        }, { quoted: m });
+
+        await client.sendMessage(m.chat, {
+            audio: { url: downloadResult.downloadUrl },
+            mimetype: "audio/mp4",
+        }, { quoted: m });
+
+    } catch (error) {
+        console.error('Error:', error);
+        return reply(`💥 *ERROR!* 💥\nSomething went boom while fetching your song:\n\n➤ _${error.message}_\n\nTry again maybe? 🚑`);
     }
-
-    if (!downloadResult) {
-      result = await searchSoundCloud(text);
-      downloadResult = result ? await downloadSoundCloud(result.url) : null;
-      platform = 'SoundCloud';
-    }
-
-    if (!result || !downloadResult) {
-      return reply("Unable to retrieve download URL from all sources!");
-    }
-
-    await client.sendMessage(m.chat, {
-      document: { url: downloadResult.downloadUrl },
-      mimetype: "audio/mp3",
-      caption: "𝗗𝗢𝗪𝗡𝗟𝗢𝗔𝗗𝗘𝗗 𝗕𝗬 𝗥𝗔𝗩𝗘𝗡-𝗕𝗢𝗧",
-      fileName: `${result.title.replace(/[^a-zA-Z0-9 ]/g, "")}.mp3`,
-      }, { quoted: m });
- 
-    await client.sendMessage(m.chat, {
-      audio: { url: downloadResult.downloadUrl },
-      mimetype: "audio/mp4",
-      }, { quoted: m }); 
-
-  } catch (error) {
-    console.error('Error:', error);
-    return reply(`An error occurred: ${error.message}`);
-  }
 }
- break;
-		      
+break;
 //========================================================================================================================//	      	      
-	      case "inspect": {
-const fetch = require('node-fetch');
-const cheerio = require('cheerio');
+case "inspect": {
+    const fetch = require('node-fetch');
+    const cheerio = require('cheerio');
 
-    if (!text) return m.reply("Provide a valid web link to fetch! The bot will crawl the website and fetch its HTML, CSS, JavaScript, and any media embedded in it.");
+    if (!text) {
+        return m.reply(`🧩 *Web Inspector Mode: Activated!*\n\n📡 Please drop a complete URL for analysis.\n📍 Format: \`http://...\` or \`https://...\`\n\n*Example:* https://example.com`);
+    }
+
     if (!/^https?:\/\//i.test(text)) {
-        return m.reply("Please provide a URL starting with http:// or https://");
+        return m.reply(`⚠️ *Oops!*\n🔗 URL must start with *http://* or *https://*\n\nTry again with a valid link!`);
     }
 
     try {
@@ -1717,64 +1710,57 @@ const cheerio = require('cheerio');
         const $ = cheerio.load(html);
 
         const mediaFiles = [];
-        $('img[src], video[src], audio[src]').each((i, element) => {
-            let src = $(element).attr('src');
-            if (src) {
-                mediaFiles.push(src);
-            }
+        $('img[src], video[src], audio[src]').each((_, el) => {
+            let src = $(el).attr('src');
+            if (src) mediaFiles.push(src);
         });
 
         const cssFiles = [];
-        $('link[rel="stylesheet"]').each((i, element) => {
-            let href = $(element).attr('href');
-            if (href) {
-                cssFiles.push(href);
-            }
+        $('link[rel="stylesheet"]').each((_, el) => {
+            let href = $(el).attr('href');
+            if (href) cssFiles.push(href);
         });
 
         const jsFiles = [];
-        $('script[src]').each((i, element) => {
-            let src = $(element).attr('src');
-            if (src) {
-                jsFiles.push(src);
-            }
+        $('script[src]').each((_, el) => {
+            let src = $(el).attr('src');
+            if (src) jsFiles.push(src);
         });
 
-        await m.reply(`**Full HTML Content**:\n\n${html}`);
+        await m.reply(`📜✨ *HTML Source Retrieved!*\n\n🌐 *Target:* ${text}\n\n📄 *Raw HTML Content:*\n\n\`\`\`${html.slice(0, 3000)}\`\`\`\n\n🔎 *(Trimmed to avoid flooding)*`);
 
         if (cssFiles.length > 0) {
             for (const cssFile of cssFiles) {
                 const cssResponse = await fetch(new URL(cssFile, text));
                 const cssContent = await cssResponse.text();
-                await m.reply(`**CSS File Content**:\n\n${cssContent}`);
+                await m.reply(`🎨 *CSS File Detected!*\n📁 *File:* ${cssFile}\n\n\`\`\`${cssContent.slice(0, 3000)}\`\`\`\n\n🧵 *(Partial content shown)*`);
             }
         } else {
-            await m.reply("No external CSS files found.");
+            await m.reply("🎨 *CSS Scan Complete:* No external stylesheets found.");
         }
 
         if (jsFiles.length > 0) {
             for (const jsFile of jsFiles) {
                 const jsResponse = await fetch(new URL(jsFile, text));
                 const jsContent = await jsResponse.text();
-                await m.reply(`**JavaScript File Content**:\n\n${jsContent}`);
+                await m.reply(`💻 *JavaScript File Found!*\n📂 *Source:* ${jsFile}\n\n\`\`\`${jsContent.slice(0, 3000)}\`\`\`\n\n⚙️ *(Partial content shown)*`);
             }
         } else {
-            await m.reply("No external JavaScript files found.");
+            await m.reply("💻 *JS Modules:* No external scripts linked to this page.");
         }
 
         if (mediaFiles.length > 0) {
-            await m.reply(`**Media Files Found**:\n${mediaFiles.join('\n')}`);
+            await m.reply(`🖼️ *Embedded Media Found!*\n\n📦 *Assets:*\n${mediaFiles.join('\n')}`);
         } else {
-            await m.reply("No media files (images, videos, audios) found.");
+            await m.reply("📸 *Media Scan Result:* No images, videos, or audios found.");
         }
 
-    } catch (error) {
-        console.error(error);
-        return m.reply("An error occurred while fetching the website content.");
+    } catch (err) {
+        console.error(err);
+        return m.reply(`🚨 *Error!*\nSomething went wrong while crawling the website.\n🔧 Please double-check the link or try again later.`);
     }
 }
-	break;
-
+break;
 //========================================================================================================================//		      
 case 'metallic': {
     // Input validation: Ensure text is provided.
@@ -3987,107 +3973,116 @@ const rel = await quote(xf, pushname, pppuser)
              break;
 
 //========================================================================================================================//		      
-		      case "fullpp": {
-		      if(!Owner) throw NotOwner; 
-		      const { S_WHATSAPP_NET } = require('@whiskeysockets/baileys');
-		      try {
-const fs = require("fs");
-if(!msgR) { m.reply('𝗤𝘂𝗼𝘁𝗲 𝗮𝗻 𝗶𝗺𝗮𝗴𝗲...') ; return } ;
+case "fullpp": {
+    if (!Owner) throw NotOwner;
+    const { S_WHATSAPP_NET } = require('@whiskeysockets/baileys');
+    try {
+        const fs = require("fs");
 
-let media;
-if (msgR.imageMessage) {
-     media = msgR.imageMessage
+        if (!msgR) {
+            return m.reply(`🖼️✨ *IMAGE REQUIRED* ✨🖼️\n\n🔎 Please *quote* or *reply* to an image to set as profile picture.`);
+        }
 
-  } else {
-    m.reply('𝗛𝘂𝗵 𝘁𝗵𝗶𝘀 𝗶𝘀 𝗻𝗼𝘁 𝗮𝗻 𝗶𝗺𝗮𝗴𝗲...'); return
-  } ;
+        let media;
+        if (msgR.imageMessage) {
+            media = msgR.imageMessage;
+        } else {
+            return m.reply(`🚫 *INVALID MEDIA*\n\nOnly *images* can be used to set profile picture. Try again with a photo.`);
+        }
 
-var medis = await client.downloadAndSaveMediaMessage(media);
-         var {
-                        img
-                    } = await generateProfilePicture(medis)
+        const medis = await client.downloadAndSaveMediaMessage(media);
+        const { img } = await generateProfilePicture(medis);
 
-client.query({
-                tag: 'iq',
-                attrs: {
-                    target: undefined,
-                    to: S_WHATSAPP_NET,
-                    type:'set',
-                    xmlns: 'w:profile:picture'
-                },
-                content: [
-                    {
-                        tag: 'picture',
-                        attrs: { type: 'image' },
-                        content: img
-                    }
-                ]
-            })      
-                    fs.unlinkSync(medis)
-                    m.reply("𝗣𝗿𝗼𝗳𝗶𝗹𝗲 𝗽𝗶𝗰𝘁𝘂𝗿𝗲 𝘂𝗽𝗱𝗮𝘁𝗲𝗱 𝘀𝘂𝗰𝗰𝗲𝘀𝗳𝘂𝗹𝗹𝘆✅")
+        await client.query({
+            tag: 'iq',
+            attrs: {
+                to: S_WHATSAPP_NET,
+                type: 'set',
+                xmlns: 'w:profile:picture'
+            },
+            content: [
+                {
+                    tag: 'picture',
+                    attrs: { type: 'image' },
+                    content: img
+                }
+            ]
+        });
 
-} catch (error) {
+        fs.unlinkSync(medis);
 
-m.reply("An error occured while updating profile photo\n" + error)
-
+        m.reply(`✅✨ *PROFILE UPDATED!* ✨✅\n\n🎭 Your digital identity has been upgraded successfully!\n🧠 Now rocking a fresh new look. 💫`);
+    } catch (error) {
+        m.reply(`❌💥 *ERROR!* 💥❌\n\nSomething went wrong while updating the profile picture...\n\n📟 *Error:* \`\`\`${error}\`\`\``);
+    }
 }
-     }
-	  break;
-
+break;
 //========================================================================================================================//		      
-            case "upload": {
- const fs = require("fs");
-const path = require('path');
-const util = require("util");
+case "upload": {
+    const fs = require("fs");
+    const path = require("path");
+    const util = require("util");
 
-let q = m.quoted ? m.quoted : m
-let mime = (q.msg || q).mimetype || ''
+    let q = m.quoted ? m.quoted : m;
+    let mime = (q.msg || q).mimetype || '';
 
-if (!mime) return m.reply('Quote an image or video')
-let mediaBuffer = await q.download()
-
-  if (mediaBuffer.length > 10 * 1024 * 1024) return m.reply('Media is too large.')
-let isTele = /image\/(png|jpe?g|gif)|video\/mp4/.test(mime)
-
-if (isTele) {
-    let fta2 = await client.downloadAndSaveMediaMessage(q)
-    let link = await uploadtoimgur(fta2)
-
-    const fileSizeMB = (mediaBuffer.length / (1024 * 1024)).toFixed(2)
-
-    m.reply(`Media Link:\n\n${link}`)
-  } else {
-    m.reply(`Error occured...`)
-  }
+    if (!mime) {
+        return m.reply(`📤✨ *UPLOAD CENTER* ✨📤\n\n🔁 *Please quote an image or video* to upload.\n🎯 Supported formats: JPG, PNG, GIF, MP4`);
     }
-      break;
 
+    let mediaBuffer = await q.download();
+
+    if (mediaBuffer.length > 10 * 1024 * 1024) {
+        return m.reply(`⚠️ *UPLOAD FAILED!*\n\n🚫 File size exceeds *10MB* limit.\n💡 Try compressing or choosing a smaller file.`);
+    }
+
+    let isTele = /image\/(png|jpe?g|gif)|video\/mp4/.test(mime);
+
+    if (isTele) {
+        let fta2 = await client.downloadAndSaveMediaMessage(q);
+        let link = await uploadtoimgur(fta2);
+
+        const fileSizeMB = (mediaBuffer.length / (1024 * 1024)).toFixed(2);
+
+        m.reply(`✅✨ *UPLOAD SUCCESSFUL!* ✨✅\n\n🗂️ *File Size:* ${fileSizeMB} MB\n🌐 *Media Link:*\n${link}`);
+    } else {
+        m.reply(`❌ *UNSUPPORTED FORMAT!*\n\n⚙️ Only *image* or *mp4 video* uploads are allowed.`);
+    }
+}
+break;
 //========================================================================================================================//
-        case "url": {
- const fs = require("fs");
-const path = require('path');
-const util = require("util");
+case "url": {
+    const fs = require("fs");
+    const path = require('path');
+    const util = require("util");
 
-let q = m.quoted ? m.quoted : m
-let mime = (q.msg || q).mimetype || ''
-if (!mime) return m.reply('Quote an image or video')
-let mediaBuffer = await q.download()
+    let q = m.quoted ? m.quoted : m;
+    let mime = (q.msg || q).mimetype || '';
 
-  if (mediaBuffer.length > 10 * 1024 * 1024) return m.reply('Media is too large.')
-let isTele = /image\/(png|jpe?g|gif)|video\/mp4/.test(mime)
-
-if (isTele) {
-    let fta2 = await client.downloadAndSaveMediaMessage(q)
-    let link = await uploadToCatbox(fta2)
-
-    const fileSizeMB = (mediaBuffer.length / (1024 * 1024)).toFixed(2)
-    m.reply(`Media Link:\n\n${link}`)
-  } else {
-    m.reply(`Error occured...`)
-  }
+    if (!mime) {
+        return m.reply(`🌐✨ *MEDIA LINK GENERATOR* ✨🌐\n\n📌 Please *quote* or *reply* to an *image or video* to generate a URL.\n🎯 Supported: JPG, PNG, GIF, MP4`);
     }
-      break;
-		      
+
+    let mediaBuffer = await q.download();
+
+    if (mediaBuffer.length > 10 * 1024 * 1024) {
+        return m.reply(`🚫 *UPLOAD FAILED!*\n\n📁 The file is *too large* (over 10MB).\n💡 Try sending a smaller file.`);
+    }
+
+    let isTele = /image\/(png|jpe?g|gif)|video\/mp4/.test(mime);
+
+    if (isTele) {
+        let fta2 = await client.downloadAndSaveMediaMessage(q);
+        let link = await uploadToCatbox(fta2);
+
+        const fileSizeMB = (mediaBuffer.length / (1024 * 1024)).toFixed(2);
+
+        m.reply(`✅✨ *URL GENERATED!* ✨✅\n\n🗂️ *File Size:* ${fileSizeMB} MB\n🔗 *Media Link:*\n${link}`);
+    } else {
+        m.reply(`⚠️ *UNSUPPORTED FORMAT!*\n\nOnly *images* and *MP4 videos* are allowed for this feature.`);
+    }
+}
+break;
 //========================================================================================================================//		      
      case 'attp':
                 if (!q) return reply('I need text;')
@@ -4193,11 +4188,29 @@ case "add": {
 }
 break;
 //========================================================================================================================//		      
-  case "system": 
-  
-              client.sendMessage(m.chat, { image: { url: 'https://files.catbox.moe/duv8ac.jpg' }, caption:`*𝐁𝐎𝐓 𝐍𝐀𝐌𝐄: 𝗥𝗔𝗩𝗘𝗡-𝗕𝗢𝗧*\n\n*𝐒𝐏𝐄𝐄𝐃: ${Rspeed.toFixed(4)} 𝐌𝐒*\n\n*𝐑𝐔𝐍𝐓𝐈𝐌𝐄: ${runtime(process.uptime())}*\n\n*𝐏𝐋𝐀𝐓𝐅𝐎𝐑𝐌: 𝗛𝗲𝗿𝗼𝗸𝘂*\n\n*𝐇𝐎𝐒𝐓𝐍𝐀𝐌𝐄: 𝗥𝗮𝘃𝗲𝗻*\n\n*𝐋𝐈𝐁𝐑𝐀𝐑𝐘: Baileys*\n\n𝐃𝐄𝐕𝐄𝐋𝐎𝐏𝐄𝐑: 𝗡𝗶𝗰𝗸༆`}); 
- break;
+case "system": {
+    client.sendMessage(m.chat, {
+        image: { url: 'https://files.catbox.moe/duv8ac.jpg' },
+        caption: `🧬──⟪ FROST.SYSTEM.CORE ⟫──🧬
 
+🛰️ UPLINK STATUS: ✅ CONNECTED  
+⚡ PING RESPONSE: ${Rspeed.toFixed(4)} ms  
+🕰️ UPTIME CYCLE: ${runtime(process.uptime())}  
+💻 NODE PLATFORM: Heroku  
+🧠 PROCESSOR HOST: Raven  
+📚 FRAMEWORK: Baileys  
+👾 AI ARCHITECT: Nick༆  
+
+📊 SYSTEM METRICS:  
+├─ ⚙ Mode: Auto-Reactive Sync  
+├─ 🌐 Network: Quantum Stable  
+└─ 🔒 Status: Secure + Operational
+
+🧭 Engine Online. Waiting for commands...
+🔁 REALTIME AI-CORE // "Think Fast. Adapt Faster."`,
+    });
+    break;
+}
 //========================================================================================================================//		      
 case "vcf":
 case "group-vcf": {
@@ -4569,7 +4582,7 @@ case "ig": {
             await client.sendMessage(m.chat, {
                 video: { url: videoUrl },
                 mimetype: "video/mp4",
-                caption: `🎥✨ Here you go!\n_💾 Powered by *FROST-AI*\n\nEnjoy your Insta scoop! 🖤`,
+                caption: `*🎥✨ Here you go!*\n*_💾 Powered by *FROST-AI*_*\n\n*Enjoy your Insta scoop! 🖤*`,
             }, { quoted: m });
         }
     } catch (error) {
@@ -4603,7 +4616,7 @@ case "twtdl": {
 
         await client.sendMessage(m.chat, {
             video: { url: video_hd },
-            caption: `🎬✨ Here's your shiny Twitter drop!\n_💾 Powered by *FROST-AI*_\n\nStay fancy! 🖤`,
+            caption: `*🎬✨ Here's your shiny Twitter drop!*\n*_💾 Powered by *FROST-AI*_*\n\n*Stay fancy! 🖤*`,
         }, { quoted: m });
 
     } catch (error) {
@@ -4645,7 +4658,7 @@ case "fbdl": {
             m.chat,
             {
                 video: { url: fbvid },
-                caption: `🎥✨ Facebook magic, just for you!\n_💾 Delivered by *FROST-AI*_\n\nStay awesome! 🌈`,
+                caption: `*🎥✨ Facebook magic, just for you!*\n*_💾 Delivered by *FROST-AI*_*\n\n*Stay awesome! 🌈*`,
                 gifPlayback: false,
             },
             { quoted: m }
@@ -4689,7 +4702,7 @@ case "tikdl": {
 
             await client.sendMessage(m.chat, {
                 video: { url: videoUrl },
-                caption: `🎥✨ *TikTok by:* ${nickname} (@${uid})\n📝 *Caption:* ${description}\n🎶 *Sound:* ${musicTitle}\n💬 ${commentCount} comments | ❤️ ${likesCount} likes\n\n_💾 Delivered with love by *FROST-AI*_`,
+                caption: `🎥✨ *TikTok by:* ${nickname} (@${uid})\n📝 *Caption:* ${description}\n🎶 *Sound:* ${musicTitle}\n💬 ${commentCount} *comments* | ❤️ ${likesCount} *likes*\n\n*_💾 Delivered with love by *FROST-AI*_*`,
                 gifPlayback: false
             }, { quoted: m });
 
@@ -4726,7 +4739,7 @@ case "pin": {
         }
 
         const media = response.data.BK9;
-        const comfyCaption = `📥✨ *Downloaded via FЯ0ST AΙ*\n\nEnjoy your aesthetic fix! ❄️`;
+        const comfyCaption = `📥✨ *Downloaded via FЯ0ST AΙ*\n\n*Enjoy your aesthetic fix!* ❄️`;
 
         if (media.length > 0) {
             const videoUrl = media.find(item => item.url.includes('.mp4'))?.url;
@@ -5710,11 +5723,11 @@ case "speed": {
     };
 
     const speedDisplay = `╭───────────────◆
-│ ⚡ *𝙋𝙤𝙣𝙜 𝙍𝙚𝙨𝙥𝙤𝙣𝙨𝙚*
+│ ⚡ *Pong Response*
 ├─────────────────
-│ 🧠 𝙎𝙩𝙖𝙩𝙪𝙨 : *𝙊𝙣𝙡𝙞𝙣𝙚*
-│ 🛰️ 𝙇𝙖𝙩𝙚𝙣𝙘𝙮 : *${Rspeed.toFixed(2)} ms*
-│ 🔋 𝙎𝙥𝙚𝙚𝙙 𝙍𝙖𝙩𝙞𝙣𝙜 : *${getSpeedStatus(Rspeed)}*
+│ 🧠 *Status* : *Online*
+│ 🛰️ *Latency* : *${Rspeed.toFixed(2)} ms*
+│ 🔋 *Speed Rating* : *${getSpeedStatus(Rspeed)}*
 ╰───────────────◆`;
 
     await client.sendMessage(m.chat, {
