@@ -42,11 +42,6 @@ const { smsg, isUrl, generateMessageTag, getBuffer, getSizeMedia, fetchJson, awa
 const { sessionName, session, port, packname } = require("../set.js"); // Bot configuration.
 const makeInMemoryStore = require('../store/store.js'); // For managing WhatsApp state.
 
-// --- NEW IMPORT ---
-// Import functions for managing presence and fetching settings from a config file.
-const { getSettings, resolvePresence } = require('./config');
-// --- END NEW IMPORT ---
-
 const store = makeInMemoryStore({ logger: logger.child({ stream: 'store' }) }); // Initialize the store.
 
 // Helper function for coloring text in the console.
@@ -482,7 +477,7 @@ async function startRaven() {
 ╰───────◇
 ╭──〔 🔗 *Quick Links* 〕──◇
 ├─ 📢 *Join Our Channel:*
-│   Click [**Here**] to join!
+│   Click [**Here**](https://whatsapp.com/channel/0029VasHgfG4tRrwjAUyTs10) to join!
 ├─ 🛠️ *Shadow-Xtech Developer:*
 │   Click [**Here**](${developerContactLink})
 ├─ ⭐ *Give Us a Star:*
@@ -514,36 +509,6 @@ async function startRaven() {
           },
       });
       // --- End of Enhanced Connection Message ---
-
-      // --- START: New presence management logic ---
-      // This section handles setting the bot's presence when it successfully connects.
-      let presenceSettings;
-      try {
-          // Fetch settings related to presence from './config'.
-          // This assumes 'getSettings()' is defined in './config' and returns an object
-          // with a 'wapresence' property (e.g., 'available', 'composing', 'recording').
-          presenceSettings = await getSettings();
-          console.log("😴 Presence settings object:", presenceSettings);
-      } catch (error) {
-          console.error("❌ Failed to load presence settings from ./config:", error.message || error);
-          // Fallback to a default presence if settings fail to load from the config file.
-          presenceSettings = { wapresence: 'available' };
-      }
-
-      // Determine the bot's online status. When the connection is 'open', the bot is considered online.
-      const isUserOnline = true;
-
-      // Resolve the presence state (e.g., 'available', 'composing', 'recording')
-      // based on the fetched settings ('wapresence') and the bot's online status.
-      // 'resolvePresence' is expected to map the settings to a valid presence string.
-      const presence = resolvePresence(presenceSettings.wapresence, isUserOnline);
-
-      // Set the bot's presence. 'client.user.id' is the bot's own JID.
-      // If the second argument (jid) is omitted, it defaults to the bot's own ID.
-      // This makes the bot appear as 'available', 'composing', etc., in WhatsApp.
-      await client.sendPresenceUpdate(presence, client.user.id);
-      console.log(`✅ Bot presence set to: ${presence}`);
-      // --- END: New presence management logic ---
     }
   });
 
