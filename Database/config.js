@@ -1,14 +1,16 @@
 const { Pool } = require('pg');
 
+// PostgreSQL connection
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false }
 });
 
+// Default bot settings
 const defaultSettings = {
   antilink: 'on',
   antilinkall: 'off',
-  autobio: 'off',
+  autobio: 'on',
   antidelete: 'on',
   antitag: 'on',
   antibot: 'off',
@@ -22,9 +24,10 @@ const defaultSettings = {
   prefix: '.',
   autolike: 'on',
   autoview: 'on',
-  wapresence: 'recording'
+  wapresence: 'recording' // can be: 'recording', 'typing', 'available', 'unavailable'
 };
 
+// Initialize database table and insert default values
 async function initializeDatabase() {
   const client = await pool.connect();
   console.log("📡 Connecting to PostgreSQL...");
@@ -55,9 +58,9 @@ async function initializeDatabase() {
   }
 }
 
+// Get settings from DB, fallback to defaults
 async function getSettings() {
   const client = await pool.connect();
-
   try {
     const result = await client.query(
       `SELECT key, value FROM bot_settings WHERE key = ANY($1::text[])`,
@@ -70,7 +73,7 @@ async function getSettings() {
     }
 
     console.log("✅ Settings fetched from DB.");
-    return settings;
+    return { ...defaultSettings, ...settings }; // fallback with default values
 
   } catch (err) {
     console.error("❌ Failed to fetch settings:", err);
@@ -81,6 +84,7 @@ async function getSettings() {
   }
 }
 
+// Update a setting in DB
 async function updateSetting(key, value) {
   const client = await pool.connect();
   try {
@@ -94,7 +98,6 @@ async function updateSetting(key, value) {
       [value, key]
     );
 
-   
     return true;
   } catch (err) {
     console.error("❌ Failed to update setting:", err.message || err);
@@ -104,8 +107,24 @@ async function updateSetting(key, value) {
   }
 }
 
+// Utility: Map wapresence to proper WhatsApp presence
+function resolvePresence(wapresence, isUserOnline = false) {
+  switch (wapresence) {
+    case 'recording':
+    case 'typing':
+      return isUserOnline ? wapresence : 'unavailable'; // Show last seen if offline
+    case 'available':
+      return 'available';
+    case 'unavailable':
+    default:
+      return 'unavailable';
+  }
+}
+
 module.exports = {
   initializeDatabase,
   getSettings,
-  updateSetting
+  updateSetting,
+  resolvePresence,
+  defaultSettings
 };
