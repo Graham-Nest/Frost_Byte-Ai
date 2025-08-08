@@ -15,7 +15,7 @@ const Events = async (client, Nick) => {
       try {
         dpuser = await client.profilePictureUrl(num, "image");
       } catch {
-        dpuser = "https://files.catbox.moe/3l3qgq.jpg";
+        dpuser = "https://files.catbox.moe/jl104w.jpeg";
       }
 
       const tag = `@${num.split("@")[0]}`;
