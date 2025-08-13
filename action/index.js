@@ -240,6 +240,120 @@ async function startRaven() {
     }
   });
 
+  // --- ANTIEDIT LOGIC START ---
+  const processedEdits = new Map(); // Use Map to store timestamp and content for cooldown and comparison
+  const EDIT_COOLDOWN = 5000; // 5 seconds cooldown
+
+  client.ev.on('messages.update', async (messageUpdates) => {
+    try {
+      // Fetch settings for antiedit status
+      const settings = await fetchSettings();
+      const currentAntiedit = settings.antiedit; // Accessing antiedit from settings
+
+      if (currentAntiedit === 'off') {
+        return; // Skip if antiedit is disabled
+      }
+
+      const now = Date.now();
+
+      for (const update of messageUpdates) {
+        const { key, update: messageUpdate } = update; // Renamed 'update' to 'messageUpdate' to avoid conflict
+        if (!key?.id || !messageUpdate?.message) continue;
+
+        const editId = `${key.id}-${key.remoteJid}`;
+
+        // Skip if recently processed within the cooldown period
+        if (processedEdits.has(editId)) {
+          const [timestamp] = processedEdits.get(editId);
+          if (now - timestamp < EDIT_COOLDOWN) {
+            continue;
+          }
+        }
+
+        const chat = key.remoteJid;
+        const isGroup = chat.endsWith('@g.us');
+        // Access the edited message content correctly
+        const editedMsg = messageUpdate.message.editedMessage?.message || messageUpdate.message.editedMessage;
+        if (!editedMsg) continue;
+
+        // Get both messages properly
+        // This relies on store.loadMessage being available and functional
+        const originalMsg = await store.loadMessage(chat, key.id) || {};
+        const sender = key.participant || key.remoteJid;
+        const senderName = await client.getName(sender); // client.getName is defined later in startRaven
+
+        // Enhanced content extractor
+        const getContent = (msg) => {
+          if (!msg) return '[Deleted]';
+          const type = Object.keys(msg)[0];
+          const content = msg[type];
+
+          switch(type) {
+            case 'conversation':
+              return content;
+            case 'extendedTextMessage':
+              return content.text +
+                    (content.contextInfo?.quotedMessage ? ' (with quoted message)' : '');
+            case 'imageMessage':
+              return `🖼️ ${content.caption || 'Image'}`;
+            case 'videoMessage':
+              return `🎥 ${content.caption || 'Video'}`;
+            case 'documentMessage':
+              return `📄 ${content.fileName || 'Document'}`;
+            case 'audioMessage': // Added handling for audio messages (voice notes)
+              return `🎵 ${content.ptt ? 'Voice Note' : 'Audio'}`;
+            case 'stickerMessage': // Added handling for sticker messages
+              return `🎨 Sticker`;
+            case 'reactionMessage': // Added handling for reaction messages
+              return `👍 Reaction`;
+            default:
+              // Log unhandled types for debugging if necessary
+              // console.log(chalk.yellow(`[ANTIEDIT] Unhandled message type: ${type}`));
+              return `[${type.replace('Message', '')}]`;
+          }
+        };
+
+        const originalContent = getContent(originalMsg.message);
+        const editedContent = getContent(editedMsg);
+
+        // Only proceed if content actually changed
+        if (originalContent === editedContent) {
+          // console.log(chalk.yellow(`[ANTIEDIT] No content change detected for ${editId}`));
+          continue;
+        }
+
+        // Construct the notification message
+        const notificationMessage = `*🗑️🚫 ꜰʀᴏꜱᴛ-ᴀɪ ᴀɴᴛɪᴇᴅɪᴛ 🚫🗑️*\n\n` +
+                                 `👤 *sᴇɴᴅᴇʀ:* @${sender.split('@')[0]}\n` +
+                                 `📄 *ᴏʀɪɢɪɴᴀʟ ᴍᴇssᴀɢᴇ:* ${originalContent}\n` +
+                                 `✏️ *ᴇᴅɪᴛᴇᴅ ᴍᴇssᴀɢᴇ:* ${editedContent}\n` +
+                                 `🧾 *ᴄʜᴀᴛ ᴛʏᴘᴇ:* ${isGroup ? 'Group' : 'DM'}`;
+
+        // Determine where to send the notification
+        const sendTo = currentAntiedit === 'private' ? client.user.id : chat;
+        await client.sendMessage(sendTo, {
+          text: notificationMessage,
+          mentions: [sender] // Mention the sender of the edited message
+        });
+
+        // Update tracking with timestamp and content for cooldown and comparison
+        processedEdits.set(editId, [now, originalContent, editedContent]);
+        console.log(chalk.green(`[ANTIEDIT] Reported edit from ${senderName}`));
+      }
+
+      // Cleanup old entries from the map to prevent memory leaks
+      const cleanupThreshold = now - 60000; // 1 minute retention
+      for (const [id, data] of processedEdits.entries()) {
+        if (data[0] < cleanupThreshold) { // Check timestamp (data[0] is the timestamp)
+          processedEdits.delete(id);
+        }
+      }
+    } catch (err) {
+      console.error(chalk.red('[ANTIEDIT ERROR]'), err.stack); // Log the error with stack trace
+    }
+  });
+  // --- ANTIEDIT LOGIC END ---
+
   // Handle unhandled promise rejections.
   process.on("unhandledRejection", (reason, promise) => {
     console.error("Unhandled Rejection at:", promise, "reason:", reason);
@@ -477,7 +591,7 @@ async function startRaven() {
 ╰───────◇
 ╭──〔 🔗 *Quick Links* 〕──◇
 ├─ 📢 *Join Our Channel:*
-│   Click [**Here**](https://whatsapp.com/channel/0029VasHgfG4tRrwjAUyTs10) to join!
+│   Click [**Here**] to join!
 ├─ 🛠️ *Shadow-Xtech Developer:*
 │   Click [**Here**](${developerContactLink})
 ├─ ⭐ *Give Us a Star:*

@@ -136,259 +136,121 @@ console.log(prefix);
      const Rspeed = speed() - timestamp 
 //========================================================================================================================//
 //========================================================================================================================//
-const baseDir = 'message_data';
+const fs = require("fs");
+const path = require("path");
+const config = require("./config.js");
 
-// --- File System Helper Functions ---
+const baseDir = "message_data";
+if (!fs.existsSync(baseDir)) {
+    fs.mkdirSync(baseDir);
+}
+
 function loadChatData(remoteJid, messageId) {
-  const chatFilePath = path.join(baseDir, remoteJid, `${messageId}.json`);
-  try {
-    if (fs.existsSync(chatFilePath)) {
-      const data = fs.readFileSync(chatFilePath, 'utf8');
-      return JSON.parse(data) || [];
+    const chatFilePath = path.join(baseDir, remoteJid, `${messageId}.json`);
+    try {
+        const data = fs.readFileSync(chatFilePath, "utf8");
+        return JSON.parse(data) || [];
+    } catch {
+        return [];
     }
-    return [];
-  } catch (error) {
-    console.error(`Error loading chat data for ${remoteJid}/${messageId}:`, error);
-    return [];
-  }
 }
 
 function saveChatData(remoteJid, messageId, chatData) {
-  const chatDir = path.join(baseDir, remoteJid);
-
-  if (!fs.existsSync(chatDir)) {
-    fs.mkdirSync(chatDir, { recursive: true });
-  }
-
-  const chatFilePath = path.join(chatDir, `${messageId}.json`);
-
-  try {
+    const chatDir = path.join(baseDir, remoteJid);
+    if (!fs.existsSync(chatDir)) {
+        fs.mkdirSync(chatDir, { recursive: true });
+    }
+    const chatFilePath = path.join(chatDir, `${messageId}.json`);
     fs.writeFileSync(chatFilePath, JSON.stringify(chatData, null, 2));
-  } catch (error) {
-    console.error('Error saving chat data:', error);
-  }
 }
 
 function handleIncomingMessage(message) {
-  const remoteJid = message.key.remoteJid;
-  const messageId = message.key.id;
-
-  const chatData = loadChatData(remoteJid, messageId);
-  chatData.push(message);
-  saveChatData(remoteJid, messageId, chatData);
+    const remoteJid = message.key.remoteJid;
+    const messageId = message.key.id;
+    const chatData = loadChatData(remoteJid, messageId);
+    chatData.push(message);
+    saveChatData(remoteJid, messageId, chatData);
 }
-
-// --- Unicode Styling Helper Functions ---
-
-// Converts text to bold Unicode characters
-function toBoldUnicode(text) {
-    let result = '';
-    for (let i = 0; i < text.length; i++) {
-        const char = text[i];
-        const charCode = char.charCodeAt(0);
-        if (charCode >= 65 && charCode <= 90) { // Uppercase A-Z
-            result += String.fromCharCode(charCode + 0x1D400); // 𝗔-𝙕
-        } else if (charCode >= 97 && charCode <= 122) { // Lowercase a-z
-            result += String.fromCharCode(charCode + 0x1D431); // 𝗮-𝘇
-        } else {
-            result += char; // Keep other characters as is
-        }
-    }
-    return result;
-}
-
-// --- Sassy Phrase Definitions ---
-// Define the new sassy phrases with their emojis and example descriptions
-const sassyPhrases = [
-    { name: "Ghosted Whispers", emoji: "👻", description: "frost_Byte-Ai caught the 👻 *ghosted whispers* before they could fade!" },
-    { name: "Vanished Secrets", emoji: "✨", description: "No secret is safe from frost_Byte-Ai; it recovers all ✨ *vanished secrets*." },
-    { name: "Silenced Truths", emoji: "🤫", description: "frost_Byte-Ai's here to expose the 🤫 *silenced truths* that were meant to disappear." },
-    { name: "Evaporated Echoes", emoji: "💨", description: "Don't worry, frost_Byte-Ai always finds the 💨 *evaporated echoes* of your chats." }
-];
-
-// Function to pick a random sassy phrase description
-function getRandomSassyPhraseDescription() {
-    const randomIndex = Math.floor(Math.random() * sassyPhrases.length);
-    return sassyPhrases[randomIndex].description;
-}
-
-// --- Main Message Revocation Handler ---
 
 async function handleMessageRevocation(client, revocationMessage) {
-  const remoteJid = revocationMessage.key.remoteJid;
-  const messageId = revocationMessage.message.protocolMessage.key.id;
+    const remoteJid = revocationMessage.key.remoteJid;
+    const messageId = revocationMessage.message.protocolMessage.key.id;
+    const chatData = loadChatData(remoteJid, messageId);
+    const originalMessage = chatData[0];
+    if (!originalMessage) return;
 
-  // Load the original message data
-  const chatData = loadChatData(remoteJid, messageId);
-  const originalMessage = chatData.length > 0 ? chatData[0] : null;
+    const deleteTime = new Date().toLocaleString();
+    const deleter = (revocationMessage.participant || revocationMessage.key.participant || "").split("@")[0];
+    const sender = (originalMessage.key.participant || originalMessage.key.remoteJid).split("@")[0];
+    const isGroup = remoteJid.endsWith("@g.us");
 
-  if (!originalMessage) {
-    console.log(`Original message not found for ID: ${messageId}`);
-    return;
-  }
-
-  const deletedBy = revocationMessage.participant || revocationMessage.key.participant || revocationMessage.key.remoteJid;
-  
-  // Format participant IDs for display
-  const deletedByFormatted = deletedBy ? `@${deletedBy.split('@')[0]}` : 'Unknown';
-
-  // --- Stylish and Sassy Notification Text ---
-  let notificationText = `✨👑 𝒀𝒐𝒖 𝒄𝒂𝒏'𝒕 𝒉𝒊𝒅𝒆 𝒇𝒓𝒐𝒎 𝑭𝒓𝒐𝒔𝒕_𝑩𝒚𝒕𝒆-𝑨𝒊! 👑✨\n\n`;
-  
-  // Incorporate a random sassy phrase to enhance the message
-  const randomSassyDescriptor = getRandomSassyPhraseDescription();
-  notificationText += `${randomSassyDescriptor}\n\n`; // Using the full descriptive sentence
-
-  notificationText += `🤫 𝒀𝒐𝒖 𝒄𝒂𝒏'𝒕 𝒔𝒊𝒍𝒆𝒏𝒄𝒆 𝒕𝒉𝒊𝒔 𝒎𝒆𝒔𝒔𝒂𝒈𝒆! 𝑫𝒆𝒍𝒆𝒕𝒆𝒅 𝑴𝒆𝒔𝒔𝒂𝒈𝒆 𝒃𝒚: ${toBoldUnicode(deletedByFormatted)} 🤫\n\n`;
-
-  let messageContent = '';
-  let mediaCaption = '';
-
-  try {
-    // Check if the deleted message was sent by the bot itself, if so, ignore.
-    if (originalMessage.message?.conversation) {
-      // Text message
-      const messageText = originalMessage.message.conversation;
-      messageContent = `💬 𝑶𝒐𝒑𝒔! 𝑨 𝒎𝒆𝒔𝒔𝒂𝒈𝒆 𝒈𝒐𝒕 𝒆𝒓𝒂𝒔𝒆𝒅... 𝑯𝒆𝒓𝒆'𝒔 𝒘𝒉𝒂𝒕 𝒚𝒐𝒖 𝒎𝒊𝒔𝒔𝒆𝒅, 𝒅𝒆𝒂𝒓: \n\n${toBoldUnicode(messageText)} 💅`;
-    } else if (originalMessage.message?.extendedTextMessage) {
-      // Extended text message (quoted messages)
-      const messageText = originalMessage.message.extendedTextMessage.text;
-      messageContent = `💬 𝑨 𝒒𝒖𝒐𝒕𝒆𝒅 𝒎𝒆𝒔𝒔𝒂𝒈𝒆 𝒗𝒂𝒏𝒊𝒔𝒉𝒆𝒅! 𝑯𝒆𝒓𝒆'𝒔 𝒕𝒉𝒆 𝒄𝒐𝒏𝒕𝒆𝒏𝒕, 𝒅𝒓𝒂𝒎𝒂 𝒇𝒓𝒆𝒆: \n\n${toBoldUnicode(messageText)} 💖`;
-    } else if (originalMessage.message?.imageMessage) {
-      // Image message
-      const ImageM = originalMessage.message.imageMessage;
-      messageContent = `📸 𝑨 𝒑𝒊𝒄𝒕𝒖𝒓𝒆 𝒑𝒆𝒓𝒇𝒆𝒄𝒕 𝒎𝒐𝒎𝒆𝒏𝒕, 𝒏𝒐𝒘 𝒓𝒆𝒄𝒐𝒗𝒆𝒓𝒆𝒅! 𝑭𝒓𝒐𝒔𝒕_𝑩𝒚𝒕𝒆-𝑨𝒊's 𝒈𝒐𝒕 𝒚𝒐𝒖𝒓 𝒃𝒂𝒄𝒌. [Image] 🌟`;
-      mediaCaption = `✨ 𝑶𝒓𝒊𝒈𝒊𝒏𝒂𝒍 𝑪𝒂𝒑𝒕𝒊𝒐𝒏: ${ImageM.caption ? toBoldUnicode(ImageM.caption) : 'No caption provided. 🤷‍♀️'}`;
-      
-      // Attempt to download and send the media
-      try {
-        const buffer = await client.downloadMediaMessage(ImageM);
-        await client.sendMessage(client.user.id, { 
-          image: buffer,
-          caption: `${notificationText}\n${messageContent}\n${mediaCaption}`
-        });
-      } catch (mediaError) {
-        console.error('Failed to download image:', mediaError);
-        await client.sendMessage(client.user.id, { text: `${notificationText}${messageContent}\n\n⚠️ Could not recover deleted image (media expired). 😥` });
-      }
-      return; // Exit early as media is handled
-    } else if (originalMessage.message?.videoMessage) {
-      // Video message
-      const VideoM = originalMessage.message.videoMessage;
-      messageContent = `🎬 𝑨 𝒗𝒊𝒅𝒆𝒐 𝒄𝒍𝒊𝒑 𝒕𝒉𝒂𝒕 𝒗𝒂𝒏𝒊𝒔𝒉𝒆𝒅... 𝑩𝒖𝒕 𝒏𝒐𝒕 𝒇𝒓𝒐𝒎 𝑭𝒓𝒐𝒔𝒕_𝑩𝒚𝒕𝒆-𝑨𝒊's 𝒎𝒆𝒎𝒐𝒓𝒚! 𝑩𝒓𝒊𝒏𝒈𝒊𝒏𝒈 𝒊𝒕 𝒃𝒂𝒄𝒌. [Video] 💎`;
-      mediaCaption = `✨ 𝑶𝒓𝒊𝒈𝒊𝒏𝒂𝒍 𝑪𝒂𝒑𝒕𝒊𝒐𝒏: ${VideoM.caption ? toBoldUnicode(VideoM.caption) : 'No caption provided. 🤷‍♀️'}`;
-
-      try {
-        const buffer = await client.downloadMediaMessage(VideoM);
-        await client.sendMessage(client.user.id, { 
-          video: buffer, 
-          caption: `${notificationText}\n${messageContent}\n${mediaCaption}`
-        });
-      } catch (mediaError) {
-        console.error('Failed to download video:', mediaError);
-        await client.sendMessage(client.user.id, { text: `${notificationText}${messageContent}\n\n⚠️ Could not recover deleted video (media expired). 😥` });
-      }
-      return; // Exit early as media is handled
-    } else if (originalMessage.message?.stickerMessage) {
-      // Sticker message
-      const StickerM = originalMessage.message.stickerMessage;
-      messageContent = `🎨 𝑨 𝒔𝒕𝒊𝒄𝒌𝒆𝒓 𝒕𝒉𝒂𝒕 𝒅𝒊𝒔𝒂𝒑𝒑𝒆𝒂𝒓𝒆𝒅! 𝑹𝒆𝒄𝒐𝒗𝒆𝒓𝒆𝒅 𝒂 𝒎𝒆𝒎𝒐𝒓𝒚 𝒇𝒐𝒓 𝒚𝒐𝒖. 💋 [Sticker]`;
-      
-      try {
-        const buffer = await client.downloadMediaMessage(StickerM);
-        await client.sendMessage(client.user.id, { 
-          sticker: buffer, 
-          contextInfo: {
-            externalAdReply: {
-              title: `${notificationText}\n${messageContent}`,
-              body: `𝑫𝒆𝒍𝒆𝒕𝒆𝒅 𝑴𝒆𝒔𝒔𝒂𝒈𝒆 𝒃𝒚: ${toBoldUnicode(deletedByFormatted)} 💅`,
-              thumbnailUrl: "https://files.catbox.moe/7f98vp.jpg", // Placeholder thumbnail
-              sourceUrl: '',
-              mediaType: 1, // For sticker
-              renderLargerThumbnail: false
-            }
-          }
-        });
-      } catch (mediaError) {
-        console.error('Failed to download sticker:', mediaError);
-        await client.sendMessage(client.user.id, { text: `${notificationText}${messageContent}\n\n⚠️ Could not recover deleted sticker. 😥` });
-      }
-      return; // Exit early as media is handled
-    } else if (originalMessage.message?.documentMessage) {
-      // Document message
-      const docMessage = originalMessage.message.documentMessage;
-      messageContent = `📄 𝑨 𝒅𝒐𝒄𝒖𝒎𝒆𝒏𝒕 𝒕𝒉𝒂𝒕 𝒗𝒂𝒏𝒊𝒔𝒉𝒆𝒅! 𝑹𝒆𝒄𝒐𝒗𝒆𝒓𝒆𝒅 𝒇𝒐𝒓 𝒚𝒐𝒖, 𝒅𝒂𝒓𝒍𝒊𝒏𝒈. [Document] 📚`;
-      mediaCaption = `✨ 𝑭𝒊𝒍𝒆 𝑵𝒂𝒎𝒆: ${docMessage.fileName || 'N/A'} 📚`;
-
-      try {
-        const buffer = await client.downloadMediaMessage(docMessage);
-        await client.sendMessage(client.user.id, { 
-          document: buffer, 
-          fileName: docMessage.fileName,
-          mimetype: docMessage.mimetype,
-          contextInfo: {
-            externalAdReply: {
-              title: `${notificationText}\n${messageContent}\n${mediaCaption}`,
-              body: `𝑫𝒆𝒍𝒆𝒕𝒆𝒅 𝑴𝒆𝒔𝒔𝒂𝒈𝒆 𝒃𝒚: ${toBoldUnicode(deletedByFormatted)} 💅`,
-              thumbnailUrl: "https://files.catbox.moe/7f98vp.jpg", // Placeholder thumbnail
-              sourceUrl: '',
-              mediaType: 1, // For document
-              renderLargerThumbnail: false
-            }
-          }
-        });
-      } catch (mediaError) {
-        console.error('Failed to download document:', mediaError);
-        await client.sendMessage(client.user.id, { text: `${notificationText}${messageContent}\n\n⚠️ Could not recover deleted document. 😥` });
-      }
-      return; // Exit early as media is handled
-    } else if (originalMessage.message?.audioMessage) {
-      // Audio message
-      const AudioM = originalMessage.message.audioMessage;
-      messageContent = `🎵 𝑨 𝒎𝒆𝒔𝒔𝒂𝒈𝒆 𝒊𝒏 𝒎𝒖𝒔𝒊𝒄, 𝒏𝒐𝒘 𝒓𝒆𝒄𝒐𝒗𝒆𝒓𝒆𝒅! 𝑲𝒆𝒆𝒑 𝒕𝒉𝒆 𝒃𝒆𝒂𝒕 𝒈𝒐𝒊𝒏𝒈. 🎶 [Audio] 💖`;
-      
-      try {
-        const buffer = await client.downloadMediaMessage(AudioM);
-        const isPTT = AudioM.ptt === true;
-        await client.sendMessage(client.user.id, { 
-          audio: buffer, 
-          ptt: isPTT, 
-          mimetype: 'audio/mpeg', // Assuming mp3 or similar
-          contextInfo: {
-            externalAdReply: {
-              title: `${notificationText}\n${messageContent}`,
-              body: `𝑫𝒆𝒍𝒆𝒕𝒆𝒅 𝑴𝒆𝒔𝒔𝒂𝒈𝒆 𝒃𝒚: ${toBoldUnicode(deletedByFormatted)} 💅`,
-              thumbnailUrl: "https://files.catbox.moe/7f98vp.jpg", // Placeholder thumbnail
-              sourceUrl: '',
-              mediaType: 1, // For audio
-              renderLargerThumbnail: false
-            }
-          }
-        });
-      } catch (mediaError) {
-        console.error('Failed to download audio:', mediaError);
-        await client.sendMessage(client.user.id, { text: `${notificationText}${messageContent}\n\n⚠️ Could not recover deleted audio. 😥` });
-      }
-      return; // Exit early as media is handled
+    let deleteInfo = "";
+    if (isGroup) {
+        const groupMetadata = await client.groupMetadata(remoteJid);
+        const groupName = groupMetadata.subject;
+        deleteInfo =
+            `*🛡️ 𝗥𝗘𝗖𝗢𝗩𝗘𝗥𝗘𝗗 𝗖𝗢𝗡𝗧𝗘𝗡𝗧 🛡️*\n\n` +
+            `*⏰ Time:* ${deleteTime}\n` +
+            `*👥 Group:* ${groupName}\n` +
+            `*🗑️ Deleted by:* @${deleter}\n` +
+            `*👤 Original Sender:* @${sender}`;
     } else {
-      // Fallback for unhandled message types
-      messageContent = `🤷‍♀️ 𝑨 𝒎𝒚𝒔𝒕𝒆𝒓𝒊𝒐𝒖𝒔 𝒎𝒆𝒔𝒔𝒂𝒈𝒆 𝒗𝒂𝒏𝒊𝒔𝒉𝒆𝒅! 𝑭𝒓𝒐𝒔𝒕_𝑩𝒚𝒕𝒆-𝑨𝒊 𝒄𝒂𝒏'𝒕 𝒒𝒖𝒊𝒕𝒆 𝒇𝒊𝒈𝒖𝒓𝒆 𝒐𝒖𝒕 𝒘𝒉𝒂𝒕 𝒊𝒕 𝒘𝒂𝒔. 🔮`;
+        deleteInfo =
+            `*🛡️ 𝗥𝗘𝗖𝗢𝗩𝗘𝗥𝗘𝗗 𝗖𝗢𝗡𝗧𝗘𝗡𝗧 🛡️*\n\n` +
+            `*⏰ Time:* ${deleteTime}\n` +
+            `*🗑️ Deleted by:* @${deleter}\n` +
+            `*👤 Original Sender:* @${sender}`;
     }
 
-    // Combine and send text-based notifications
-    const finalNotification = `${notificationText}${messageContent}`;
-    
-    // Sending to the bot's own ID for logging/testing purposes as in original code
-    await client.sendMessage(client.user.id, { text: finalNotification });
+    // Check settings
+    if (config.antidelete.all === "off") {
+        if (isGroup && config.antidelete.group === "off") return;
+        if (!isGroup && config.antidelete.private === "off") return;
+    }
 
-  } catch (error) {
-    console.error('Error handling deleted message:', error);
-    let errorNotification = `😥 𝑶𝒉 𝒏𝒐! 𝑭𝒓𝒐𝒔𝒕_𝑩𝒚𝒕𝒆-𝑨𝒊 𝒄𝒐𝒖𝒍𝒅𝒏'𝒕 𝒄𝒂𝒕𝒄𝒉 𝒕𝒉𝒂𝒕 𝒎𝒆𝒔𝒔𝒂𝒈𝒆... 𝑴𝒂𝒚𝒃𝒆 𝒊𝒕 𝒘𝒂𝒔 𝒕𝒐𝒐 𝒇𝒂𝒔𝒕! 𝒀𝒐𝒖'𝒓𝒆 𝒎𝒊𝒔𝒔𝒊𝒏𝒈 𝒐𝒖𝒕. 😓\n\n`;
-    errorNotification += `𝑬𝒓𝒓𝒐𝒓 𝑫𝒆𝒕𝒂𝒊𝒍𝒔: ${error.message}`;
-    await client.sendMessage(client.user.id, { text: errorNotification });
-  }
+    const targetJid =
+        (config.antidelete.inbox === "on" && config.ownerNumber)
+            ? config.ownerNumber
+            : remoteJid;
+
+    // Send recovered message
+    try {
+        if (originalMessage.message?.conversation) {
+            await client.sendMessage(targetJid, {
+                text: `${deleteInfo}\n\n${originalMessage.message.conversation}`,
+                mentions: [deleter + "@s.whatsapp.net", sender + "@s.whatsapp.net"]
+            });
+        } else if (originalMessage.message?.imageMessage) {
+            const buffer = await client.downloadMediaMessage(originalMessage.message.imageMessage);
+            await client.sendMessage(targetJid, {
+                image: buffer,
+                caption: `${deleteInfo}\n\n${originalMessage.message.imageMessage.caption || ""}`,
+                mentions: [deleter + "@s.whatsapp.net", sender + "@s.whatsapp.net"]
+            });
+        }
+        // TODO: Add similar blocks for video, sticker, document, audio...
+    } catch (err) {
+        console.error("Error sending recovered message:", err);
+    }
 }
 
+// --- Toggle Commands ---
+async function toggleAntideleteCommand(m, text, reply, command) {
+    if (m.sender !== config.ownerNumber) return reply("*Only owner can toggle antidelete.*");
+    const settingKey = command.replace("antidelete", "");
+    if (!["all", "inbox", "group", "private"].includes(settingKey)) return reply("Invalid antidelete command.");
+    if (!["on", "off"].includes(text)) return reply(`Usage: ${command} on/off`);
+
+    config.antidelete[settingKey] = text;
+    fs.writeFileSync("./config.js", "module.exports = " + JSON.stringify(config, null, 4));
+    reply(`✅ Antidelete ${settingKey} has been turned *${text.toUpperCase()}*`);
+}
+
+module.exports = {
+    handleIncomingMessage,
+    handleMessageRevocation,
+    toggleAntideleteCommand
+};
 //========================================================================================================================//
 //========================================================================================================================//	  
     // Push Message To Console
@@ -631,7 +493,7 @@ if (antilinkall === 'on' && body.includes('https://') && !Owner && isBotAdmin &&
 	  await mp3d ()
 		      
 let cap = `╭───────────────⭓
-│ 👋 ཏɛʟʟօ ₮ཏɛʀɛ ${getGreeting()}
+│ 👋 ${getGreeting()}
 │ 👑 ᴜꜱᴇʀ : ${m.pushName}
 │ 🧩 ᴘʀᴇғɪx : ${prefix}
 │ 🌐 ᴍᴏᴅᴇ : ${mode}
@@ -639,212 +501,200 @@ let cap = `╭───────────────⭓
 │ ⚡ ꜱᴘᴇᴇᴅ : ${Rspeed.toFixed(4)} Պֆ
 │ ⌛ ᴛɪᴍᴇ : ${getCurrentTimeInNairobi()} on ${date.toLocaleString('en-US', { weekday: 'long', timeZone: 'Africa/Nairobi'})}
 │ ♈ ʀᴀᴍ ᴜꜱᴀɢᴇ: ${ram()}
-│ 👑 ᴏᴡɴᴇʀ : ʙʟᴀᴄᴋ-ᴛᴀᴘᴘʏ
-│ 🛠️ ᴅᴇᴠ : *ʙʟᴀᴄᴋ-ᴛᴀᴘᴘʏ*
+│ 👑 ᴏᴡɴᴇʀ : ᴅᴇᴠ-ɢʀᴀʜᴀᴍ
+│ 🛠️ ᴅᴇᴠ : *ᴅᴇᴠ ɢʀᴀʜᴀᴍ*
 │ 🧬 ᴠᴇʀꜱɪᴏɴ : *4.1.0*
 ╰───────────────⭓
-════════════════════
-> *✨Explore the commands below to harness the bot's full power!✨*
-════════════════════
-> 📥 *𝗗𝗢𝗪𝗡𝗟𝗢𝗔𝗗 𝗠𝗘𝗡𝗨* 📥
-════════════════════
+> 🔧 *Wᴇʟᴄᴏᴍᴇ ᴛᴏ ᴛʜᴇ ᴍᴇɴᴜ!*
 ╭───────────────⭓
-│ ⬡ 🎬 video     
-│ ⬡ 🎬 ytmp4
-│ ⬡ 📱 fbdl      
-│ ⬡ 🎬 movie
-│ ⬡ 🎵 ytmp3    
-│ ⬡ 🎥 tiktok
-│ ⬡ 🎵 song    
-│ ⬡ 🎧 play
-│ ⬡ 🎵 shazam
-│ ⬡ 🎵 whatsong
-│ ⬡ 📹 yts      
-│ ⬡ 🐦 twitter
-│ ⬡ 📌 pinterest 
-│ ⬡ 🎶 song2
-│ ⬡ 🎤 play2      
-│ ⬡ 🎼 lyrics
-│ ⬡ 📸 insta
+│ ⬡ 📥 DOWNLOAD MODULE 📥
 ╰───────────────⭓
-════════════════════
-> 📦 *𝗖𝗢𝗡𝗩𝗘𝗥𝗧𝗘𝗥 𝗣𝗔𝗚𝗘* 📦
-════════════════════
+❖ ⟦ 🎬 video ⟧
+❖ ⟦ 🎬 ytmp4 ⟧
+❖ ⟦ 📱 fbdl ⟧
+❖ ⟦ 🎬 movie ⟧
+❖ ⟦ 🎵 ytmp3 ⟧
+❖ ⟦ 🎥 tiktok ⟧
+❖ ⟦ 🎵 song ⟧
+❖ ⟦ 🎧 play ⟧
+❖ ⟦ 🎵 shazam ⟧
+❖ ⟦ 🎵 whatsong ⟧
+❖ ⟦ 📹 yts ⟧
+❖ ⟦ 🐦 twitter ⟧
+❖ ⟦ 📌 pinterest ⟧
+❖ ⟦ 🎶 song2 ⟧
+❖ ⟦ 🎤 play2 ⟧
+❖ ⟦ 🎼 lyrics ⟧
+❖ ⟦ 📸 insta ⟧
+
 ╭───────────────⭓
-│ ⬡ 🖼 sticker     
-│ ⬡ 📷 photo
-│ ⬡ 🔄 retrieve    
-│ ⬡ 🎬 vv2
-│ ⬡ 🎚 mix         
-│ ⬡ 🐦 tweet
-│ ⬡ 🎭 smeme       
-│ ⬡ 🎥 mp4
-│ ⬡ 🎬 vv          
-│ ⬡ 📸 screenshot
-│ ⬡ ✂ take         
-│ ⬡ ✍ quotely
+│ ⬡ 📦 CONVERTER MODULE 📦
 ╰───────────────⭓
-════════════════════
-> 👤 *𝗚𝗥𝗢𝗨𝗣 𝗠𝗘𝗡𝗨* 👤
-════════════════════
+❖ ⟦ 🖼 sticker ⟧
+❖ ⟦ 📷 photo ⟧
+❖ ⟦ 🔄 retrieve ⟧
+❖ ⟦ 🎬 vv2 ⟧
+❖ ⟦ 🎚 mix ⟧
+❖ ⟦ 🐦 tweet ⟧
+❖ ⟦ 🎭 smeme ⟧
+❖ ⟦ 🎥 mp4 ⟧
+❖ ⟦ 🎬 vv ⟧
+❖ ⟦ 📸 screenshot ⟧
+❖ ⟦ ✂ take ⟧
+❖ ⟦ ✍ quotely ⟧
+
 ╭───────────────⭓
-│ ⬡ ✅ approve     
-│ ⬡ 🟢 promote
-│ ⬡ 🗑 delete      
-│ ⬡ 🤡 faker
-│ ⬡ 🔒 close       
-│ ⬡ ⏰ closetime
-│ ⬡ 🔕 disp-off    
-│ ⬡ 🔔 disp-7
-│ ⬡ 🖼 icon        
-│ ⬡ ✏ subject
-│ ⬡ 🚪 leave       
-│ ⬡  @ tagall
-│ ⬡ 🔄 revoke      
-│ ⬡ 🔊 unmute
-│ ⬡ ❌ reject      
-│ ⬡ 🌐 demote
-│ ⬡ 🚪 remove      
-│ ⬡ 🌍 foreigners
-│ ⬡ 🔓 open        
-│ ⬡ ⏳ opentime
-│ ⬡ 🔔 disp-1      
-│ ⬡ 🔔 disp-90
-│ ⬡ 📋 gcprofile   
-│ ⬡ 📝 desc
-│ ⬡ ➕ add         
-│ ⬡ 👻 hidetag
-│ ⬡ 🔇 mute
+│ ⬡ 👤 GROUP COMMANDS 👤
 ╰───────────────⭓
-════════════════════
-> 🤖 *𝗚𝗣𝗧 𝗠𝗘𝗡𝗨* 🤖
-════════════════════
+❖ ⟦ ✅ approve ⟧
+❖ ⟦ 🟢 promote ⟧
+❖ ⟦ 🗑 delete ⟧
+❖ ⟦ 🤡 faker ⟧
+❖ ⟦ 🔒 close ⟧
+❖ ⟦ ⏰ closetime ⟧
+❖ ⟦ 🔕 disp-off ⟧
+❖ ⟦ 🔔 disp-7 ⟧
+❖ ⟦ 🖼 icon ⟧
+❖ ⟦ ✏ subject ⟧
+❖ ⟦ 🚪 leave ⟧
+❖ ⟦ @ tagall ⟧
+❖ ⟦ 🔄 revoke ⟧
+❖ ⟦ 🔊 unmute ⟧
+❖ ⟦ ❌ reject ⟧
+❖ ⟦ 🌐 demote ⟧
+❖ ⟦ 🚪 remove ⟧
+❖ ⟦ 🌍 foreigners ⟧
+❖ ⟦ 🔓 open ⟧
+❖ ⟦ ⏳ opentime ⟧
+❖ ⟦ 🔔 disp-1 ⟧
+❖ ⟦ 🔔 disp-90 ⟧
+❖ ⟦ 📋 gcprofile ⟧
+❖ ⟦ 📝 desc ⟧
+❖ ⟦ ➕ add ⟧
+❖ ⟦ 👻 hidetag ⟧
+❖ ⟦ 🔇 mute ⟧
+
 ╭───────────────⭓
-│ ⬡ 🤖 ai         
-│ ⬡ 👁 vision
-│ ⬡ 💎 gemini    
-│ ⬡ 🗣 gpt
-│ ⬡ 🗣 gpt3       
-│ ⬡ 🧠 ai2
-│ ⬡ 📖 define     
-│ ⬡ 🔍 google
-│ ⬡ 🗣 gpt2       
-│ ⬡ 🗣 gpt4
+│ ⬡ 🤖 GPT / AI CORE 🤖
 ╰───────────────⭓
-════════════════════
-> 👑 *𝗢𝗪𝗡𝗘𝗥 𝗣𝗔𝗚𝗘* 👑
-════════════════════
+❖ ⟦ 🤖 ai ⟧
+❖ ⟦ 👁 vision ⟧
+❖ ⟦ 💎 gemini ⟧
+❖ ⟦ 🗣 gpt ⟧
+❖ ⟦ 🗣 gpt3 ⟧
+❖ ⟦ 🧠 ai2 ⟧
+❖ ⟦ 📖 define ⟧
+❖ ⟦ 🔍 google ⟧
+❖ ⟦ 🗣 gpt2 ⟧
+❖ ⟦ 🗣 gpt4 ⟧
+
 ╭───────────────⭓
-│ ⬡ 🔄 restart     
-│ ⬡ 📢 cast
-│ ⬡ 🗑️ antidelete
-│ ⬡ 🚮 antilink 
-│ ⬡ 🏷️ antitag  
-│ ⬡ 🙌 antilinkall
-│ ⬡ 🧩 gpt_inbox
-│ ⬡ ❌ antibadword
-│ ⬡ ➕ join        
-│ ⬡ ♻ redeploy
-│ ⬡ ⚙ setvar      
-│ ⬡ 🖼 fullpp
-│ ⬡ ✅ unblock     
-│ ⬡ ☠ kill2
-│ ⬡ 👑 admin       
-│ ⬡ 📢 broadcast
-│ ⬡ 📊 getvar      
-│ ⬡ 🔄 update
-│ ⬡ 🤖 botpp       
-│ ⬡ ⛔ block
-│ ⬡ ☠ kill         
-│ ⬡ 💾 save
+│ ⬡ 👑 OWNER PANEL 👑
 ╰───────────────⭓
-════════════════════
-> 🏟 *𝗙𝗢𝗢𝗧𝗕𝗔𝗟𝗟 𝗣𝗔𝗚𝗘* 🏟
-════════════════════
+❖ ⟦ 🔄 restart ⟧
+❖ ⟦ 📢 cast ⟧
+❖ ⟦ 🗑 antidelete ⟧
+❖ ⟦ 🚮 antilink ⟧
+❖ ⟦ 🏷 antitag ⟧
+❖ ⟦ 🙌 antilinkall ⟧
+❖ ⟦ 🧩 gpt_inbox ⟧
+❖ ⟦ ❌ antibadword ⟧
+❖ ⟦ ➕ join ⟧
+❖ ⟦ ♻ redeploy ⟧
+❖ ⟦ ⚙ setvar ⟧
+❖ ⟦ 🖼 fullpp ⟧
+❖ ⟦ ✅ unblock ⟧
+❖ ⟦ ☠ kill2 ⟧
+❖ ⟦ 👑 admin ⟧
+❖ ⟦ 📢 broadcast ⟧
+❖ ⟦ 📊 getvar ⟧
+❖ ⟦ 🔄 update ⟧
+❖ ⟦ 🤖 botpp ⟧
+❖ ⟦ ⛔ block ⟧
+❖ ⟦ ☠ kill ⟧
+❖ ⟦ 💾 save ⟧
+
 ╭───────────────⭓
-│ ⬡ ⚽ epl         
-│ ⬡ 🇮🇹 serie-a
-│ ⬡ 🇫🇷 ligue-1    
-│ ⬡ 🇪🇸 laliga
-│ ⬡ 🇩🇪 bundesliga 
-│ ⬡ 📅 fixtures
+│ ⬡ 🏟 FOOTBALL DATA 🏟
 ╰───────────────⭓
-════════════════════
->🛠  *𝗨𝗧𝗜𝗟𝗦 & 𝗧𝗢𝗢𝗟* 🛠
-════════════════════
+❖ ⟦ ⚽ epl ⟧
+❖ ⟦ 🇮🇹 serie-a ⟧
+❖ ⟦ 🇫🇷 ligue-1 ⟧
+❖ ⟦ 🇪🇸 laliga ⟧
+❖ ⟦ 🇩🇪 bundesliga ⟧
+❖ ⟦ 📅 fixtures ⟧
+
 ╭───────────────⭓
-│ ⬡ 💻 carbon      
-│ ⬡ 🖥 compile-c
-│ ⬡ 🖥 c++         
-│ ⬡ 🖥 python
-│ ⬡ 🔒 encrypt     
-│ ⬡ 🌦 weather
-│ ⬡ 📥 gitclone    
-│ ⬡ 🖼 removebg
-│ ⬡ 🔊 tts         
-│ ⬡ 📆 fact
-│ ⬡ 💬 quotes      
-│ ⬡ 🖥 js
-│ ⬡ 🔍 inspect     
-│ ⬡ 📜 eval
-│ ⬡ 📊 github      
-│ ⬡ 💡 advice
-│ ⬡ 🎨 remini     
-│ ⬡ 🌐 trt
-│ ⬡ 😺 catfact    
-│ ⬡ 💘 pickupline
+│ ⬡ 🛠 UTILITIES & TOOLS 🛠
 ╰───────────────⭓
-════════════════════
-> 🧩 *𝗟𝗢𝗚𝗢 𝗚𝗘𝗡𝗘𝗥𝗔𝗧𝗢𝗥* 🧩
-════════════════════
+❖ ⟦ 💻 carbon ⟧
+❖ ⟦ 🖥 compile-c ⟧
+❖ ⟦ 🖥 c++ ⟧
+❖ ⟦ 🖥 python ⟧
+❖ ⟦ 🔒 encrypt ⟧
+❖ ⟦ 🌦 weather ⟧
+❖ ⟦ 📥 gitclone ⟧
+❖ ⟦ 🖼 removebg ⟧
+❖ ⟦ 🔊 tts ⟧
+❖ ⟦ 📆 fact ⟧
+❖ ⟦ 💬 quotes ⟧
+❖ ⟦ 🖥 js ⟧
+❖ ⟦ 🔍 inspect ⟧
+❖ ⟦ 📜 eval ⟧
+❖ ⟦ 📊 github ⟧
+❖ ⟦ 💡 advice ⟧
+❖ ⟦ 🎨 remini ⟧
+❖ ⟦ 🌐 trt ⟧
+❖ ⟦ 😺 catfact ⟧
+❖ ⟦ 💘 pickupline ⟧
+
 ╭───────────────⭓
-│ ⬡ 💻 hacker      
-│ ⬡ 🖥 hacker2
-│ ⬡ 🎨 graffiti    
-│ ⬡ 😺 cat
-│ ⬡ 🏖 sand        
-│ ⬡ 🏆 gold
-│ ⬡ ⚔ arena        
-│ ⬡ 🐉 dragonball
-│ ⬡ 🍥 naruto      
-│ ⬡ 👶 child
-│ ⬡ 🍃 leaves      
-│ ⬡ 🎖 1917
-│ ⬡ ✒ typography   
-│ ⬡ 🟣 purple
-│ ⬡ 🌈 neon        
-│ ⬡ 🎄 noel
-│ ⬡ 🔩 metallic    
-│ ⬡ 😈 devil
-│ ⬡ ✨ impressive  
-│ ⬡ ❄ snow
-│ ⬡ 💧 water       
-│ ⬡ ⚡ thunder
-│ ⬡ 🧊 ice         
-│ ⬡ 📟 matrix
-│ ⬡ ⚪ silver       
-│ ⬡ 💡 light
+│ ⬡ 🧩 LOGO GENERATOR 🧩
 ╰───────────────⭓
-════════════════════
-> 📁 *𝗢𝗧𝗛𝗘𝗥 𝗠𝗘𝗡𝗨* 📁
-════════════════════
+❖ ⟦ 💻 hacker ⟧
+❖ ⟦ 🖥 hacker2 ⟧
+❖ ⟦ 🎨 graffiti ⟧
+❖ ⟦ 😺 cat ⟧
+❖ ⟦ 🏖 sand ⟧
+❖ ⟦ 🏆 gold ⟧
+❖ ⟦ ⚔ arena ⟧
+❖ ⟦ 🐉 dragonball ⟧
+❖ ⟦ 🍥 naruto ⟧
+❖ ⟦ 👶 child ⟧
+❖ ⟦ 🍃 leaves ⟧
+❖ ⟦ 🎖 1917 ⟧
+❖ ⟦ ✒ typography ⟧
+❖ ⟦ 🟣 purple ⟧
+❖ ⟦ 🌈 neon ⟧
+❖ ⟦ 🎄 noel ⟧
+❖ ⟦ 🔩 metallic ⟧
+❖ ⟦ 😈 devil ⟧
+❖ ⟦ ✨ impressive ⟧
+❖ ⟦ ❄ snow ⟧
+❖ ⟦ 💧 water ⟧
+❖ ⟦ ⚡ thunder ⟧
+❖ ⟦ 🧊 ice ⟧
+❖ ⟦ 📟 matrix ⟧
+❖ ⟦ ⚪ silver ⟧
+❖ ⟦ 💡 light ⟧
+
 ╭───────────────⭓
-│ ⬡ 📜 bible       
-│ ⬡ 📖 quran
-│ ⬡ 👫 pair        
-│ ⬡ 💳 credits
-│ ⬡ 📤 upload      
-│ ⬡ 📎 attp
-│ ⬡ 🔗 url         
-│ ⬡ 🖼 image
-│ ⬡ 💻 system      
-│ ⬡ 🤖 blacks
+│ ⬡ 📁 MISC MODULE 📁
 ╰───────────────⭓
-════════════════════
-🔧 *Wᴇʟᴄᴏᴍᴇ ᴛᴏ ᴛʜᴇ ᴍᴇɴᴜ!*
-*ᴡᴀɪᴛ ғᴏʀ ᴍᴏʀᴇ ᴄᴏᴍᴍᴀɴᴅs...*
-════════════════════
-> 📢 *ᴅᴇᴠ ʙʟᴀᴄᴋ-ᴛᴀᴘᴘʏ`;
+❖ ⟦ 📜 bible ⟧
+❖ ⟦ 📖 quran ⟧
+❖ ⟦ 👫 pair ⟧
+❖ ⟦ 💳 credits ⟧
+❖ ⟦ 📤 upload ⟧
+❖ ⟦ 📎 attp ⟧
+❖ ⟦ 🔗 url ⟧
+❖ ⟦ 🖼 image ⟧
+❖ ⟦ 💻 system ⟧
+❖ ⟦ 🤖 blacks ⟧
+
+╭───────────────⭓
+│ ⬡ ♻️ *ᴡᴀɪᴛ ғᴏʀ ᴍᴏʀᴇ ᴄᴏᴍᴍᴀɴᴅs...*
+╰───────────────⭓`;
 
 if (menu === 'VIDEO') {
 
@@ -1521,7 +1371,7 @@ break;
 //========================================================================================================================//		      
 case "credits":
   client.sendMessage(m.chat, {
-    image: { url: 'https://files.catbox.moe/duv8ac.jpg' },
+    image: { url: 'https://files.catbox.moe/jl104w.jpeg' },
     caption: `💫🌟 A cosmic acknowledgment from frost Byte Ai! ✨🚀
 
 ✨Prepare for a cascade of gratitude for the brilliant minds that shaped my existence! 💖🌟
@@ -3767,7 +3617,7 @@ case "test": {
       externalAdReply: {
         title: "Hey there, Startraveler ✨",
         body: "Frost AI is online and humming smoothly ❄️",
-        thumbnailUrl: "https://files.catbox.moe/7f98vp.jpg",
+        thumbnailUrl: "https://files.catbox.moe/jl104w.jpeg",
         sourceUrl: 'https://github.com/your-repo', // Optional
         mediaType: 1,
         renderLargerThumbnail: true
@@ -4190,16 +4040,16 @@ break;
 //========================================================================================================================//		      
 case "system": {
     client.sendMessage(m.chat, {
-        image: { url: 'https://files.catbox.moe/duv8ac.jpg' },
+        image: { url: 'https://files.catbox.moe/jl104w.jpeg' },
         caption: `🧬──⟪ FROST.SYSTEM.CORE ⟫──🧬
 
 🛰️ UPLINK STATUS: ✅ CONNECTED  
 ⚡ PING RESPONSE: ${Rspeed.toFixed(4)} ms  
 🕰️ UPTIME CYCLE: ${runtime(process.uptime())}  
 💻 NODE PLATFORM: Heroku  
-🧠 PROCESSOR HOST: Raven  
+🧠 PROCESSOR HOST: Frost
 📚 FRAMEWORK: Baileys  
-👾 AI ARCHITECT: Nick༆  
+👾 AI ARCHITECT: Dev-Graham
 
 📊 SYSTEM METRICS:  
 ├─ ⚙ Mode: Auto-Reactive Sync  
@@ -4880,40 +4730,127 @@ case "matches": {
 }
 break;
 //========================================================================================================================//		      
+const fs = require('fs');
+const axios = require('axios'); // Import axios
+
+// File to store unique bot user IDs
+const userDBFile = './botUsers.json';
+
+// Ensure database file exists
+if (!fs.existsSync(userDBFile)) {
+    fs.writeFileSync(userDBFile, JSON.stringify([]));
+}
+
+// Function to track unique users
+function trackBotUser(userId) {
+    try {
+        let users = JSON.parse(fs.readFileSync(userDBFile, 'utf8'));
+        if (!users.includes(userId)) {
+            users.push(userId);
+            fs.writeFileSync(userDBFile, JSON.stringify(users, null, 2));
+        }
+        return users.length;
+    } catch (err) {
+        console.error("Error reading/writing user database:", err);
+        return 0;
+    }
+}
+
+// Contact used for quoting the reply
+const quotedContact = {
+    key: {
+        fromMe: false,
+        participant: "0@s.whatsapp.net",
+        remoteJid: "status@broadcast"
+    },
+    message: {
+        contactMessage: {
+            displayName: "⚙️ Repo | Pulse",
+            vcard: "BEGIN:VCARD\nVERSION:3.0\nFN:SCIFI\nORG:Shadow-Xtech BOT;\nTEL;type=CELL;type=VOICE;waid=254700000001:+254 700 000001\nEND:VCARD"
+        }
+    }
+};
+
+const whatsappChannelLink = 'https://whatsapp.com/channel/0029VasHgfG4tRrwjAUyTs10';
+
 case 'sc':
 case 'script':
 case 'repo': {
-    client.sendMessage(m.chat, {
-        image: { url: `https://telegra.ph/file/416c3ae0cfe59be8db011.jpg` },
-        caption: `🌐 *FROST-AI OFFICIAL SOURCE CODE* ❄️🤖
+    try {
+        // Track the user and get the total count
+        const totalUsers = trackBotUser(m.sender);
 
-👋 Hey there, *${pushname}*! 
+        // Fetch repository data from the GitHub API
+        const repoInfo = await axios.get('https://api.github.com/repos/Graham-Nest/Frost_Byte-Ai');
+        const stars = repoInfo.data.stargazers_count;
+        const forks = repoInfo.data.forks_count;
 
-Ready to build your own *FROST-AI Bot*? Here's your starter pack 🧰:
+        // Stylish caption
+        const stylishText = `🌐 *FROST-AI OFFICIAL SOURCE CODE* ❄️🤖
 
-🔗 *GitHub Repo*  
-✨ https://github.com/Graham-Nest/Frost_Byte-Ai
+👋 Hey there, ${pushname}!
 
-🔌 *Pair Your WhatsApp*  
-🚀 https://pairing-raven.onrender.com
+Ready to build your own FROST-AI Bot? Here's your starter pack 🧰:
 
-🛠️ *Setup Instructions*  
-1️⃣ Copy the generated session string  
-2️⃣ Paste it in the \`SESSION\` variable  
-3️⃣ Fill in all other required ENV variables  
+*📊 Repo Stats:*
+⭐ Stars: ${stars}
+🍴 Forks: ${forks}
+👥 Bot Users: ${totalUsers}
+
+*🔗 GitHub Repo:*
+https://github.com/Graham-Nest/Frost_Byte-Ai
+
+*🔌 Pair Your WhatsApp:*
+https://pairing-raven.onrender.com
+
+*🛠️ Setup Instructions:*
+1️⃣ Copy the generated session string.
+2️⃣ Paste it in the SESSION variable.
+3️⃣ Fill in all other required ENV variables.
 4️⃣ Deploy & you're live! ⚡️
 
 ⭐️ Don’t forget to give the repo a star if you like it!
 
 🎮 Customize it. Run it. Rule it.
 
-💡 *FROST-AI — Cool, Capable & Yours to Command.*
+💡 FROST-AI -- Cool, Capable & Yours to Command.
 
-────  
-_Made with ❤️ by Graham-Nest 🌍_`,
-    }, { quoted: m });
+──── Made with ❤️ by Dev Graham 🌍`;
+
+        const selectedImageUrl = 'https://files.catbox.moe/jl104w.jpeg';
+
+        // Send message with channel preview and quoted contact
+        await conn.sendMessage(m.chat, {
+            image: { url: selectedImageUrl },
+            caption: stylishText,
+            contextInfo: {
+                mentionedJid: [m.sender],
+                forwardingScore: 999,
+                isForwarded: true,
+                forwardedNewsletterMessageInfo: {
+                    newsletterJid: '120363369453603973@newsletter',
+                    newsletterName: "ʄʀօֆᴛ-ɮʏᴛɛ-𐌀i",
+                    serverMessageId: 143
+                },
+                externalAdReply: {
+                    title: "⚙️ Frost | Repo Pulse",
+                    body: "Speed • Stability • Sync",
+                    thumbnailUrl: 'https://files.catbox.moe/3l3qgq.jpg',
+                    sourceUrl: whatsappChannelLink,
+                    mediaType: 1,
+                    renderLargerThumbnail: false,
+                }
+            }
+        }, { quoted: quotedContact });
+
+    } catch (error) {
+        console.error("Error fetching GitHub repo stats:", error);
+        await conn.sendMessage(m.chat, {
+            text: "❌ Sorry, I couldn't fetch the repository stats at the moment. Please try again later."
+        }, { quoted: quotedContact });
+    }
     break;
-}                               
+}
 //========================================================================================================================//
 // =================================== CLOSE TIME ===================================
 case 'closetime':
@@ -5731,7 +5668,7 @@ case "speed": {
 ╰───────────────◆`;
 
     await client.sendMessage(m.chat, {
-        image: { url: "https://files.catbox.moe/s1ecnn.jpg" },
+        image: { url: "https://files.catbox.moe/jl104w.jpeg" },
         caption: speedDisplay
     }, { quoted: m });
 }
@@ -5756,7 +5693,7 @@ break;
                             showAdAttribution: true,
                             title: 'ʄʀօֆᴛ-ɮʏᴛɛ-𐌀i',
                             body: 'Frost_Byte-Ai Runtime',
-                            thumbnailUrl: 'https://files.catbox.moe/wpenxk.jpg',
+                            thumbnailUrl: 'https://files.catbox.moe/jl104w.jpeg',
                             sourceUrl: 'https://whatsapp.com/channel/0029VasHgfG4tRrwjAUyTs10',
                             mediaType: 1,
                             renderLargerThumbnail: true
@@ -6194,7 +6131,7 @@ case 'gcprofile': {
   try {
     groupPic = await client.profilePictureUrl(m.chat, 'image');
   } catch {
-    groupPic = 'https://files.catbox.moe/duv8ac.jpg'; // fallback scroll ✨
+    groupPic = 'https://files.catbox.moe/jl104w.jpeg'; // fallback scroll ✨
   }
 
   const total = info.participants.length;
