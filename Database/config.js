@@ -1,6 +1,6 @@
 const { Pool } = require('pg');
 
-// PostgreSQL connection pool
+// PostgreSQL connection
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false }
@@ -10,7 +10,7 @@ const pool = new Pool({
 const defaultSettings = {
   antilink: 'on',
   antilinkall: 'off',
-  autobio: 'on',
+  autobio: 'off',
   antidelete: 'on',
   antitag: 'on',
   antibot: 'off',
@@ -23,21 +23,12 @@ const defaultSettings = {
   mode: 'public',
   prefix: '.',
   autolike: 'on',
-  autoview: 'on',
   antiedit: 'private',
-  wapresence: 'recording' // Options: 'recording', 'typing', 'available', 'unavailable', 'follow_user'
+  autoview: 'on',
+  wapresence: 'recording'
 };
 
-// Stores the latest WA presence for the main user
-let latestUserPresence = 'unavailable';
-
-// Update latest presence from Baileys event
-function updateLatestUserPresence(newPresence) {
-  latestUserPresence = newPresence;
-  console.log(`📡 Latest WA presence updated: ${newPresence}`);
-}
-
-// Initialize DB: create table if not exists and insert default settings
+// Initialize the database and insert default settings
 async function initializeDatabase() {
   const client = await pool.connect();
   console.log("📡 Connecting to PostgreSQL...");
@@ -51,22 +42,34 @@ async function initializeDatabase() {
       );
     `);
 
+    await client.query('BEGIN');
     for (const [key, value] of Object.entries(defaultSettings)) {
       await client.query(
-        `INSERT INTO bot_settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO NOTHING;`,
+        `INSERT INTO bot_settings (key, value)
+         VALUES ($1, $2)
+         ON CONFLICT (key) DO NOTHING;`,
         [key, value]
       );
     }
+    await client.query('COMMIT');
 
     console.log("✅ Database initialized.");
   } catch (err) {
+    await client.query('ROLLBACK');
     console.error("❌ Initialization error:", err);
   } finally {
     client.release();
   }
 }
 
-// Fetch settings from DB, merge with defaults
+// Helper to convert 'on'/'off' to boolean
+function parseValue(value) {
+  if (value === 'on') return true;
+  if (value === 'off') return false;
+  return value;
+}
+
+// Fetch current settings from database
 async function getSettings() {
   const client = await pool.connect();
 
@@ -78,11 +81,12 @@ async function getSettings() {
 
     const settings = {};
     for (const row of result.rows) {
-      settings[row.key] = row.value;
+      settings[row.key] = parseValue(row.value);
     }
 
     console.log("✅ Settings fetched from DB.");
-    return { ...defaultSettings, ...settings };
+    return settings;
+
   } catch (err) {
     console.error("❌ Failed to fetch settings:", err);
     return defaultSettings;
@@ -91,13 +95,12 @@ async function getSettings() {
   }
 }
 
-// Update a single setting in DB
+// Update a single setting in the database
 async function updateSetting(key, value) {
   const client = await pool.connect();
 
   try {
-    const validKeys = Object.keys(defaultSettings);
-    if (!validKeys.includes(key)) {
+    if (!Object.keys(defaultSettings).includes(key)) {
       throw new Error(`Invalid setting key: ${key}`);
     }
 
@@ -106,6 +109,7 @@ async function updateSetting(key, value) {
       [value, key]
     );
 
+    console.log(`✅ Setting updated: ${key} = ${value}`);
     return true;
   } catch (err) {
     console.error("❌ Failed to update setting:", err.message || err);
@@ -115,29 +119,12 @@ async function updateSetting(key, value) {
   }
 }
 
-// Resolve final WA presence based on stored presence and user online status
-function resolvePresence(wapresence, isUserOnline = false) {
-  if (wapresence === 'follow_user') {
-    return latestUserPresence || 'unavailable';
-  }
-
-  switch (wapresence) {
-    case 'recording':
-    case 'typing':
-      return isUserOnline ? wapresence : 'unavailable';
-    case 'available':
-      return 'available';
-    default:
-      return 'unavailable';
-  }
-}
-
-// config for owner and antidelete
+// Bot-level configuration
 const botConfig = {
-  ownerNumber: "254756360306@s.whatsapp.net", 
+  ownerNumber: "254756360306@s.whatsapp.net",
   antidelete: {
-    all: "off",      // on/off
-    inbox: "off",   // on/off 
+    all: "off",     // on/off
+    inbox: "off",   // on/off
     group: "on",    // on/off
     private: "on"   // on/off
   }
@@ -147,8 +134,6 @@ module.exports = {
   initializeDatabase,
   getSettings,
   updateSetting,
-  resolvePresence,
-  updateLatestUserPresence,
   defaultSettings,
   botConfig
 };
