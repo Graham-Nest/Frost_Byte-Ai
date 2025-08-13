@@ -4,148 +4,80 @@ const fetchSettings = require('../Database/fetchSettings');
 const Events = async (client, Nick) => {
   try {
     const welcomegoodbye = await fetchSettings();
-    const metadata = await client.groupMetadata(Nick.id);
-    const participants = Nick.participants;
-    const desc = metadata.desc || "📌 No bio set. Just vibes and frequency.";
-    const groupName = metadata.subject;
-    const totalMembers = metadata.participants.length;
+    let metadata = await client.groupMetadata(Nick.id);
+    let participants = Nick.participants;
+    let desc = metadata.desc || "No Description";
+    let groupMembersCount = metadata.participants.length;
+
+    const now = new Date();
 
     for (let num of participants) {
       let dpuser;
       try {
         dpuser = await client.profilePictureUrl(num, "image");
       } catch {
-        dpuser = "https://files.catbox.moe/jl104w.jpeg";
+        dpuser = "https://files.catbox.moe/jl104w.jpeg"; // default sci-fi avatar
       }
 
-      const tag = `@${num.split("@")[0]}`;
-      const now = new Date();
-      const localeTime = now.toLocaleString("en-GB", { timeZone: "Africa/Nairobi" });
+      const usernameTag = `@${num.split("@")[0]}`;
 
-      // 🌟 Fancy Modern Welcome Texts
-      const welcomeMessages = [
-        `
-🧬 *[  NEW ENTITY SYNCED ]* 🧬
+      // ---------------- WELCOME ----------------
+      if (Nick.action === "add") {
+        const joinTime = now.toLocaleString("en-GB", { timeZone: "UTC" });
 
-✨ Welcome ${tag} to *${groupName}*  
-👥 Members: *${totalMembers}*  
-🕰️ Joined: *${localeTime}*  
-⚡ You’ve entered a high-frequency zone of legends & byte-sized chaos.
+        const WelcomeMessage = `
+🚀 [INCOMING NODE] 🚀
+${usernameTag} has joined the grid.
 
-🔍 *Group Protocol:*  
-"${desc}"
+📡 Group: ${metadata.subject}
+👥 Members: ${groupMembersCount}
 
-🛠 Pro Tips:  
-◽ Drop vibes, not viruses  
-◽ Stream thoughts, not drama  
-◽ Be coded in chill
+📝 Description: ${desc || "No Description"}
+🕒 Joined: ${joinTime} UTC
 
-🤖 Powered by *${botname} v2025*  
-🛰 Let’s disrupt the silence.
-        `,
-        `
-🌐 *ACCESS GRANTED* 🌐  
-Welcome, ${tag}. You’ve unlocked *${groupName}*.
+☺️ Enjoy your stay in the grid.
+- ${botname} I 2025 🌌
+`;
 
-👥 Total Members: *${totalMembers}*  
-🕓 Joined: *${localeTime}*
+        if (welcomegoodbye === 'on') {
+          await client.sendMessage(Nick.id, {
+            image: { url: dpuser },
+            caption: WelcomeMessage,
+            mentions: [num],
+          });
+        }
 
-💾 Group Version: LIVE  
-📂 Description File:  
-"${desc}"
+      // ---------------- GOODBYE ----------------
+      } else if (Nick.action === "remove") {
+        const leaveTime = now.toLocaleString("en-GB", { timeZone: "UTC" });
 
-🧠 Mood: Casual intelligence  
-🎭 Role: Creator, not spectator
+        const timeSpent = "Unknown"; 
 
-📡 You’re in. Make it iconic.  
-🤖 *${botname} 2025 — whispering in binaries.*
-        `,
-        `
-💡 *ENERGY SPIKE DETECTED* 💡
+        const GoodbyeMessage = `
+${usernameTag} has exited the grid.
 
-${tag} just linked into *${groupName}* 🚀  
-👥 Group Population: *${totalMembers}*  
-🕰️ Arrival Timestamp: *${localeTime}*
+📡 Group: ${metadata.subject}
+👥 Members: ${groupMembersCount}
 
-🧾 Group Essence:  
-"${desc}"
+🕒 Left: ${leaveTime} UTC
+⏳ Time spent: ${timeSpent}
 
-🪩 Style. Signal. Substance.  
-Stay bold, speak bright, stay unplugged from basic.
+✌️ Farewell , Dear Hustler
+- ${botname} I 2025 ⚙️
+`;
 
-🤖 *${botname} 2025* — digitally enchanted.
-        `
-      ];
-
-      // 💔 Fancy Modern Goodbye Texts
-      const goodbyeMessages = [
-        `
-🚷 *USER LOGGED OUT* 🚷
-
-${tag} just left *${groupName}* — no mic drop, just pixels fading.  
-🕛 Exit Time: *${localeTime}*  
-👥 Remaining Members: *${totalMembers - 1}*
-
-📁 Status: Inactive  
-📂 Memories: Auto-archived  
-🎞 Vibe trail: Still glowing
-
-Farewell, digital dreamer.  
-🤖 ${botname} — memory stable, farewell encrypted.
-        `,
-        `
-📡 *DISCONNECTED FROM GRID* 📡
-
-${tag} has exited *${groupName}*.  
-⏳ Logged Out At: *${localeTime}*  
-🧑‍🚀 Active Agents Remaining: *${totalMembers - 1}*
-
-Cause: Unknown. Energy loss? Enlightenment? We'll never know.
-
-🗂 Legacy stored  
-⛓ Connections released  
-✨ Offline aura: Eternal
-
-See you across frequencies, traveler.  
-🤖 ${botname} — logging emotional echo.
-        `,
-        `
-🚪 *EXIT SEQUENCE INITIATED* 🚪
-
-${tag} has walked out of *${groupName}* with class.  
-🕰️ Departure Logged: *${localeTime}*  
-👥 Network Strength: *${totalMembers - 1}*
-
-Sometimes silence hits harder than a rant.
-
-🧠 Thoughts remain  
-🖤 Impact made  
-🧾 Chapter closed
-
-🔚 Until our code syncs again...  
-🤖 ${botname} — keeping style in logout.
-        `
-      ];
-
-      const welcomeText = welcomeMessages[Math.floor(Math.random() * welcomeMessages.length)].trim();
-      const goodbyeText = goodbyeMessages[Math.floor(Math.random() * goodbyeMessages.length)].trim();
-
-      if (Nick.action === "add" && welcomegoodbye === 'on') {
-        await client.sendMessage(Nick.id, {
-          image: { url: dpuser },
-          caption: welcomeText,
-          mentions: [num],
-        });
-      } else if (Nick.action === "remove" && welcomegoodbye === 'on') {
-        await client.sendMessage(Nick.id, {
-          image: { url: dpuser },
-          caption: goodbyeText,
-          mentions: [num],
-        });
+        if (welcomegoodbye === 'on') {
+          await client.sendMessage(Nick.id, {
+            image: { url: dpuser },
+            caption: GoodbyeMessage,
+            mentions: [num],
+          });
+        }
       }
     }
+
   } catch (err) {
-    console.log("⚠️ Event Handler Error:", err);
+    console.log("💥 Event Error:", err);
   }
 };
 

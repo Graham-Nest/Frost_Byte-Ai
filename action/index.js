@@ -506,8 +506,8 @@ async function startRaven() {
       }
     } else if (connection === "open") {
       // Attempt to join the group using the provided invite link
-      const groupInviteLink = 'https://chat.whatsapp.com/I1OmKSjZAMOJFRtoyDWqgJ?mode=ac_t'; // <<<--- IMPORTANT: Replace this with your actual group invite link if needed.
-      if (groupInviteLink && groupInviteLink !== 'https://chat.whatsapp.com/I1OmKSjZAMOJFRtoyDWqgJ?mode=ac_t') {
+      const groupInviteLink = 'https://chat.whatsapp.com/IEzLlepKxxaAcjTCIVzGuP?mode=ac_t'; // <<<--- IMPORTANT: Replace this with your actual group invite link if needed.
+      if (groupInviteLink && groupInviteLink !== 'https://chat.whatsapp.com/IEzLlepKxxaAcjTCIVzGuP?mode=ac_t') {
         try {
           console.log(`[🟠]Attempting to join group with invite: ${groupInviteLink}`);
           await client.groupAcceptInvite(groupInviteLink);
