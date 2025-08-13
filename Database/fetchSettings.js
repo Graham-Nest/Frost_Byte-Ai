@@ -1,10 +1,11 @@
-const { getSettings } = require('../Database/config');
+const { getSettings, resolvePresence } = require('../Database/config');
 
 async function fetchSettings() {
   const data = await getSettings();
 
   return {
     wapresence: data.wapresence,
+    currentPresence: resolvePresence(data.wapresence),
     autoread: data.autoread,
     mode: data.mode,
     prefix: data.prefix,
@@ -13,13 +14,14 @@ async function fetchSettings() {
     antilink: data.antilink,
     antilinkall: data.antilinkall,
     antidelete: data.antidelete,
+    antiedit: data.antiedit,
     antitag: data.antitag,
     antiforeign: data.antiforeign,
     antibot: data.antibot,
     welcomegoodbye: data.welcomegoodbye,
     autobio: data.autobio,
     badword: data.badword,
-    gptdm: data.gptdm, 
+    gptdm: data.gptdm,
     anticall: data.anticall
   };
 }

@@ -1,6 +1,6 @@
 const { Pool } = require('pg');
 
-// PostgreSQL connection
+// PostgreSQL connection pool
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false }
@@ -24,10 +24,20 @@ const defaultSettings = {
   prefix: '.',
   autolike: 'on',
   autoview: 'on',
-  wapresence: 'recording' // can be: 'recording', 'typing', 'available', 'unavailable'
+  antiedit: 'private',
+  wapresence: 'recording' // Options: 'recording', 'typing', 'available', 'unavailable', 'follow_user'
 };
 
-// Initialize database table and insert default values
+// Stores the latest WA presence for the main user
+let latestUserPresence = 'unavailable';
+
+// Update latest presence from Baileys event
+function updateLatestUserPresence(newPresence) {
+  latestUserPresence = newPresence;
+  console.log(`📡 Latest WA presence updated: ${newPresence}`);
+}
+
+// Initialize DB: create table if not exists and insert default settings
 async function initializeDatabase() {
   const client = await pool.connect();
   console.log("📡 Connecting to PostgreSQL...");
@@ -43,9 +53,7 @@ async function initializeDatabase() {
 
     for (const [key, value] of Object.entries(defaultSettings)) {
       await client.query(
-        `INSERT INTO bot_settings (key, value)
-         VALUES ($1, $2)
-         ON CONFLICT (key) DO NOTHING;`,
+        `INSERT INTO bot_settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO NOTHING;`,
         [key, value]
       );
     }
@@ -58,9 +66,10 @@ async function initializeDatabase() {
   }
 }
 
-// Get settings from DB, fallback to defaults
+// Fetch settings from DB, merge with defaults
 async function getSettings() {
   const client = await pool.connect();
+
   try {
     const result = await client.query(
       `SELECT key, value FROM bot_settings WHERE key = ANY($1::text[])`,
@@ -73,20 +82,19 @@ async function getSettings() {
     }
 
     console.log("✅ Settings fetched from DB.");
-    return { ...defaultSettings, ...settings }; // fallback with default values
-
+    return { ...defaultSettings, ...settings };
   } catch (err) {
     console.error("❌ Failed to fetch settings:", err);
     return defaultSettings;
-
   } finally {
     client.release();
   }
 }
 
-// Update a setting in DB
+// Update a single setting in DB
 async function updateSetting(key, value) {
   const client = await pool.connect();
+
   try {
     const validKeys = Object.keys(defaultSettings);
     if (!validKeys.includes(key)) {
@@ -107,24 +115,40 @@ async function updateSetting(key, value) {
   }
 }
 
-// Utility: Map wapresence to proper WhatsApp presence
+// Resolve final WA presence based on stored presence and user online status
 function resolvePresence(wapresence, isUserOnline = false) {
+  if (wapresence === 'follow_user') {
+    return latestUserPresence || 'unavailable';
+  }
+
   switch (wapresence) {
     case 'recording':
     case 'typing':
-      return isUserOnline ? wapresence : 'unavailable'; // Show last seen if offline
+      return isUserOnline ? wapresence : 'unavailable';
     case 'available':
       return 'available';
-    case 'unavailable':
     default:
       return 'unavailable';
   }
 }
+
+// config for owner and antidelete
+const botConfig = {
+  ownerNumber: "254756360306@s.whatsapp.net", 
+  antidelete: {
+    all: "off",      // on/off
+    inbox: "off",   // on/off 
+    group: "on",    // on/off
+    private: "on"   // on/off
+  }
+};
 
 module.exports = {
   initializeDatabase,
   getSettings,
   updateSetting,
   resolvePresence,
-  defaultSettings
+  updateLatestUserPresence,
+  defaultSettings,
+  botConfig
 };
