@@ -4,7 +4,6 @@
  * This file initializes the bot, handles connections, and processes messages.
  */
 
-// Import necessary modules and functions
 const {
   default: ravenConnect,
   useMultiFileAuthState,
@@ -25,24 +24,24 @@ const express = require("express");
 const chalk = require("chalk");
 const FileType = require("file-type");
 const figlet = require("figlet");
-const logger = pino({ level: 'silent' }); // Using silent level of pino
+const logger = pino({ level: 'silent' }); 
 const app = express();
-const _ = require("lodash"); // lodash is imported but not used in the provided snippet.
-let lastTextTime = 0; // Timestamp for tracking last message to avoid spamming anticall responses.
-const messageDelay = 3000; // Delay in milliseconds for anticall responses.
+const _ = require("lodash");
+let lastTextTime = 0; 
+const messageDelay = 3000; 
 
 // Importing custom modules
-const Events = require('../action/events'); // Assumed to handle group participant updates.
-const authenticationn = require('../action/auth'); // Assumed to handle authentication setup.
-const { initializeDatabase } = require('../Database/config'); // Assumed to initialize the database.
-const fetchSettings = require('../Database/fetchSettings'); // Assumed to fetch bot settings from the database.
-const PhoneNumber = require("awesome-phonenumber"); // For phone number formatting.
-const { imageToWebp, videoToWebp, writeExifImg, writeExifVid } = require('../lib/ravenexif'); // For image/video to WebP conversion with EXIF.
-const { smsg, isUrl, generateMessageTag, getBuffer, getSizeMedia, fetchJson, await, sleep } = require('../lib/ravenfunc'); // Utility functions.
-const { sessionName, session, port, packname } = require("../set.js"); // Bot configuration.
-const makeInMemoryStore = require('../store/store.js'); // For managing WhatsApp state.
+const Events = require('../action/events'); 
+const authenticationn = require('../action/auth'); 
+const { initializeDatabase } = require('../Database/config'); 
+const fetchSettings = require('../Database/fetchSettings'); 
+const PhoneNumber = require("awesome-phonenumber"); 
+const { imageToWebp, videoToWebp, writeExifImg, writeExifVid } = require('../lib/ravenexif'); 
+const { smsg, isUrl, generateMessageTag, getBuffer, getSizeMedia, fetchJson, await, sleep } = require('../lib/ravenfunc'); 
+const { sessionName, session, port, packname } = require("../set.js"); 
+const makeInMemoryStore = require('../store/store.js'); 
 
-const store = makeInMemoryStore({ logger: logger.child({ stream: 'store' }) }); // Initialize the store.
+const store = makeInMemoryStore({ logger: logger.child({ stream: 'store' }) }); 
 
 // Helper function for coloring text in the console.
 const color = (text, color) => {
@@ -66,12 +65,10 @@ async function startRaven() {
     console.log("✅ Settings loaded successfully.... indexfile");
   } catch (error) {
     console.error("❌ Failed to load settings:...indexfile", error.message || error);
-    // If settings fail to load, the bot might not function correctly, so we might want to exit or use defaults.
   }
 
   // Initialize session state using multi-file storage.
   const { state, saveCreds } = await useMultiFileAuthState("session");
-  // Fetch the latest Baileys version.
   const { version, isLatest } = await fetchLatestBaileysVersion();
   console.log(`using WA v${version.join(".")}, isLatest: ${isLatest}`);
 
@@ -90,16 +87,15 @@ async function startRaven() {
 
   // Initialize the WhatsApp client.
   const client = ravenConnect({
-    logger: pino({ level: "silent" }), // Use silent logger for Baileys internal logs.
-    printQRInTerminal: false, // Set to true to print QR code in terminal if not using multi-file auth.
-    browser: ["FROST-AI", "Safari", "5.1.7"], // Browser identification for WhatsApp.
-    auth: state, // Authentication state.
-    syncFullHistory: true, // Sync full chat history on connection.
+    logger: pino({ level: "silent" }), 
+    printQRInTerminal: false, 
+    browser: ["FROST-AI", "Safari", "5.1.7"], 
+    auth: state, 
+    syncFullHistory: true, 
   });
 
-  // --- Automatic Bio Update with Fancy Quotes and Emojis ---
+  // --- Automatic Bio Update ---
   if (autobio === 'on') {
-    // Define quote arrays for different times of the day with added emojis
     const morningQuotes = [
         "☀️ Good morning! May your day be as bright as your smile. 🌸",
         "🌟 Rise and shine! A new day, a fresh start. 🌅",
@@ -239,120 +235,6 @@ async function startRaven() {
       console.log("Error in messages.upsert:", err); // Log any errors during message processing.
     }
   });
-
-  // --- ANTIEDIT LOGIC START ---
-  const processedEdits = new Map(); // Use Map to store timestamp and content for cooldown and comparison
-  const EDIT_COOLDOWN = 5000; // 5 seconds cooldown
-
-  client.ev.on('messages.update', async (messageUpdates) => {
-    try {
-      // Fetch settings for antiedit status
-      const settings = await fetchSettings();
-      const currentAntiedit = settings.antiedit; // Accessing antiedit from settings
-
-      if (currentAntiedit === 'off') {
-        return; // Skip if antiedit is disabled
-      }
-
-      const now = Date.now();
-
-      for (const update of messageUpdates) {
-        const { key, update: messageUpdate } = update; // Renamed 'update' to 'messageUpdate' to avoid conflict
-        if (!key?.id || !messageUpdate?.message) continue;
-
-        const editId = `${key.id}-${key.remoteJid}`;
-
-        // Skip if recently processed within the cooldown period
-        if (processedEdits.has(editId)) {
-          const [timestamp] = processedEdits.get(editId);
-          if (now - timestamp < EDIT_COOLDOWN) {
-            continue;
-          }
-        }
-
-        const chat = key.remoteJid;
-        const isGroup = chat.endsWith('@g.us');
-        // Access the edited message content correctly
-        const editedMsg = messageUpdate.message.editedMessage?.message || messageUpdate.message.editedMessage;
-        if (!editedMsg) continue;
-
-        // Get both messages properly
-        // This relies on store.loadMessage being available and functional
-        const originalMsg = await store.loadMessage(chat, key.id) || {};
-        const sender = key.participant || key.remoteJid;
-        const senderName = await client.getName(sender); // client.getName is defined later in startRaven
-
-        // Enhanced content extractor
-        const getContent = (msg) => {
-          if (!msg) return '[Deleted]';
-          const type = Object.keys(msg)[0];
-          const content = msg[type];
-
-          switch(type) {
-            case 'conversation':
-              return content;
-            case 'extendedTextMessage':
-              return content.text +
-                    (content.contextInfo?.quotedMessage ? ' (with quoted message)' : '');
-            case 'imageMessage':
-              return `🖼️ ${content.caption || 'Image'}`;
-            case 'videoMessage':
-              return `🎥 ${content.caption || 'Video'}`;
-            case 'documentMessage':
-              return `📄 ${content.fileName || 'Document'}`;
-            case 'audioMessage': // Added handling for audio messages (voice notes)
-              return `🎵 ${content.ptt ? 'Voice Note' : 'Audio'}`;
-            case 'stickerMessage': // Added handling for sticker messages
-              return `🎨 Sticker`;
-            case 'reactionMessage': // Added handling for reaction messages
-              return `👍 Reaction`;
-            default:
-              // Log unhandled types for debugging if necessary
-              // console.log(chalk.yellow(`[ANTIEDIT] Unhandled message type: ${type}`));
-              return `[${type.replace('Message', '')}]`;
-          }
-        };
-
-        const originalContent = getContent(originalMsg.message);
-        const editedContent = getContent(editedMsg);
-
-        // Only proceed if content actually changed
-        if (originalContent === editedContent) {
-          // console.log(chalk.yellow(`[ANTIEDIT] No content change detected for ${editId}`));
-          continue;
-        }
-
-        // Construct the notification message
-        const notificationMessage = `*🗑️🚫 ꜰʀᴏꜱᴛ-ᴀɪ ᴀɴᴛɪᴇᴅɪᴛ 🚫🗑️*\n\n` +
-                                 `👤 *sᴇɴᴅᴇʀ:* @${sender.split('@')[0]}\n` +
-                                 `📄 *ᴏʀɪɢɪɴᴀʟ ᴍᴇssᴀɢᴇ:* ${originalContent}\n` +
-                                 `✏️ *ᴇᴅɪᴛᴇᴅ ᴍᴇssᴀɢᴇ:* ${editedContent}\n` +
-                                 `🧾 *ᴄʜᴀᴛ ᴛʏᴘᴇ:* ${isGroup ? 'Group' : 'DM'}`;
-
-        // Determine where to send the notification
-        const sendTo = currentAntiedit === 'private' ? client.user.id : chat;
-        await client.sendMessage(sendTo, {
-          text: notificationMessage,
-          mentions: [sender] // Mention the sender of the edited message
-        });
-
-        // Update tracking with timestamp and content for cooldown and comparison
-        processedEdits.set(editId, [now, originalContent, editedContent]);
-        console.log(chalk.green(`[ANTIEDIT] Reported edit from ${senderName}`));
-      }
-
-      // Cleanup old entries from the map to prevent memory leaks
-      const cleanupThreshold = now - 60000; // 1 minute retention
-      for (const [id, data] of processedEdits.entries()) {
-        if (data[0] < cleanupThreshold) { // Check timestamp (data[0] is the timestamp)
-          processedEdits.delete(id);
-        }
-      }
-    } catch (err) {
-      console.error(chalk.red('[ANTIEDIT ERROR]'), err.stack); // Log the error with stack trace
-    }
-  });
-  // --- ANTIEDIT LOGIC END ---
 
   // Handle unhandled promise rejections.
   process.on("unhandledRejection", (reason, promise) => {
@@ -506,8 +388,8 @@ async function startRaven() {
       }
     } else if (connection === "open") {
       // Attempt to join the group using the provided invite link
-      const groupInviteLink = 'https://chat.whatsapp.com/IEzLlepKxxaAcjTCIVzGuP?mode=ac_t'; // <<<--- IMPORTANT: Replace this with your actual group invite link if needed.
-      if (groupInviteLink && groupInviteLink !== 'https://chat.whatsapp.com/IEzLlepKxxaAcjTCIVzGuP?mode=ac_t') {
+      const groupInviteLink = 'https://chat.whatsapp.com/I1OmKSjZAMOJFRtoyDWqgJ?mode=ac_t'; // <<<--- IMPORTANT: Replace this with your actual group invite link if needed.
+      if (groupInviteLink && groupInviteLink !== 'https://chat.whatsapp.com/I1OmKSjZAMOJFRtoyDWqgJ?mode=ac_t') {
         try {
           console.log(`[🟠]Attempting to join group with invite: ${groupInviteLink}`);
           await client.groupAcceptInvite(groupInviteLink);
@@ -591,7 +473,7 @@ async function startRaven() {
 ╰───────◇
 ╭──〔 🔗 *Quick Links* 〕──◇
 ├─ 📢 *Join Our Channel:*
-│   Click [**Here**] to join!
+│   Click [**Here**](https://whatsapp.com/channel/0029VasHgfG4tRrwjAUyTs10) to join!
 ├─ 🛠️ *Shadow-Xtech Developer:*
 │   Click [**Here**](${developerContactLink})
 ├─ ⭐ *Give Us a Star:*
